@@ -30,7 +30,10 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
           {!user ? (
             <Link href="/login" className="hover:text-blue-700">Log in</Link>
           ) : (
-            <Link href="/profile" className="hover:text-blue-700">Profile</Link>
+            <>
+              <Link href="/become-host" className="hover:text-blue-700">Become a Sublettor</Link>
+              <Link href="/profile" className="hover:text-blue-700">Profile</Link>
+            </>
           )}
         </nav>
 
@@ -57,7 +60,10 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
             {!user ? (
               <Link href="/login" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Log in</Link>
             ) : (
-              <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Profile</Link>
+              <>
+                <Link href="/become-host" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Become a Sublettor</Link>
+                <Link href="/profile" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Profile</Link>
+              </>
             )}
           </div>
         )}

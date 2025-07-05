@@ -87,10 +87,7 @@ export default function ListingDetails() {
       try {
         const res = await fetch(`http://localhost:4000/api/listings/${id}`);
         const data = await res.json();
-        // Fetch images for the listing
-        const imgRes = await fetch(`http://localhost:4000/api/listing-images?listing_id=${id}`);
-        const images = await imgRes.json();
-        setListing({ ...data, images });
+        setListing(data);
 
         // Fetch host user
         if (data.user_id) {
@@ -168,6 +165,12 @@ export default function ListingDetails() {
     }
     return 0;
   });
+  
+  // Convert relative URLs to absolute URLs for uploaded images
+  images = images.map(img => ({
+    ...img,
+    url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
+  }));
 
   return (
     <div className="min-h-screen bg-white pt-16">

@@ -5,7 +5,16 @@ module.exports = (pool) => {
   // Get all listing images
   router.get('/', async (req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM listing_images');
+      const { listing_id } = req.query;
+      let query = 'SELECT * FROM listing_images';
+      let params = [];
+      
+      if (listing_id) {
+        query += ' WHERE listing_id = $1 ORDER BY order_index';
+        params.push(listing_id);
+      }
+      
+      const { rows } = await pool.query(query, params);
       res.json(rows);
     } catch (err) {
       res.status(500).json({ error: err.message });

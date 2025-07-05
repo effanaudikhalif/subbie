@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const { Pool } = require('pg');
 const universitiesRouter = require('./routes/universities');
 const usersRouter = require('./routes/users');
@@ -13,6 +14,9 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const pool = new Pool({
   connectionString: process.env.SUPABASE_DB_URL,

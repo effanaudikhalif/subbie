@@ -62,7 +62,14 @@ export default function Results() {
           {filteredListings.map(listing => (
             <Link key={listing.id} href={`/listings/${listing.id}`} className="bg-white rounded-2xl shadow p-4 flex flex-col hover:shadow-lg transition-shadow">
               <div className="relative mb-3">
-                <img src="https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80" alt={listing.title} className="rounded-xl w-full h-48 object-cover" />
+                <img 
+                  src={listing.images && listing.images.length > 0 
+                    ? `http://localhost:4000${listing.images[0].url}` 
+                    : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80"
+                  } 
+                  alt={listing.title} 
+                  className="rounded-xl w-full h-48 object-cover" 
+                />
               </div>
               <div className="text-black font-semibold text-lg mb-1">{listing.title}</div>
               <div className="text-gray-500 text-sm mb-1">{listing.city}, {listing.state}</div>
