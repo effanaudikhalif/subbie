@@ -406,3 +406,50 @@ create policy "owner manages occupants"
   using (
     auth.uid() = (select user_id from public.listings where id = listing_id)
   );
+
+-- 1️⃣ conversations  (one thread per guest↔host pair, per listing)
+create table public.conversations (
+    id            uuid primary key default gen_random_uuid(),
+    listing_id    uuid references public.listings(id) on delete cascade,
+    guest_id      uuid references public.users(id)    on delete restrict,
+    host_id       uuid references public.users(id)    on delete restrict,
+    created_at    timestamptz default now()
+);
+
+-- 2️⃣ messages  (many per conversation)
+create table public.messages (
+    id               uuid primary key default gen_random_uuid(),
+    conversation_id  uuid references public.conversations(id) on delete cascade,
+    sender_id        uuid references public.users(id) on delete restrict,
+    body             text not null,
+    sent_at          timestamptz default now(),
+    read_at          timestamptz
+);
+
+-- indexes for speed
+create index msg_convo_idx on public.messages (conversation_id, sent_at);
+
+alter table public.conversations enable row level security;
+alter table public.messages       enable row level security;
+
+-- either participant may read the convo
+create policy "convo read"
+  on public.conversations for select
+  using (auth.uid() = guest_id OR auth.uid() = host_id);
+
+-- only participants may insert / select messages
+create policy "msg read"
+  on public.messages for select
+  using (
+    auth.uid() = sender_id OR
+    auth.uid() IN (select guest_id from public.conversations where id = conversation_id) OR
+    auth.uid() IN (select host_id  from public.conversations where id = conversation_id)
+  );
+
+create policy "msg write"
+  on public.messages for insert
+  with check (auth.uid() = sender_id
+           AND auth.uid() IN (
+                select guest_id from public.conversations where id = conversation_id
+                UNION
+                select host_id  from public.conversations where id = conversation_id));

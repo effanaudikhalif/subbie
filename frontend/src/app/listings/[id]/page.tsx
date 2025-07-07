@@ -3,9 +3,11 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import SearchBar from "../../../components/Searchbar";
+import ChatBox from "../../../components/ChatBox";
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
+import { useAuth } from "../../../hooks/useAuth";
 
 interface ListingImage {
   url: string;
@@ -40,6 +42,7 @@ export default function ListingDetails() {
   const [loading, setLoading] = useState(true);
   const [host, setHost] = useState<User | null>(null);
   const [university, setUniversity] = useState<University | null>(null);
+  const { user } = useAuth();
 
   // SearchBar state
   const [where, setWhere] = useState("");
@@ -301,6 +304,10 @@ export default function ListingDetails() {
             </div>
           </div>
         </div>
+        {/* Chat box for messaging the host */}
+        {host && user && user.id !== host.id && (
+          <ChatBox listingId={listing.id} hostId={host.id} />
+        )}
       </div>
     </div>
   );

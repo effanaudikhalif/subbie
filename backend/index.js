@@ -8,6 +8,8 @@ const usersRouter = require('./routes/users');
 const listingsRouter = require('./routes/listings');
 const listingImagesRouter = require('./routes/listing_images');
 const bookingsRouter = require('./routes/bookings');
+const conversationsRouter = require('./routes/conversations');
+const messagesRouter = require('./routes/messages');
 
 dotenv.config();
 
@@ -50,6 +52,12 @@ app.use('/api/listing-images', listingImagesRouterInstance);
 
 const bookingsRouterInstance = bookingsRouter(pool);
 app.use('/api/bookings', bookingsRouterInstance);
+
+const conversationsRouterInstance = conversationsRouter(pool);
+app.use('/api/conversations', conversationsRouterInstance);
+
+const messagesRouterInstance = messagesRouter(pool);
+app.use('/api/messages', messagesRouterInstance);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

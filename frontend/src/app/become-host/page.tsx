@@ -49,6 +49,7 @@ export default function BecomeHost() {
     start_date: '',
     end_date: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const amenities = [
     { code: 'wifi', name: 'Wi-Fi', category: 'core' },
@@ -123,8 +124,11 @@ export default function BecomeHost() {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     if (!user || !profile) {
       alert('Please log in to create a listing');
+      setSubmitting(false);
       return;
     }
 
@@ -171,6 +175,8 @@ export default function BecomeHost() {
     } catch (error) {
       console.error('Error submitting form:', error);
       alert('Error creating listing. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -179,7 +185,7 @@ export default function BecomeHost() {
       case 1:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Which of these best describes your place?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Which of these best describes your place?</h2>
             <div className="space-y-4">
               {[
                 { value: 'house', label: 'House' },
@@ -194,7 +200,7 @@ export default function BecomeHost() {
                     onChange={(e) => handleInputChange('property_type', e.target.value)}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-lg">{option.label}</span>
+                  <span className="text-lg text-black">{option.label}</span>
                 </label>
               ))}
             </div>
@@ -204,7 +210,7 @@ export default function BecomeHost() {
       case 2:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">What type of place will guests have?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">What type of place will guests have?</h2>
             <div className="space-y-4">
               {[
                 { value: 'entire_place', label: 'An entire place' },
@@ -220,7 +226,7 @@ export default function BecomeHost() {
                     onChange={(e) => handleInputChange('guest_space', e.target.value)}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-lg">{option.label}</span>
+                  <span className="text-lg text-black">{option.label}</span>
                 </label>
               ))}
             </div>
@@ -230,63 +236,63 @@ export default function BecomeHost() {
       case 3:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Where's your place located?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Where's your place located?</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Country/region</label>
+                <label className="block text-sm font-medium mb-2 text-black">Country/region</label>
                 <input
                   type="text"
                   value={formData.country}
                   onChange={(e) => handleInputChange('country', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="USA"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Street address</label>
+                <label className="block text-sm font-medium mb-2 text-black">Street address</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="123 Main St"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Apt, unit, suite (if applicable)</label>
+                <label className="block text-sm font-medium mb-2 text-black">Apt, unit, suite (if applicable)</label>
                 <input
                   type="text"
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="Apt 3B"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">City/town</label>
+                <label className="block text-sm font-medium mb-2 text-black">City/town</label>
                 <input
                   type="text"
                   value={formData.city}
                   onChange={(e) => handleInputChange('city', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="Boston"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">State/territory</label>
+                <label className="block text-sm font-medium mb-2 text-black">State/territory</label>
                 <input
                   type="text"
                   value={formData.state}
                   onChange={(e) => handleInputChange('state', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="MA"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Zip code</label>
+                <label className="block text-sm font-medium mb-2 text-black">Zip code</label>
                 <input
                   type="text"
                   value={formData.zip}
                   onChange={(e) => handleInputChange('zip', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                   placeholder="02115"
                 />
               </div>
@@ -297,13 +303,13 @@ export default function BecomeHost() {
       case 4:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">How many people can stay here?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">How many people can stay here?</h2>
             <input
               type="number"
               min="1"
               value={formData.max_occupancy}
               onChange={(e) => handleInputChange('max_occupancy', parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl"
+              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
             />
           </div>
         );
@@ -311,13 +317,13 @@ export default function BecomeHost() {
       case 5:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">How many bedrooms?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">How many bedrooms?</h2>
             <input
               type="number"
               min="0"
               value={formData.bedrooms}
               onChange={(e) => handleInputChange('bedrooms', parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl"
+              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
             />
           </div>
         );
@@ -325,14 +331,14 @@ export default function BecomeHost() {
       case 6:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">How many bathrooms?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">How many bathrooms?</h2>
             <input
               type="number"
               min="1"
               step="0.5"
               value={formData.bathrooms}
               onChange={(e) => handleInputChange('bathrooms', parseFloat(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl"
+              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
             />
           </div>
         );
@@ -340,7 +346,7 @@ export default function BecomeHost() {
       case 7:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Who else might be there?</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Who else might be there?</h2>
             <div className="space-y-4">
               {occupants.map(occupant => (
                 <label key={occupant.value} className="flex items-center space-x-3 cursor-pointer">
@@ -350,7 +356,7 @@ export default function BecomeHost() {
                     onChange={() => handleOccupantToggle(occupant.value)}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-lg">{occupant.label}</span>
+                  <span className="text-lg text-black">{occupant.label}</span>
                 </label>
               ))}
             </div>
@@ -360,7 +366,7 @@ export default function BecomeHost() {
       case 8:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Amenities</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Amenities</h2>
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {amenities.map(amenity => (
                 <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer">
@@ -370,7 +376,7 @@ export default function BecomeHost() {
                     onChange={() => handleAmenityToggle(amenity.code)}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-lg">{amenity.name}</span>
+                  <span className="text-lg text-black">{amenity.name}</span>
                 </label>
               ))}
             </div>
@@ -380,7 +386,7 @@ export default function BecomeHost() {
       case 9:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Upload Photos (at least 5)</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Upload Photos (at least 5)</h2>
             <input
               type="file"
               multiple
@@ -391,7 +397,7 @@ export default function BecomeHost() {
             />
             {formData.photos.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-4">Selected {formData.photos.length} photos</p>
+                <p className="text-sm text-black mb-4">Selected {formData.photos.length} photos</p>
                 <div className="grid grid-cols-2 gap-4">
                   {formData.photos.map((photo, index) => (
                     <div key={index} className="relative">
@@ -423,12 +429,12 @@ export default function BecomeHost() {
       case 10:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Write a title</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Write a title</h2>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg"
+              className="w-full p-3 border border-gray-300 rounded-lg text-black"
               placeholder="Cozy apartment near campus"
               maxLength={120}
             />
@@ -438,11 +444,11 @@ export default function BecomeHost() {
       case 11:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Write a description</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Write a description</h2>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg h-32 resize-none"
+              className="w-full p-3 border border-gray-300 rounded-lg h-32 resize-none text-black"
               placeholder="Describe your place..."
             />
           </div>
@@ -451,16 +457,16 @@ export default function BecomeHost() {
       case 12:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Price per night</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Price per night</h2>
             <div className="relative">
               <span className="absolute left-3 top-3 text-gray-500">$</span>
               <input
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.price_per_night}
+                value={Number.isFinite(formData.price_per_night) ? formData.price_per_night : ""}
                 onChange={(e) => handleInputChange('price_per_night', parseFloat(e.target.value))}
-                className="w-full p-3 pl-8 border border-gray-300 rounded-lg text-center text-2xl"
+                className="w-full p-3 pl-8 border border-gray-300 rounded-lg text-center text-2xl text-black"
                 placeholder="0"
               />
             </div>
@@ -470,24 +476,24 @@ export default function BecomeHost() {
       case 13:
         return (
           <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6">Availability dates</h2>
+            <h2 className="text-2xl font-bold mb-6 text-black">Availability dates</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Start date</label>
+                <label className="block text-sm font-medium mb-2 text-black">Start date</label>
                 <input
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => handleInputChange('start_date', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">End date</label>
+                <label className="block text-sm font-medium mb-2 text-black">End date</label>
                 <input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => handleInputChange('end_date', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
                 />
               </div>
             </div>
@@ -505,7 +511,7 @@ export default function BecomeHost() {
         <Navbar />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Please log in to create a listing</h1>
+            <h1 className="text-2xl font-bold mb-4 text-black">Please log in to create a listing</h1>
             <button
               onClick={() => router.push('/login')}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
@@ -521,9 +527,9 @@ export default function BecomeHost() {
   return (
     <div className="bg-white min-h-screen">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 pt-24">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center mb-4">Become a Sublettor</h1>
+          <h1 className="text-3xl font-bold text-center mb-4 text-black">Become a Sublettor</h1>
           <div className="flex justify-center mb-8">
             <div className="flex space-x-2">
               {Array.from({ length: 13 }, (_, i) => (
@@ -545,7 +551,7 @@ export default function BecomeHost() {
             {currentStep > 1 && (
               <button
                 onClick={prevStep}
-                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-black"
               >
                 Back
               </button>
@@ -561,9 +567,10 @@ export default function BecomeHost() {
             ) : (
               <button
                 onClick={handleSubmit}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={submitting}
               >
-                Create Listing
+                {submitting ? "Creating..." : "Create Listing"}
               </button>
             )}
           </div>
