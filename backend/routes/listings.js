@@ -22,11 +22,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 module.exports = (pool) => {
-  // Get all listings
+  // Get all listings (optionally filter by user_id)
   router.get('/', async (req, res) => {
     try {
-      const { rows } = await pool.query('SELECT * FROM listings');
-      
+      const { user_id } = req.query;
+      let rows;
+      if (user_id) {
+        const result = await pool.query('SELECT * FROM listings WHERE user_id = $1', [user_id]);
+        rows = result.rows;
+      } else {
+        const result = await pool.query('SELECT * FROM listings');
+        rows = result.rows;
+      }
       // Fetch images for each listing
       for (let listing of rows) {
         const imageResult = await pool.query(
@@ -35,7 +42,6 @@ module.exports = (pool) => {
         );
         listing.images = imageResult.rows;
       }
-      
       res.json(rows);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -57,7 +63,25 @@ module.exports = (pool) => {
         [listing.id]
       );
       listing.images = imageResult.rows;
-      
+
+      // Fetch amenities for the listing
+      const amenitiesResult = await pool.query(
+        `SELECT a.code, a.name, a.category, a.is_premium
+         FROM listing_amenities la
+         JOIN amenities a ON la.amenity = a.code
+         WHERE la.listing_id = $1
+         ORDER BY a.category, a.name`,
+        [listing.id]
+      );
+      listing.amenities = amenitiesResult.rows;
+
+      // Fetch occupants for the listing
+      const occupantsResult = await pool.query(
+        'SELECT occupant FROM listing_occupants WHERE listing_id = $1',
+        [listing.id]
+      );
+      listing.occupants = occupantsResult.rows.map(r => r.occupant);
+
       res.json(listing);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -157,6 +181,27 @@ module.exports = (pool) => {
       const { rowCount } = await pool.query('DELETE FROM listings WHERE id = $1', [id]);
       if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
       res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get available dates for a listing
+  router.get('/:id/available-dates', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rows } = await pool.query('SELECT start_date, end_date FROM listings WHERE id = $1', [id]);
+      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      const { start_date, end_date } = rows[0];
+      if (!start_date || !end_date) return res.json([]);
+      const availableDates = [];
+      let current = new Date(start_date);
+      const end = new Date(end_date);
+      while (current <= end) {
+        availableDates.push(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+      res.json(availableDates);
     } catch (err) {
       res.status(500).json({ error: err.message });
     }

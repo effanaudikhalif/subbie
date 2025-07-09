@@ -67,5 +67,16 @@ module.exports = (pool) => {
     }
   });
 
+  // Get all bookings for a specific user (guest)
+  router.get('/user/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { rows } = await pool.query('SELECT * FROM bookings WHERE guest_id = $1', [userId]);
+      res.json(rows);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }; 

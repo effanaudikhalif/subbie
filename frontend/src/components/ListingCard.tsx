@@ -1,5 +1,4 @@
 import React from 'react';
-import Link from 'next/link';
 
 interface ListingCardProps {
   id: string;
@@ -23,7 +22,12 @@ const ListingCard: React.FC<ListingCardProps> = ({
   href
 }) => {
   return (
-    <Link href={href || `/listings/${id}`} className=" bg-white rounded-2xl shadow p-4 flex flex-col hover:shadow-lg transition-shadow border border-gray-200">
+    <a
+      href={href || `/listings/${id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="bg-white rounded-2xl shadow p-4 flex flex-col hover:shadow-lg transition-shadow border border-gray-200"
+    >
       <div className="relative mb-3">
         <img src={image} alt={title} className="rounded-xl w-full h-48 object-cover" />
       </div>
@@ -34,7 +38,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
         <span className="font-bold text-black mr-1">${pricePerNight.toFixed(2)}</span>
         <span className="text-gray-500">for 1 night</span>
       </div>
-    </Link>
+    </a>
   );
 };
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
+import Navbar from "../../components/Navbar";
 
 interface Conversation {
   id: string;
@@ -104,62 +105,65 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-        <h2 className="text-xl font-bold mb-4 text-black">Inbox</h2>
-        {loading ? (
-          <div className="text-gray-400">Loading...</div>
-        ) : conversations.length === 0 ? (
-          <div className="text-gray-400">No messages yet.</div>
-        ) : (
-          <ul className="flex-1 overflow-y-auto">
-            {conversations.map((c) => (
-              <li
-                key={c.id}
-                className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selected?.id === c.id ? "bg-blue-50 border-blue-400" : ""}`}
-                onClick={() => setSelected(c)}
-              >
-                <div className="font-semibold text-black">
-                  {c.guest_id === userId 
-                    ? guestProfiles[c.host_id]?.name || "Host" 
-                    : guestProfiles[c.guest_id]?.name || "Guest"
+    <div className="flex flex-col bg-gray-50">
+      <Navbar />
+      <div className="flex flex-1 pt-20">
+        {/* Sidebar */}
+        <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
+          <h2 className="text-xl font-bold mb-4 text-black">Inbox</h2>
+          {loading ? (
+            <div className="text-gray-400">Loading...</div>
+          ) : conversations.length === 0 ? (
+            <div className="text-gray-400">No messages yet.</div>
+          ) : (
+            <ul className="flex-1 overflow-y-auto">
+              {conversations.map((c) => (
+                <li
+                  key={c.id}
+                  className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selected?.id === c.id ? "bg-blue-50 border-blue-400" : ""}`}
+                  onClick={() => setSelected(c)}
+                >
+                  <div className="font-semibold text-black">
+                    {c.guest_id === userId 
+                      ? guestProfiles[c.host_id]?.name || "Host" 
+                      : guestProfiles[c.guest_id]?.name || "Guest"
+                    }
+                  </div>
+                  <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col">
+          {selected ? (
+            <div className="flex-1 flex flex-col">
+              <div className="border-b border-gray-200 px-6 py-4 bg-white">
+                <div className="font-bold text-lg text-black">
+                  {selected.guest_id === userId 
+                    ? guestProfiles[selected.host_id]?.name || "Host" 
+                    : guestProfiles[selected.guest_id]?.name || "Guest"
                   }
                 </div>
-                <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {/* Chat area */}
-      <div className="flex-1 flex flex-col">
-        {selected ? (
-          <div className="flex-1 flex flex-col">
-            <div className="border-b border-gray-200 px-6 py-4 bg-white">
-              <div className="font-bold text-lg text-black">
-                {selected.guest_id === userId 
-                  ? guestProfiles[selected.host_id]?.name || "Host" 
-                  : guestProfiles[selected.guest_id]?.name || "Guest"
-                }
+                <div className="text-xs text-gray-500">Listing: {listingTitles[selected.listing_id] || "Listing"}</div>
               </div>
-              <div className="text-xs text-gray-500">Listing: {listingTitles[selected.listing_id] || "Listing"}</div>
+              <div className="flex-1 overflow-y-auto">
+                <ChatBox 
+                  listingId={selected.listing_id} 
+                  hostId={selected.host_id} 
+                  allowHostChat={selected.host_id === userId} 
+                  conversationId={selected.id} 
+                  disableAutoScroll={true}
+                  fullWidth={true}
+                  hideHeader={true}
+                />
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto">
-              <ChatBox 
-                listingId={selected.listing_id} 
-                hostId={selected.host_id} 
-                allowHostChat={selected.host_id === userId} 
-                conversationId={selected.id} 
-                disableAutoScroll={true}
-                fullWidth={true}
-                hideHeader={true}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view messages</div>
-        )}
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view messages</div>
+          )}
+        </div>
       </div>
     </div>
   );

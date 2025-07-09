@@ -23,6 +23,13 @@ interface Listing {
   state: string;
   price_per_night: number;
   images: ListingImage[];
+  property_type?: string;
+  guest_space?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  max_occupancy?: number;
+  amenities?: any[];
+  occupants?: string[];
 }
 
 interface User {
@@ -69,6 +76,8 @@ export default function ListingDetails() {
   ]);
   const [bookingShowCalendar, setBookingShowCalendar] = useState(false);
   const [bookingGuests, setBookingGuests] = useState('');
+  const [availableMinDate, setAvailableMinDate] = useState<Date | null>(null);
+  const [availableMaxDate, setAvailableMaxDate] = useState<Date | null>(null);
 
   let nights = 0;
   let totalPrice = 0;
@@ -103,6 +112,13 @@ export default function ListingDetails() {
             const uni = await uniRes.json();
             setUniversity(uni);
           }
+        }
+        // Fetch available dates for booking
+        const datesRes = await fetch(`http://localhost:4000/api/listings/${id}/available-dates`);
+        const dates = await datesRes.json();
+        if (dates.length > 0) {
+          setAvailableMinDate(new Date(dates[0]));
+          setAvailableMaxDate(new Date(dates[dates.length - 1]));
         }
       } catch (e) {
         setListing(null);
@@ -175,6 +191,38 @@ export default function ListingDetails() {
     url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
   }));
 
+  const handleReserve = async () => {
+    if (!user || !listing) return;
+    if (!bookingDateRange[0].startDate || !bookingDateRange[0].endDate || !bookingGuests) {
+      alert("Please select check-in, check-out, and number of guests.");
+      return;
+    }
+    const nights = bookingDateRange[0].startDate && bookingDateRange[0].endDate
+      ? Math.max(0, Math.ceil((new Date(bookingDateRange[0].endDate).getTime() - new Date(bookingDateRange[0].startDate).getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+    const booking = {
+      listing_id: listing.id,
+      guest_id: user.id,
+      host_id: listing.user_id,
+      start_date: bookingDateRange[0].startDate,
+      end_date: bookingDateRange[0].endDate,
+      price_per_night: listing.price_per_night,
+      total_price: nights * listing.price_per_night,
+      status: "pending",
+      payment_status: "unpaid"
+    };
+    const res = await fetch("http://localhost:4000/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(booking)
+    });
+    if (res.ok) {
+      alert("Booking request submitted!");
+    } else {
+      alert("Failed to submit booking.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white pt-16">
       <Navbar fixed={false}>
@@ -240,6 +288,52 @@ export default function ListingDetails() {
             <div>
               <h3 className="text-black font-semibold mb-2">About this place</h3>
               <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
+              {/* Listing Details */}
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-4 text-gray-700 text-sm">
+                    <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 font-medium">
+                      <span className="font-semibold">Type:</span> {listing.property_type?.replace('_', ' ')}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 font-medium">
+                      <span className="font-semibold">Space:</span> {listing.guest_space?.replace('_', ' ')}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 font-medium">
+                      <span className="font-semibold">Bedrooms:</span> {listing.bedrooms}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 font-medium">
+                      <span className="font-semibold">Bathrooms:</span> {listing.bathrooms}
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-gray-100 rounded-full px-3 py-1 font-medium">
+                      <span className="font-semibold">Max Guests:</span> {listing.max_occupancy}
+                    </span>
+                  </div>
+                  {listing.occupants && listing.occupants.length > 0 && (
+                    <div className="mt-4">
+                      <span className="font-semibold text-gray-800">Who else lives here:</span>
+                      <span className="ml-2 text-gray-700">{listing.occupants.map((o: string) => o.replace('_', ' ')).join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Amenities */}
+                <div>
+                  <div className="font-semibold text-gray-800 mb-2">Amenities</div>
+                  <div className="flex flex-wrap gap-2">
+                    {listing.amenities && listing.amenities.length > 0 ? (
+                      listing.amenities.map((a: any) => (
+                        <span
+                          key={a.code}
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${a.is_premium ? 'bg-yellow-100 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-700'}`}
+                        >
+                          {a.name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400">No amenities listed</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           {/* Right: Booking card placeholder */}
@@ -292,13 +386,14 @@ export default function ListingDetails() {
                         onChange={(item: any) => setBookingDateRange([item.selection])}
                         moveRangeOnFirstSelection={false}
                         editableDateInputs={true}
-                        minDate={new Date()}
+                        minDate={availableMinDate || new Date()}
+                        maxDate={availableMaxDate || undefined}
                         rangeColors={["#2563eb"]}
                       />
                     </div>
                   )}
                 </div>
-                <button className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl transition">Reserve</button>
+                <button className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl transition" onClick={handleReserve} type="button">Reserve</button>
                 <div className="text-center text-gray-500 text-sm mt-2">You won't be charged yet</div>
               </div>
             </div>
@@ -306,7 +401,7 @@ export default function ListingDetails() {
         </div>
         {/* Chat box for messaging the host */}
         {host && user && user.id !== host.id && (
-          <ChatBox listingId={listing.id} hostId={host.id} />
+          <ChatBox listingId={listing.id} hostId={host.id} disableAutoScroll={true} />
         )}
       </div>
     </div>

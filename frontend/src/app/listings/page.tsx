@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import Navbar from '../../components/Navbar';
 import SearchBar from '../../components/Searchbar';
 import Link from 'next/link';
 
 export default function Results() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [where, setWhere] = useState(searchParams?.get('where') || '');
   const [appliedWhere, setAppliedWhere] = useState(searchParams?.get('where') || '');
   const [dateRange, setDateRange] = useState([
@@ -38,7 +40,12 @@ export default function Results() {
   console.log('Filtered listings:', filteredListings);
 
   const handleSearch = () => {
-    setAppliedWhere(where);
+    const params = new URLSearchParams();
+    if (where) params.set("where", where);
+    if (dateRange[0].startDate) params.set("checkin", dateRange[0].startDate.toISOString().split("T")[0]);
+    if (dateRange[0].endDate) params.set("checkout", dateRange[0].endDate.toISOString().split("T")[0]);
+    if (guests) params.set("guests", guests);
+    router.push(`/listings?${params.toString()}`);
   };
 
   return (
