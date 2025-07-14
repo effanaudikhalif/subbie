@@ -167,7 +167,7 @@ export default function BecomeHost() {
       if (response.ok) {
         const result = await response.json();
         alert('Listing created successfully!');
-        router.push(`/listings/${result.id}`);
+        router.push('/my-listings');
       } else {
         const error = await response.json();
         alert(`Error creating listing: ${error.error}`);
@@ -529,7 +529,7 @@ export default function BecomeHost() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 py-8 pt-24">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-center mb-4 text-black">Become a Sublettor</h1>
+          <h1 className="text-3xl font-bold text-center mb-4 text-black">Add Listings</h1>
           <div className="flex justify-center mb-8">
             <div className="flex space-x-2">
               {Array.from({ length: 13 }, (_, i) => (

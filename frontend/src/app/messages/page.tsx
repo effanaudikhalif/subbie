@@ -22,6 +22,7 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  avatar_url?: string;
 }
 
 interface Message {
@@ -38,6 +39,7 @@ export default function MessagesPage() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [guestProfiles, setGuestProfiles] = useState<Record<string, UserProfile>>({});
   const [listingTitles, setListingTitles] = useState<Record<string, string>>({});
+  const [listingDetails, setListingDetails] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,7 +54,6 @@ export default function MessagesPage() {
       const userConversations = data.filter((c: Conversation) => 
         c.host_id === userId || c.guest_id === userId
       );
-      
       // Fetch messages for each conversation to check if there are actual messages
       const conversationsWithMessages = await Promise.all(
         userConversations.map(async (conversation: Conversation) => {
@@ -62,16 +63,16 @@ export default function MessagesPage() {
           return { ...conversation, hasMessages: messages.length > 0 };
         })
       );
-      
       if (isMounted) {
         setConversations(conversationsWithMessages.filter(c => c.hasMessages));
         setLoading(false);
       }
     }
     fetchConversations();
+    return () => { isMounted = false; };
   }, [userId]);
 
-  // Fetch guest profiles and listing titles for sidebar
+  // Fetch guest profiles, listing titles, and listing details for sidebar and right panel
   useEffect(() => {
     async function fetchDetails() {
       // Get all user IDs (both guests and hosts) that are not the current user
@@ -81,6 +82,7 @@ export default function MessagesPage() {
       const listingIds = Array.from(new Set(conversations.map(c => c.listing_id)));
       const userProfilesObj: Record<string, UserProfile> = {};
       const listingTitlesObj: Record<string, string> = {};
+      const listingDetailsObj: Record<string, any> = {};
       await Promise.all([
         ...otherUserIds.map(async (id) => {
           const res = await fetch(`http://localhost:4000/api/users/${id}`);
@@ -91,11 +93,13 @@ export default function MessagesPage() {
           if (res.ok) {
             const listing = await res.json();
             listingTitlesObj[id] = listing.title;
+            listingDetailsObj[id] = listing;
           }
         })
       ]);
       setGuestProfiles(userProfilesObj);
       setListingTitles(listingTitlesObj);
+      setListingDetails(listingDetailsObj);
     }
     if (conversations.length > 0) fetchDetails();
   }, [conversations, userId]);
@@ -105,7 +109,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="flex flex-col bg-gray-50">
+    <div className="flex flex-col bg-gray-50 min-h-screen">
       <Navbar />
       <div className="flex flex-1 pt-20">
         {/* Sidebar */}
@@ -135,8 +139,8 @@ export default function MessagesPage() {
             </ul>
           )}
         </div>
-        {/* Chat area */}
-        <div className="flex-1 flex flex-col">
+        {/* Center: Chat area */}
+        <div className="flex-1 flex flex-col border-r border-gray-200">
           {selected ? (
             <div className="flex-1 flex flex-col">
               <div className="border-b border-gray-200 px-6 py-4 bg-white">
@@ -162,6 +166,55 @@ export default function MessagesPage() {
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view messages</div>
+          )}
+        </div>
+        {/* Right: Listing and user details */}
+        <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col">
+          {selected && listingDetails[selected.listing_id] ? (
+            <div>
+              {listingDetails[selected.listing_id].images && listingDetails[selected.listing_id].images.length > 0 && (
+                <img src={listingDetails[selected.listing_id].images[0].url.startsWith('/uploads/') ? `http://localhost:4000${listingDetails[selected.listing_id].images[0].url}` : listingDetails[selected.listing_id].images[0].url} alt={listingDetails[selected.listing_id].title} className="rounded-xl w-full h-48 object-cover mb-6" />
+              )}
+              <div className="font-bold text-2xl text-black mb-1">{listingDetails[selected.listing_id].title}</div>
+              <div className="text-gray-500 mb-2">{listingDetails[selected.listing_id].city}, {listingDetails[selected.listing_id].state}</div>
+              <div className="text-gray-700 mb-4">{listingDetails[selected.listing_id].description}</div>
+              <div className="flex items-center gap-3 mb-4">
+                {/* Show the other user's avatar and info */}
+                {selected.guest_id === userId ? (
+                  guestProfiles[selected.host_id]?.avatar_url ? (
+                    <img src={guestProfiles[selected.host_id].avatar_url} alt={guestProfiles[selected.host_id].name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                      {guestProfiles[selected.host_id]?.name ? guestProfiles[selected.host_id].name[0] : 'U'}
+                    </div>
+                  )
+                ) : (
+                  guestProfiles[selected.guest_id]?.avatar_url ? (
+                    <img src={guestProfiles[selected.guest_id].avatar_url} alt={guestProfiles[selected.guest_id].name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                      {guestProfiles[selected.guest_id]?.name ? guestProfiles[selected.guest_id].name[0] : 'U'}
+                    </div>
+                  )
+                )}
+                <div>
+                  <div className="text-black font-semibold">
+                    {selected.guest_id === userId
+                      ? `Hosted by ${guestProfiles[selected.host_id]?.name || 'Host'}`
+                      : `Guest: ${guestProfiles[selected.guest_id]?.name || 'Guest'}`
+                    }
+                  </div>
+                  <div className="text-gray-500 text-sm">
+                    {selected.guest_id === userId
+                      ? guestProfiles[selected.host_id]?.email
+                      : guestProfiles[selected.guest_id]?.email
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view details</div>
           )}
         </div>
       </div>

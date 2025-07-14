@@ -453,3 +453,10 @@ create policy "msg write"
                 select guest_id from public.conversations where id = conversation_id
                 UNION
                 select host_id  from public.conversations where id = conversation_id));
+
+ALTER TABLE public.users 
+ADD COLUMN avatar_url text;
+
+ALTER TABLE public.users 
+ADD CONSTRAINT avatar_url_format 
+CHECK (avatar_url IS NULL OR avatar_url ~ '^https?://');

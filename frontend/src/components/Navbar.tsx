@@ -2,14 +2,18 @@
 import React, { useState, ReactNode, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
+import { usePathname } from "next/navigation";
 
 interface NavbarProps {
   children?: ReactNode;
   fixed?: boolean;
+  activeTab?: 'all' | 'pending' | 'approvedBookings' | 'messages';
+  setActiveTab?: (tab: 'all' | 'pending' | 'approvedBookings' | 'messages') => void;
 }
 
-export default function Navbar({ children, fixed = true }: NavbarProps) {
-  const { user, profile, signOut } = useAuth();
+export default function Navbar({ children, fixed = true, activeTab, setActiveTab }: NavbarProps) {
+  const { user, profile, userListings, loading, signOut } = useAuth();
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileBtnRef = useRef<HTMLButtonElement>(null);
@@ -41,9 +45,54 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
             <span className="font-extrabold text-2xl text-black cursor-pointer hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 rounded transition">Subly</span>
           </Link>
         </div>
-        {/* Center: SearchBar or children */}
+        {/* Center: SearchBar, children, or my-listings tabs */}
         <div className="flex-1 flex justify-center items-center">
-          {children}
+          {pathname === '/my-listings' ? (
+            <div className="flex space-x-8">
+              <button
+                className={`pb-1 font-semibold transition-colors ${
+                  activeTab === 'all'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab?.('all')}
+              >
+                Listings
+              </button>
+              <button
+                className={`pb-1 font-semibold transition-colors ${
+                  activeTab === 'pending'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab?.('pending')}
+              >
+                Requests
+              </button>
+              <button
+                className={`pb-1 font-semibold transition-colors ${
+                  activeTab === 'approvedBookings'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab?.('approvedBookings')}
+              >
+                Approved
+              </button>
+              <button
+                className={`pb-1 font-semibold transition-colors ${
+                  activeTab === 'messages'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab?.('messages')}
+              >
+                Messages
+              </button>
+            </div>
+          ) : (
+            children
+          )}
         </div>
         {/* Right: Desktop nav */}
         <nav className="hidden sm:flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-gray-700 text-base font-medium max-w-full pr-4 pt-2 pb-2">
@@ -51,18 +100,36 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
             <Link href="/login" className="hover:text-blue-700">Log in</Link>
           ) : (
             <>
-              <Link href="/become-host" className="hover:text-blue-700">Become a Sublettor</Link>
+              {/* Conditional Sublettor Button - Don't show on my-listings page or while loading */}
+              {pathname !== '/my-listings' && !loading && userListings && (
+                userListings.hasListings ? (
+                  <Link 
+                    href="/my-listings" 
+                    className="hover:text-blue-700 text-gray-700 text-base font-medium"
+                  >
+                    Switch to Sublettor
+                  </Link>
+                ) : (
+                  <Link 
+                    href="/add-listings" 
+                    className="hover:text-blue-700 text-gray-700 text-base font-medium"
+                  >
+                    Become a Sublettor
+                  </Link>
+                )
+              )}
+              
               <div className="relative">
                 <button
                   ref={profileBtnRef}
                   onClick={() => setProfileDropdownOpen((o) => !o)}
-                  className="hover:text-blue-700 focus:outline-none px-2 py-1 rounded flex items-center gap-1"
+                  className="hover:text-blue-700 focus:outline-none w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
                   aria-haspopup="true"
                   aria-expanded={profileDropdownOpen}
+                  aria-label="Profile menu"
                 >
-                  Profile
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                 </button>
                 {profileDropdownOpen && (
@@ -75,14 +142,7 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
                       className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
-                      View Profile
-                    </Link>
-                    <Link
-                      href="/my-listings"
-                      className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Listings
+                      Profile
                     </Link>
                     <Link
                       href="/bookings"
@@ -129,18 +189,38 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
               <Link href="/login" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Log in</Link>
             ) : (
               <>
-                <Link href="/become-host" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Become a Sublettor</Link>
+                {/* Conditional Sublettor Button - Don't show on my-listings page or while loading */}
+                {pathname !== '/my-listings' && !loading && userListings && (
+                  userListings.hasListings ? (
+                    <Link 
+                      href="/my-listings" 
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-blue-700 text-gray-700 text-base font-medium"
+                    >
+                      Switch to Sublettor
+                    </Link>
+                  ) : (
+                    <Link 
+                      href="/add-listings" 
+                      onClick={() => setMenuOpen(false)}
+                      className="hover:text-blue-700 text-gray-700 text-base font-medium"
+                    >
+                      Become a Sublettor
+                    </Link>
+                  )
+                )}
+                
                 <div className="relative">
                   <button
                     ref={profileBtnRef}
                     onClick={() => setProfileDropdownOpen((o) => !o)}
-                    className="hover:text-blue-700 focus:outline-none px-2 py-1 rounded flex items-center gap-1"
+                    className="hover:text-blue-700 focus:outline-none w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
                     aria-haspopup="true"
                     aria-expanded={profileDropdownOpen}
+                    aria-label="Profile menu"
                   >
-                    Profile
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                   </button>
                   {profileDropdownOpen && (
@@ -153,14 +233,7 @@ export default function Navbar({ children, fixed = true }: NavbarProps) {
                         className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
-                        View Profile
-                      </Link>
-                      <Link
-                        href="/my-listings"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Listings
+                        Profile
                       </Link>
                       <Link
                         href="/bookings"

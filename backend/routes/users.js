@@ -1,5 +1,33 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'avatar-' + req.params.id + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
 
 module.exports = (pool) => {
   // Get all users
@@ -62,6 +90,39 @@ module.exports = (pool) => {
       if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
       res.status(204).send();
     } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Upload avatar
+  router.post('/:id/avatar', upload.single('avatar'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      // Create the avatar URL (this will be served from /uploads/ endpoint)
+      const avatarUrl = `http://localhost:4000/uploads/${req.file.filename}`;
+      
+      // Update the user's avatar_url in the database
+      const { rows } = await pool.query(
+        'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING *',
+        [avatarUrl, id]
+      );
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json({ 
+        message: 'Avatar uploaded successfully',
+        avatar_url: avatarUrl,
+        user: rows[0]
+      });
+    } catch (err) {
+      console.error('Avatar upload error:', err);
       res.status(500).json({ error: err.message });
     }
   });
