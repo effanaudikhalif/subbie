@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import Link from 'next/link';
 
 interface Listing {
   id: string;
@@ -12,24 +13,64 @@ interface Listing {
   latitude?: number;
   longitude?: number;
   images?: Array<{ url: string }>;
+  name?: string;
+  avatar_url?: string;
+  university_name?: string;
+  bedrooms?: number;
+  bathrooms?: number;
 }
 
 interface LocationMapPreviewProps {
   searchLocation?: string;
   listings?: Listing[];
   className?: string;
+  dateRange?: Array<{
+    startDate: Date | null;
+    endDate: Date | null;
+    key: string;
+  }>;
 }
 
 const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
   searchLocation,
   listings = [],
-  className = ""
+  className = "",
+  dateRange
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [infoWindowPosition, setInfoWindowPosition] = useState<{ lat: number; lng: number } | null>(null);
+
+  const handleNextImage = (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    const imageCount = listing?.images?.length || 0;
+    
+    if (imageCount > 1) {
+      setCurrentImageIndices(prev => ({
+        ...prev,
+        [listingId]: ((prev[listingId] || 0) + 1) % imageCount
+      }));
+    }
+  };
+
+  const handlePrevImage = (listingId: string) => {
+    const listing = listings.find(l => l.id === listingId);
+    const imageCount = listing?.images?.length || 0;
+    
+    if (imageCount > 1) {
+      setCurrentImageIndices(prev => ({
+        ...prev,
+        [listingId]: prev[listingId] === 0 
+          ? imageCount - 1
+          : (prev[listingId] || 0) - 1
+      }));
+    }
+  };
 
   useEffect(() => {
     const initMap = async () => {
@@ -115,6 +156,18 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                 const lng = parseFloat(listing.longitude as any);
                 
                 if (!isNaN(lat) && !isNaN(lng)) {
+                  // Calculate total price if dates are selected
+                  let displayPrice = listing.price_per_night;
+                  let priceText = `$${Math.round(listing.price_per_night)}`;
+                  
+                  if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+                    const checkIn = new Date(dateRange[0].startDate);
+                    const checkOut = new Date(dateRange[0].endDate);
+                    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                    displayPrice = nights * listing.price_per_night;
+                    priceText = `$${Math.round(displayPrice)}`;
+                  }
+                  
                   const marker = new google.maps.Marker({
                     position: { lat, lng },
                     map: mapInstance,
@@ -129,7 +182,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                       strokeWeight: 2,
                     },
                     label: {
-                      text: `$${listing.price_per_night}`,
+                      text: priceText,
                       className: 'rectangular-marker-label',
                       color: '#000000',
                       fontSize: '12px',
@@ -137,19 +190,10 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                     }
                   });
 
-                  // Create info window for listing
-                  const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                      <div style="padding: 10px; max-width: 200px;">
-                        <h3 style="margin: 0 0 5px 0; font-weight: bold;">${listing.title}</h3>
-                        <p style="margin: 0 0 5px 0; color: #666;">${listing.neighborhood || listing.city}, ${listing.state}</p>
-                        <p style="margin: 0; font-weight: bold; color: #000;">$${listing.price_per_night}/night</p>
-                      </div>
-                    `
-                  });
-
+                  // Simple marker click handler
                   marker.addListener('click', () => {
-                    infoWindow.open(mapInstance, marker);
+                    setSelectedListing(listing);
+                    setInfoWindowPosition({ lat, lng });
                   });
 
                   newMarkers.push(marker);
@@ -205,6 +249,196 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
             <p className="font-semibold">Map Error</p>
             <p className="text-sm">{error}</p>
           </div>
+        </div>
+      )}
+      
+      {/* Custom Info Window Overlay */}
+      {selectedListing && infoWindowPosition && (
+        <div className="absolute inset-0 pointer-events-none">
+          <Link 
+            href={`/listings/${selectedListing.id}`}
+            className="absolute bg-white rounded-xl shadow-lg overflow-hidden pointer-events-auto cursor-pointer hover:shadow-xl transition-shadow"
+            style={{
+              maxWidth: '280px',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              fontFamily: 'Arial, Helvetica, sans-serif'
+            }}
+          >
+            {/* Image Container */}
+            <div className="relative">
+              <img 
+                src={(() => {
+                  const currentIndex = currentImageIndices[selectedListing.id] || 0;
+                  const imageUrl = selectedListing.images && selectedListing.images.length > 0 
+                    ? `http://localhost:4000${selectedListing.images[currentIndex]?.url || selectedListing.images[0].url}` 
+                    : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
+                  return imageUrl;
+                })()}
+                alt={selectedListing.title} 
+                className="w-full h-48 object-cover" 
+              />
+              
+              {/* Heart Icon */}
+              <button 
+                className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+              
+              {/* Close Button */}
+              <button 
+                className="absolute top-3 left-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSelectedListing(null);
+                  setInfoWindowPosition(null);
+                }}
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              {/* Navigation Arrows */}
+              {selectedListing.images && selectedListing.images.length > 1 && (
+                <>
+                  {/* Left Arrow - only show if not on first image */}
+                  {(currentImageIndices[selectedListing.id] || 0) > 0 && (
+                    <button 
+                      className="absolute top-1/2 left-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handlePrevImage(selectedListing.id);
+                      }}
+                    >
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                  )}
+                  
+                  {/* Right Arrow - only show if not on last image */}
+                  {(currentImageIndices[selectedListing.id] || 0) < selectedListing.images.length - 1 && (
+                    <button 
+                      className="absolute top-1/2 right-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNextImage(selectedListing.id);
+                      }}
+                    >
+                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+              
+              {/* Image Dots */}
+              {selectedListing.images && selectedListing.images.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                  {selectedListing.images.slice(0, 5).map((_: any, index: number) => (
+                    <div 
+                      key={index}
+                      className={`w-2 h-2 bg-white rounded-full ${index === (currentImageIndices[selectedListing.id] || 0) ? 'opacity-100' : 'opacity-60'}`}
+                    />
+                  ))}
+                  {selectedListing.images.length > 5 && (
+                    <div className="w-2 h-2 bg-white rounded-full opacity-60 flex items-center justify-center">
+                      <span className="text-xs text-gray-800 font-medium">+{selectedListing.images.length - 5}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Content */}
+            <div className="p-4">
+              {/* Title */}
+              <div className="text-black font-semibold text-lg mb-2">
+                {selectedListing.title}
+              </div>
+              
+              {/* Profile picture, Name, and University */}
+              <div className="flex items-center mb-2">
+                {selectedListing.avatar_url ? (
+                  <img 
+                    src={selectedListing.avatar_url} 
+                    alt={selectedListing.name || 'Host'} 
+                    className="w-8 h-8 rounded-full mr-3 flex-shrink-0 object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-300 mr-3 flex-shrink-0">
+                    <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center">
+                      <span className="text-gray-600 text-sm font-medium">
+                        {selectedListing.name ? selectedListing.name.charAt(0).toUpperCase() : 'H'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-900 text-sm font-medium">
+                    {selectedListing.name || 'Host'}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    {selectedListing.university_name || 'University'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Beds • Baths */}
+              <div className="text-gray-500 text-sm mb-2">
+                {selectedListing.bedrooms || 1} bed{(selectedListing.bedrooms || 1) !== 1 ? 's' : ''} • {selectedListing.bathrooms || 1} bath{(selectedListing.bathrooms || 1) !== 1 ? 's' : ''}
+              </div>
+              
+              {/* Price per night • Total for nights */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span className="font-bold text-black text-lg">${Math.round(selectedListing.price_per_night)}</span>
+                  <span className="text-gray-500 text-sm ml-1">per night</span>
+                  {dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate && (
+                    <>
+                      <span className="text-gray-500 text-sm mx-1">•</span>
+                      <span className="font-bold text-black text-lg">
+                        ${(() => {
+                          const checkIn = new Date(dateRange[0].startDate);
+                          const checkOut = new Date(dateRange[0].endDate);
+                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                          const totalPrice = nights * selectedListing.price_per_night;
+                          return Math.round(totalPrice);
+                        })()}
+                      </span>
+                      <span className="text-gray-500 text-sm ml-1">
+                        for {(() => {
+                          const checkIn = new Date(dateRange[0].startDate);
+                          const checkOut = new Date(dateRange[0].endDate);
+                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                          return nights;
+                        })()} night{(() => {
+                          const checkIn = new Date(dateRange[0].startDate);
+                          const checkOut = new Date(dateRange[0].endDate);
+                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                          return nights !== 1 ? 's' : '';
+                        })()}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
       )}
     </div>

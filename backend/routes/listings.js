@@ -28,16 +28,27 @@ module.exports = (pool) => {
       const { user_id } = req.query;
       let rows;
       if (user_id) {
-        const result = await pool.query('SELECT * FROM listings WHERE user_id = $1', [user_id]);
+        const result = await pool.query(`
+          SELECT l.*, u.name, u.avatar_url, univ.name as university_name
+          FROM listings l 
+          LEFT JOIN users u ON l.user_id = u.id 
+          LEFT JOIN universities univ ON u.university_id = univ.id
+          WHERE l.user_id = $1
+        `, [user_id]);
         rows = result.rows;
       } else {
-        const result = await pool.query('SELECT * FROM listings');
+        const result = await pool.query(`
+          SELECT l.*, u.name, u.avatar_url, univ.name as university_name
+          FROM listings l 
+          LEFT JOIN users u ON l.user_id = u.id
+          LEFT JOIN universities univ ON u.university_id = univ.id
+        `);
         rows = result.rows;
       }
       // Fetch images for each listing
       for (let listing of rows) {
         const imageResult = await pool.query(
-          'SELECT url FROM listing_images WHERE listing_id = $1 ORDER BY order_index LIMIT 1',
+          'SELECT url FROM listing_images WHERE listing_id = $1 ORDER BY order_index',
           [listing.id]
         );
         listing.images = imageResult.rows;
@@ -52,7 +63,13 @@ module.exports = (pool) => {
   router.get('/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { rows } = await pool.query('SELECT * FROM listings WHERE id = $1', [id]);
+      const { rows } = await pool.query(`
+        SELECT l.*, u.name, u.avatar_url, univ.name as university_name
+        FROM listings l 
+        LEFT JOIN users u ON l.user_id = u.id 
+        LEFT JOIN universities univ ON u.university_id = univ.id
+        WHERE l.id = $1
+      `, [id]);
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       
       const listing = rows[0];

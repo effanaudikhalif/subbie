@@ -13,7 +13,11 @@ export default function Results() {
   const [dateRange, setDateRange] = useState([
     {
       startDate: searchParams?.get('checkin') ? new Date(searchParams.get('checkin')!) : new Date(),
-      endDate: searchParams?.get('checkout') ? new Date(searchParams.get('checkout')!) : new Date(),
+      endDate: searchParams?.get('checkout') ? new Date(searchParams.get('checkout')!) : (() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+      })(),
       key: 'selection',
     },
   ]);
@@ -49,7 +53,7 @@ export default function Results() {
   };
 
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen pt-25">
       <Navbar>
         <div className="flex items-center justify-center w-full px-4 sm:px-12 mt-8">
           <SearchBar
@@ -65,20 +69,16 @@ export default function Results() {
           />
         </div>
       </Navbar>
-      <div className="px-4 sm:px-8 mt-12">
+      <div className="px-4 sm:px-8 mt-4">
         <h2 className="text-xl text-black font-semibold mb-6">{filteredListings.length} places in {appliedWhere || 'your search'}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
           {filteredListings.map(listing => (
             <ListingCard
               key={listing.id}
               id={listing.id}
-              image={listing.images?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Image'}
+              images={listing.images || []}
               title={listing.title}
-              city={listing.city}
-              state={listing.state}
-              neighborhood={listing.neighborhood}
-              description={listing.description}
-              pricePerNight={listing.price_per_night}
+              price_per_night={listing.price_per_night}
             />
           ))}
         </div>

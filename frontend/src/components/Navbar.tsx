@@ -39,7 +39,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-y-2 pr-4 sm:pr-8 py-6 bg-white shadow-sm backdrop-blur-md overflow-hidden h-25">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-y-2 pr-4 sm:pr-8 py-6 bg-gray-50 shadow-sm backdrop-blur-md h-25">
         {/* Left: Logo */}
         <div className="flex items-center">
           <Logo className="hover:opacity-80 transition-opacity" />
@@ -122,7 +122,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 <button
                   ref={profileBtnRef}
                   onClick={() => setProfileDropdownOpen((o) => !o)}
-                  className="hover:text-blue-700 focus:outline-none w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
+                  className="hover:text-blue-700 focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-gray-50 flex items-center justify-center  hover:bg-gray-50 transition-colors"
                   aria-haspopup="true"
                   aria-expanded={profileDropdownOpen}
                   aria-label="Profile menu"
@@ -134,7 +134,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 {profileDropdownOpen && (
                   <div
                     ref={dropdownRef}
-                    className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2 flex flex-col"
+                    className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                   >
                     <Link
                       href="/profile"
@@ -183,7 +183,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
 
         {/* Mobile dropdown */}
         {menuOpen && (
-          <div className="sm:hidden absolute top-full left-0 w-full bg-white shadow-md border-t py-4 flex flex-col gap-4 text-center text-gray-700 text-base font-medium">
+          <div className="sm:hidden fixed top-[100px] left-0 w-full bg-white shadow-md border-t py-4 flex flex-col gap-4 text-center text-gray-700 text-base font-medium z-50">
             {!user ? (
               <Link href="/login" onClick={() => setMenuOpen(false)} className="hover:text-blue-700">Log in</Link>
             ) : (
@@ -225,7 +225,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   {profileDropdownOpen && (
                     <div
                       ref={dropdownRef}
-                      className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-2 flex flex-col"
+                      className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                     >
                       <Link
                         href="/profile"

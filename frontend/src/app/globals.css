@@ -46,3 +46,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   font-size: 12px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Hide scrollbar for listings container */
+.listings-container::-webkit-scrollbar {
+  display: none;
+}
+.listings-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  overscroll-behavior: contain; /* Prevent bounce/overscroll */
+}

@@ -411,7 +411,30 @@ export default function ListingDetails() {
                     <div className="absolute left-0 right-0 mx-auto top-24 z-50 bg-white rounded-xl shadow-lg">
                       <DateRange
                         ranges={bookingDateRange}
-                        onChange={(item: any) => setBookingDateRange([item.selection])}
+                        onChange={(item: any) => {
+                          // Ensure minimum 1 night stay
+                          const selection = item.selection;
+                          if (selection.startDate && selection.endDate) {
+                            const startDate = new Date(selection.startDate);
+                            const endDate = new Date(selection.endDate);
+                            const diffTime = endDate.getTime() - startDate.getTime();
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            
+                            // If end date is same as or before start date, set end date to 1 day after start date
+                            if (diffDays < 1) {
+                              const newEndDate = new Date(startDate);
+                              newEndDate.setDate(newEndDate.getDate() + 1);
+                              setBookingDateRange([{
+                                ...selection,
+                                endDate: newEndDate
+                              }]);
+                            } else {
+                              setBookingDateRange([selection]);
+                            }
+                          } else {
+                            setBookingDateRange([selection]);
+                          }
+                        }}
                         moveRangeOnFirstSelection={false}
                         editableDateInputs={true}
                         minDate={availableMinDate || new Date()}

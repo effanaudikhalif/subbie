@@ -85,7 +85,7 @@ export default function SearchBar({
     : 'Add dates';
 
   return (
-    <div className="w-full max-w-2xl bg-white rounded-full shadow flex items-center px-1 py-0 relative">
+    <div className="w-full max-w-2xl bg-white rounded-2xl shadow flex items-center px-1 py-0 relative">
       {/* Where */}
       <div className="flex-[1.3] px-4 py-1 flex flex-col items-start justify-center relative">
         <div className="font-medium text-black mb-0.5 text-sm">Where</div>
@@ -127,7 +127,7 @@ export default function SearchBar({
       </div>
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Who */}
-      <div className="flex-[1.3] px-4 py-1 flex flex-col items-start justify-center">
+      <div className="flex-[0.8] px-4 py-1 flex flex-col items-start justify-center">
         <div className="font-medium text-black mb-0.5 text-sm">Who</div>
         <input
           type="text"
@@ -140,7 +140,7 @@ export default function SearchBar({
         />
       </div>
       {/* Search Button */}
-      <button className="ml-2 mr-1 bg-[#FF385C] hover:bg-[#e03150] transition-colors w-8 h-8 rounded-full flex items-center justify-center shadow" onClick={onSearch}>
+      <button className="ml-2 mr-1 bg-teal-600 hover:bg-teal-700 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" onClick={onSearch}>
         <FaSearch className="text-white text-lg" />
       </button>
       {/* Calendar Dropdown */}
@@ -148,7 +148,30 @@ export default function SearchBar({
         <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 bg-white rounded-xl shadow-lg">
           <DateRange
             ranges={dateRange}
-            onChange={(item: any) => setDateRange([item.selection])}
+            onChange={(item: any) => {
+              // Ensure minimum 1 night stay
+              const selection = item.selection;
+              if (selection.startDate && selection.endDate) {
+                const startDate = new Date(selection.startDate);
+                const endDate = new Date(selection.endDate);
+                const diffTime = endDate.getTime() - startDate.getTime();
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                // If end date is same as or before start date, set end date to 1 day after start date
+                if (diffDays < 1) {
+                  const newEndDate = new Date(startDate);
+                  newEndDate.setDate(newEndDate.getDate() + 1);
+                  setDateRange([{
+                    ...selection,
+                    endDate: newEndDate
+                  }]);
+                } else {
+                  setDateRange([selection]);
+                }
+              } else {
+                setDateRange([selection]);
+              }
+            }}
             moveRangeOnFirstSelection={false}
             editableDateInputs={true}
             minDate={new Date()}
