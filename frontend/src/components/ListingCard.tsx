@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 interface ListingCardProps {
   id: string;
@@ -31,6 +32,9 @@ const ListingCard: React.FC<ListingCardProps> = ({
   currentImageIndex = 0,
   onImageChange
 }) => {
+  const { user } = useAuth();
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const handleNextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -64,6 +68,91 @@ const ListingCard: React.FC<ListingCardProps> = ({
     return Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
   })() : null;
 
+  // Check if listing is in wishlist
+  useEffect(() => {
+    if (!user) return;
+
+    const checkWishlistStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsInWishlist(data.inWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist status:', error);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [user, id]);
+
+  // Listen for wishlist changes from other components
+  useEffect(() => {
+    const handleWishlistChange = (event: CustomEvent) => {
+      const { listingId, inWishlist } = event.detail;
+      if (listingId === id) {
+        setIsInWishlist(inWishlist);
+      }
+    };
+
+    window.addEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    return () => {
+      window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    };
+  }, [id]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) {
+      alert('Please log in to add items to your wishlist');
+      return;
+    }
+
+    setWishlistLoading(true);
+    try {
+      if (isInWishlist) {
+        // Remove from wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          setIsInWishlist(false);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: id, inWishlist: false }
+          }));
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            listing_id: id,
+          }),
+        });
+        if (response.ok) {
+          setIsInWishlist(true);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: id, inWishlist: true }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      alert('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
   return (
     <a
       href={href || `/listings/${id}`}
@@ -81,10 +170,24 @@ const ListingCard: React.FC<ListingCardProps> = ({
           />
           
           {/* Heart Icon */}
-          <button className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
+          <button 
+            onClick={toggleWishlist}
+            disabled={wishlistLoading}
+            className={`absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform ${wishlistLoading ? 'opacity-50' : ''}`}
+            title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            {wishlistLoading ? (
+              <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg 
+                className={`w-5 h-5 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
+                fill={isInWishlist ? 'currentColor' : 'none'} 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            )}
           </button>
           
           {/* Navigation Arrows */}

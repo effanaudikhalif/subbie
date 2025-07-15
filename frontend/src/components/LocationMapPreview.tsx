@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import Link from 'next/link';
+import { useAuth } from '../hooks/useAuth';
 
 interface Listing {
   id: string;
@@ -37,6 +38,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
   className = "",
   dateRange
 }) => {
+  const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,8 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [infoWindowPosition, setInfoWindowPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
 
   const handleNextImage = (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
@@ -69,6 +73,76 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
           ? imageCount - 1
           : (prev[listingId] || 0) - 1
       }));
+    }
+  };
+
+  // Check if listing is in wishlist when selected listing changes
+  useEffect(() => {
+    if (!user || !selectedListing) return;
+
+    const checkWishlistStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${selectedListing.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsInWishlist(data.inWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist status:', error);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [user, selectedListing]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user || !selectedListing) {
+      alert('Please log in to add items to your wishlist');
+      return;
+    }
+
+    setWishlistLoading(true);
+    try {
+      if (isInWishlist) {
+        // Remove from wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${selectedListing.id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          setIsInWishlist(false);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: selectedListing.id, inWishlist: false }
+          }));
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            listing_id: selectedListing.id,
+          }),
+        });
+        if (response.ok) {
+          setIsInWishlist(true);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: selectedListing.id, inWishlist: true }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      alert('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -283,15 +357,23 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
               
               {/* Heart Icon */}
               <button 
-                className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
+                onClick={toggleWishlist}
+                disabled={wishlistLoading}
+                className={`absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform ${wishlistLoading ? 'opacity-50' : ''}`}
+                title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
               >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
+                {wishlistLoading ? (
+                  <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <svg 
+                    className={`w-5 h-5 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
+                    fill={isInWishlist ? 'currentColor' : 'none'} 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                )}
               </button>
               
               {/* Close Button */}

@@ -463,3 +463,37 @@ ADD COLUMN avatar_url text;
 ALTER TABLE public.users 
 ADD CONSTRAINT avatar_url_format 
 CHECK (avatar_url IS NULL OR avatar_url ~ '^https?://');
+
+-- Enable UUIDs (no-op if already installed)
+create extension if not exists "pgcrypto";
+
+----------------------------------------------------------
+-- WISHLIST TABLE
+----------------------------------------------------------
+create table public.wishlist (
+    id            uuid primary key default gen_random_uuid(),
+    user_id       uuid not null
+                  references public.users(id) on delete cascade,
+    listing_id    uuid not null
+                  references public.listings(id) on delete cascade,
+    created_at    timestamptz default now(),
+    
+    -- Ensure a user can only wishlist a listing once
+    unique(user_id, listing_id)
+);
+
+----------------------------------------------------------
+-- Helpful indexes
+----------------------------------------------------------
+create index wishlist_user_idx on public.wishlist (user_id);
+create index wishlist_listing_idx on public.wishlist (listing_id);
+
+----------------------------------------------------------
+-- Row-Level Security (RLS)
+----------------------------------------------------------
+alter table public.wishlist enable row level security;
+
+-- Users can only see their own wishlist items
+create policy "users can manage their own wishlist"
+  on public.wishlist for all
+  using (auth.uid() = user_id);

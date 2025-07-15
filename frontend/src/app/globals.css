@@ -29,6 +29,7 @@ body {
 html, body {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
+  overscroll-behavior: contain; /* Prevent bounce/overscroll */
 }
 html::-webkit-scrollbar, body::-webkit-scrollbar {
   width: 0px;
@@ -55,4 +56,9 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
   overscroll-behavior: contain; /* Prevent bounce/overscroll */
+}
+
+/* Prevent overscroll on all elements */
+* {
+  overscroll-behavior: contain;
 }

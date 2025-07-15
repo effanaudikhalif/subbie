@@ -38,6 +38,54 @@ module.exports = (pool) => {
     }
   });
 
+  // Bulk import universities from CSV data
+  router.post('/bulk-import', async (req, res) => {
+    try {
+      const { universities } = req.body;
+      
+      if (!Array.isArray(universities)) {
+        return res.status(400).json({ error: 'Universities must be an array' });
+      }
+
+      const results = {
+        added: 0,
+        skipped: 0,
+        errors: []
+      };
+
+      for (const university of universities) {
+        try {
+          const { name, domain } = university;
+          
+          if (!name || !domain) {
+            results.errors.push(`Missing name or domain for university: ${JSON.stringify(university)}`);
+            continue;
+          }
+
+          const { rows } = await pool.query(
+            'INSERT INTO universities (name, domain) VALUES ($1, $2) ON CONFLICT (domain) DO NOTHING RETURNING *',
+            [name, domain]
+          );
+          
+          if (rows.length > 0) {
+            results.added++;
+          } else {
+            results.skipped++;
+          }
+        } catch (error) {
+          results.errors.push(`Error processing ${university.name}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        message: 'Import completed',
+        results
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Update university
   router.put('/:id', async (req, res) => {
     try {

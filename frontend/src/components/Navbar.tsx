@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
+import ProfileModal from "./ProfileModal";
 
 interface NavbarProps {
   children?: ReactNode;
@@ -17,6 +18,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const profileBtnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -136,13 +138,15 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                     ref={dropdownRef}
                     className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                   >
-                    <Link
-                      href="/profile"
+                    <button
                       className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer"
-                      onClick={() => setProfileDropdownOpen(false)}
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        setProfileModalOpen(true);
+                      }}
                     >
                       Profile
-                    </Link>
+                    </button>
                     <Link
                       href="/bookings"
                       className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
@@ -152,10 +156,17 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                     </Link>
                     <Link
                       href="/messages"
-                      className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
+                      className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
                       onClick={() => setProfileDropdownOpen(false)}
                     >
                       Messages
+                    </Link>
+                    <Link
+                      href="/wishlist"
+                      className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
+                      onClick={() => setProfileDropdownOpen(false)}
+                    >
+                      Wishlist
                     </Link>
                   </div>
                 )}
@@ -227,13 +238,15 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                       ref={dropdownRef}
                       className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                     >
-                      <Link
-                        href="/profile"
+                      <button
                         className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer"
-                        onClick={() => setProfileDropdownOpen(false)}
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          setProfileModalOpen(true);
+                        }}
                       >
                         Profile
-                      </Link>
+                      </button>
                       <Link
                         href="/bookings"
                         className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
@@ -243,10 +256,17 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                       </Link>
                       <Link
                         href="/messages"
-                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
+                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
                         onClick={() => setProfileDropdownOpen(false)}
                       >
                         Messages
+                      </Link>
+                      <Link
+                        href="/wishlist"
+                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Wishlist
                       </Link>
                     </div>
                   )}
@@ -256,6 +276,12 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
           </div>
         )}
       </header>
+      
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)} 
+      />
     </>
   );
 } 

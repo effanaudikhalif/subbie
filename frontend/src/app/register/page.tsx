@@ -15,6 +15,8 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [universityId, setUniversityId] = useState("");
+  const [major, setMajor] = useState("");
+  const [year, setYear] = useState("");
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +39,7 @@ export default function RegisterPage() {
   }, []);
 
   const validateForm = () => {
-    if (!email || !password || !name || !universityId) {
+    if (!email || !password || !name || !universityId || !major || !year) {
       setError("Please fill in all required fields");
       return false;
     }
@@ -83,6 +85,8 @@ export default function RegisterPage() {
           name: name,
           email: email,
           phone: phone || null,
+          major: major,
+          year: parseInt(year),
           stripe_account: null
         };
 
@@ -116,7 +120,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-center items-center">
-      <div className="w-full max-w-md px-4">
+      <div className="w-full max-w-md px-4 py-8">
         <h2 className="mt-12 text-center text-3xl font-extrabold text-gray-900">
           Create your account
         </h2>
@@ -182,7 +186,7 @@ export default function RegisterPage() {
               required
               value={universityId}
               onChange={e => setUniversityId(e.target.value)}
-              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-pink-500 focus:border-pink-500 sm:text-sm rounded-md"
+              className={`mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500 focus:z-10 sm:text-sm ${universityId ? 'text-gray-900' : 'text-gray-500'}`}
             >
               <option value="">Select your university</option>
               {universities.map((university) => (
@@ -190,6 +194,43 @@ export default function RegisterPage() {
                   {university.name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Major Field */}
+          <div>
+            <label htmlFor="major" className="block text-sm font-medium text-gray-700">
+              Major *
+            </label>
+            <input
+              id="major"
+              type="text"
+              required
+              value={major}
+              onChange={e => setMajor(e.target.value)}
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500 focus:z-10 sm:text-sm"
+              placeholder="Enter your major"
+            />
+          </div>
+
+          {/* Year Field */}
+          <div>
+            <label htmlFor="year" className="block text-sm font-medium text-gray-700">
+              Graduation Year *
+            </label>
+            <select
+              id="year"
+              required
+              value={year}
+              onChange={e => setYear(e.target.value)}
+              className={`mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 rounded-md focus:outline-none focus:ring-pink-500 focus:border-pink-500 focus:z-10 sm:text-sm ${year ? 'text-gray-900' : 'text-gray-500'}`}
+            >
+              <option value="">Select your graduation year</option>
+              <option value="2025">Class of 2025</option>
+              <option value="2026">Class of 2026</option>
+              <option value="2027">Class of 2027</option>
+              <option value="2028">Class of 2028</option>
+              <option value="2029">Class of 2029</option>
             </select>
           </div>
 

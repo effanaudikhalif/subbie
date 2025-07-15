@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from '../../components/Navbar';
 import SearchBar from '../../components/Searchbar';
 import LocationMapPreview from '../../components/LocationMapPreview';
+import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
 
 export default function Results() {
@@ -151,37 +152,7 @@ export default function Results() {
 
   console.log('Filtered listings:', filteredListings);
 
-  const handleNextImage = (listingId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const listing = listings.find(l => l.id === listingId);
-    const imageCount = listing?.images?.length || 0;
-    console.log('Next image clicked for listing:', listingId, 'Current index:', currentImageIndex[listingId] || 0, 'Total images:', imageCount);
-    
-    if (imageCount > 1) {
-      setCurrentImageIndex(prev => ({
-        ...prev,
-        [listingId]: ((prev[listingId] || 0) + 1) % imageCount
-      }));
-    }
-  };
 
-  const handlePrevImage = (listingId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const listing = listings.find(l => l.id === listingId);
-    const imageCount = listing?.images?.length || 0;
-    console.log('Prev image clicked for listing:', listingId, 'Current index:', currentImageIndex[listingId] || 0, 'Total images:', imageCount);
-    
-    if (imageCount > 1) {
-      setCurrentImageIndex(prev => ({
-        ...prev,
-        [listingId]: prev[listingId] === 0 
-          ? imageCount - 1
-          : (prev[listingId] || 0) - 1
-      }));
-    }
-  };
 
   const handleSearch = () => {
     console.log('handleSearch called with where:', where);
@@ -221,166 +192,26 @@ export default function Results() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filteredListings.map(listing => (
-              <Link 
-                key={listing.id} 
-                href={`/listings/${listing.id}`} 
-                className="block bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-shadow overflow-hidden"
-              >
-                <div className="flex flex-col">
-                  {/* Image Container */}
-                  <div className="relative">
-                    <img 
-                      src={(() => {
-                        const currentIndex = currentImageIndex[listing.id] || 0;
-                        const imageUrl = listing.images && listing.images.length > 0 
-                          ? `http://localhost:4000${listing.images[currentIndex]?.url || listing.images[0].url}` 
-                          : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
-                        
-                        console.log('Displaying image for listing:', listing.id, 'Index:', currentIndex, 'URL:', imageUrl, 'Total images:', listing.images?.length || 0);
-                        return imageUrl;
-                      })()}
-                      alt={listing.title} 
-                      className="w-full h-48 object-cover" 
-                    />
-                    
-                    {/* Heart Icon */}
-                    <button className="absolute top-3 right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform">
-                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </button>
-                    
-                    {/* Navigation Arrows */}
-                    {listing.images && listing.images.length > 1 && (
-                      <>
-                        {/* Left Arrow - only show if not on first image */}
-                        {(currentImageIndex[listing.id] || 0) > 0 && (
-                          <button 
-                            className="absolute top-1/2 left-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handlePrevImage(listing.id, e);
-                            }}
-                          >
-                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                          </button>
-                        )}
-                        
-                        {/* Right Arrow - only show if not on last image */}
-                        {(currentImageIndex[listing.id] || 0) < listing.images.length - 1 && (
-                          <button 
-                            className="absolute top-1/2 right-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleNextImage(listing.id, e);
-                            }}
-                          >
-                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        )}
-                      </>
-                    )}
-                    
-                    {/* Image Dots */}
-                    {listing.images && listing.images.length > 1 && (
-                      <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1">
-                        {listing.images.slice(0, 5).map((_: any, index: number) => (
-                          <div 
-                            key={index}
-                            className={`w-2 h-2 bg-white rounded-full ${index === (currentImageIndex[listing.id] || 0) ? 'opacity-100' : 'opacity-60'}`}
-                          />
-                        ))}
-                        {listing.images.length > 5 && (
-                          <div className="w-2 h-2 bg-white rounded-full opacity-60 flex items-center justify-center">
-                            <span className="text-xs text-gray-800 font-medium">+{listing.images.length - 5}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="p-4">
-                    {/* Title */}
-                    <div className="text-black font-semibold text-lg mb-2">
-                      {listing.title}
-                    </div>
-                    
-                    {/* Profile picture, Name, and University */}
-                    <div className="flex items-center mb-2">
-                      {listing.avatar_url ? (
-                        <img 
-                          src={listing.avatar_url} 
-                          alt={listing.name || 'Host'} 
-                          className="w-8 h-8 rounded-full mr-3 flex-shrink-0 object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-300 mr-3 flex-shrink-0">
-                          <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-gray-600 text-sm font-medium">
-                              {listing.name ? listing.name.charAt(0).toUpperCase() : 'H'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-gray-900 text-sm font-medium">
-                          {listing.name || 'Host'}
-                        </div>
-                        <div className="text-gray-500 text-xs">
-                          {listing.university_name || 'University'}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Beds • Baths */}
-                    <div className="text-gray-500 text-sm mb-2">
-                      {listing.bedrooms || 1} bed{(listing.bedrooms || 1) !== 1 ? 's' : ''} • {listing.bathrooms || 1} bath{(listing.bathrooms || 1) !== 1 ? 's' : ''}
-                    </div>
-                    
-                    {/* Price per night • Total for nights */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <span className="font-bold text-black text-lg">${Math.round(listing.price_per_night)}</span>
-                        <span className="text-gray-500 text-sm ml-1">per night</span>
-                        {dateRange[0].startDate && dateRange[0].endDate && (
-                          <>
-                            <span className="text-gray-500 text-sm mx-1">•</span>
-                            <span className="font-bold text-black text-lg">
-                              ${(() => {
-                                const checkIn = new Date(dateRange[0].startDate);
-                                const checkOut = new Date(dateRange[0].endDate);
-                                const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                                const totalPrice = nights * listing.price_per_night;
-                                return Math.round(totalPrice);
-                              })()}
-                            </span>
-                            <span className="text-gray-500 text-sm ml-1">
-                              for {(() => {
-                                const checkIn = new Date(dateRange[0].startDate);
-                                const checkOut = new Date(dateRange[0].endDate);
-                                const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                                return nights;
-                              })()} night{(() => {
-                                const checkIn = new Date(dateRange[0].startDate);
-                                const checkOut = new Date(dateRange[0].endDate);
-                                const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                                return nights !== 1 ? 's' : '';
-                              })()}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+              <ListingCard
+                key={listing.id}
+                id={listing.id}
+                title={listing.title}
+                images={listing.images || []}
+                name={listing.name}
+                avatar_url={listing.avatar_url}
+                university_name={listing.university_name}
+                bedrooms={listing.bedrooms}
+                bathrooms={listing.bathrooms}
+                price_per_night={listing.price_per_night}
+                dateRange={dateRange}
+                currentImageIndex={currentImageIndex[listing.id] || 0}
+                onImageChange={(listingId, newIndex) => {
+                  setCurrentImageIndex(prev => ({
+                    ...prev,
+                    [listingId]: newIndex
+                  }));
+                }}
+              />
             ))}
           </div>
         </div>

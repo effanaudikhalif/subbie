@@ -9,7 +9,10 @@ interface UserProfile {
   phone?: string;
   university_id: string;
   university_name?: string;
+  major?: string;
+  year?: number;
   avatar_url?: string;
+  stripe_account?: string;
   created_at: string;
 }
 

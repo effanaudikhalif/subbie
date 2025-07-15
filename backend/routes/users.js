@@ -55,10 +55,10 @@ module.exports = (pool) => {
   // Create user
   router.post('/', async (req, res) => {
     try {
-      const { id, university_id, name, email, phone, stripe_account } = req.body;
+      const { id, university_id, name, email, phone, major, year, stripe_account } = req.body;
       const { rows } = await pool.query(
-        'INSERT INTO users (id, university_id, name, email, phone, stripe_account) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [id, university_id, name, email, phone, stripe_account]
+        'INSERT INTO users (id, university_id, name, email, phone, major, year, stripe_account) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [id, university_id, name, email, phone, major, year, stripe_account]
       );
       res.status(201).json(rows[0]);
     } catch (err) {
@@ -70,10 +70,10 @@ module.exports = (pool) => {
   router.put('/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { university_id, name, email, phone, stripe_account } = req.body;
+      const { university_id, name, email, phone, major, year, stripe_account } = req.body;
       const { rows } = await pool.query(
-        'UPDATE users SET university_id = $1, name = $2, email = $3, phone = $4, stripe_account = $5 WHERE id = $6 RETURNING *',
-        [university_id, name, email, phone, stripe_account, id]
+        'UPDATE users SET university_id = $1, name = $2, email = $3, phone = $4, major = $5, year = $6, stripe_account = $7 WHERE id = $8 RETURNING *',
+        [university_id, name, email, phone, major, year, stripe_account, id]
       );
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       res.json(rows[0]);

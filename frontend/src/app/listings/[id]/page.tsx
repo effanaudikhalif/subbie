@@ -97,6 +97,24 @@ export default function ListingDetails() {
   }
 
   useEffect(() => {
+    // Apply overscroll behavior to prevent bounce
+    document.documentElement.style.overscrollBehavior = 'contain';
+    document.body.style.overscrollBehavior = 'contain';
+    
+    // Ensure white background
+    document.documentElement.style.backgroundColor = 'white';
+    document.body.style.backgroundColor = 'white';
+    
+    // Cleanup function to reset
+    return () => {
+      document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.backgroundColor = '';
+      document.body.style.backgroundColor = '';
+    };
+  }, []);
+
+  useEffect(() => {
     async function fetchAll() {
       setLoading(true);
       try {
@@ -227,7 +245,8 @@ export default function ListingDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-16">
+    <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
+      <div className="fixed inset-0 bg-white -z-10"></div>
       <Navbar fixed={false}>
         <SearchBar
           where={where}
@@ -241,8 +260,9 @@ export default function ListingDetails() {
           onSearch={handleSearch}
         />
       </Navbar>
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8">
-        <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 pt-8 pb-8">
+        <h1 className="text-3xl font-bold mb-2 text-black">{listing.title}</h1>
+        <p className="text-gray-600 text-base mb-6">{listing.description}</p>
         <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px' }}>
           {/* First column: one big image spanning two rows */}
           <div className="relative md:row-span-2 h-full w-full">
@@ -281,7 +301,7 @@ export default function ListingDetails() {
           {/* Left: Listing details */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">{host?.name ? host.name[0] : 'H'}</div>
+              <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">{host?.name ? host.name[0] : 'H'}</div>
               <div>
                 <div className="text-black font-semibold">Hosted by {host?.name || 'Host'}</div>
                 <div className="text-gray-500 text-sm">{university ? `${university.name} student` : ''}</div>
