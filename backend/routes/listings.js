@@ -93,7 +93,7 @@ module.exports = (pool) => {
     try {
       const {
         user_id, title, description, address, city, state, zip, country,
-        price_per_night, start_date, end_date, max_occupancy, status,
+        neighborhood, latitude, longitude, price_per_night, start_date, end_date, max_occupancy, status,
         property_type, guest_space, bedrooms, bathrooms, amenities, occupants
       } = req.body;
 
@@ -105,12 +105,12 @@ module.exports = (pool) => {
       const { rows } = await pool.query(
         `INSERT INTO listings (
           user_id, title, description, address, city, state, zip, country,
-          price_per_night, start_date, end_date, max_occupancy, status,
+          neighborhood, latitude, longitude, price_per_night, start_date, end_date, max_occupancy, status,
           property_type, guest_space, bedrooms, bathrooms
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING *`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING *`,
         [
           user_id, title, description, address, city, state, zip, country,
-          price_per_night, start_date, end_date, max_occupancy || 1, status || 'active',
+          neighborhood || null, latitude || null, longitude || null, price_per_night, start_date, end_date, max_occupancy || 1, status || 'active',
           property_type || 'apartment', guest_space || 'entire_place', bedrooms || 1, bathrooms || 1
         ]
       );
@@ -159,17 +159,101 @@ module.exports = (pool) => {
   });
 
   // Update listing
-  router.put('/:id', async (req, res) => {
+  router.put('/:id', upload.array('photo_replacements', 10), async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, description, address, city, state, zip, country, price_per_night, start_date, end_date, max_occupancy, status } = req.body;
+      const { 
+        title, description, address, unit, city, state, zip, country, neighborhood,
+        latitude, longitude, price_per_night, start_date, end_date, max_occupancy, 
+        property_type, guest_space, bedrooms, bathrooms, amenities, occupants,
+        photo_indices
+      } = req.body;
+
+      // Update the listing
       const { rows } = await pool.query(
-        `UPDATE listings SET title = $1, description = $2, address = $3, city = $4, state = $5, zip = $6, country = $7, price_per_night = $8, start_date = $9, end_date = $10, max_occupancy = $11, status = $12 WHERE id = $13 RETURNING *`,
-        [title, description, address, city, state, zip, country, price_per_night, start_date, end_date, max_occupancy, status, id]
+        `UPDATE listings SET 
+          title = $1, description = $2, address = $3, unit = $4, city = $5, state = $6, 
+          zip = $7, country = $8, neighborhood = $9, latitude = $10, longitude = $11,
+          price_per_night = $12, start_date = $13, end_date = $14, max_occupancy = $15,
+          property_type = $16, guest_space = $17, bedrooms = $18, bathrooms = $19
+        WHERE id = $20 RETURNING *`,
+        [
+          title, description, address, unit, city, state, zip, country, neighborhood,
+          latitude, longitude, price_per_night, start_date, end_date, max_occupancy,
+          property_type, guest_space, bedrooms, bathrooms, id
+        ]
       );
+      
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+      // Update amenities
+      if (amenities) {
+        // Delete existing amenities
+        await pool.query('DELETE FROM listing_amenities WHERE listing_id = $1', [id]);
+        
+        // Insert new amenities
+        for (const amenity of amenities) {
+          await pool.query(
+            'INSERT INTO listing_amenities (listing_id, amenity) VALUES ($1, $2)',
+            [id, amenity]
+          );
+        }
+      }
+
+      // Update occupants
+      if (occupants) {
+        // Delete existing occupants
+        await pool.query('DELETE FROM listing_occupants WHERE listing_id = $1', [id]);
+        
+        // Insert new occupants
+        for (const occupant of occupants) {
+          await pool.query(
+            'INSERT INTO listing_occupants (listing_id, occupant) VALUES ($1, $2)',
+            [id, occupant]
+          );
+        }
+      }
+
+      // Handle photo replacements
+      if (req.files && req.files.length > 0 && photo_indices) {
+        const photoIndices = Array.isArray(photo_indices) ? photo_indices : [photo_indices];
+        
+        for (let i = 0; i < req.files.length; i++) {
+          const file = req.files[i];
+          const photoIndex = parseInt(photoIndices[i]);
+          
+          // Get the current image to replace
+          const currentImageResult = await pool.query(
+            'SELECT url FROM listing_images WHERE listing_id = $1 AND order_index = $2',
+            [id, photoIndex]
+          );
+          
+          if (currentImageResult.rows.length > 0) {
+            const currentImage = currentImageResult.rows[0];
+            
+            // Delete the old file if it exists
+            if (currentImage.url && currentImage.url.startsWith('/uploads/')) {
+              const oldFilePath = path.join(__dirname, '..', currentImage.url);
+              if (fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
+              }
+            }
+            
+            // Store the new file
+            const imageUrl = `/uploads/${file.filename}`;
+            
+            // Update the database record
+            await pool.query(
+              'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
+              [imageUrl, id, photoIndex]
+            );
+          }
+        }
+      }
+
       res.json(rows[0]);
     } catch (err) {
+      console.error('Error updating listing:', err);
       res.status(500).json({ error: err.message });
     }
   });

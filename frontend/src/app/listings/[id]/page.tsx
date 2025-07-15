@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import SearchBar from "../../../components/Searchbar";
 import ChatBox from "../../../components/ChatBox";
+import PrivacyMap from "../../../components/PrivacyMap";
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -30,6 +31,8 @@ interface Listing {
   max_occupancy?: number;
   amenities?: any[];
   occupants?: string[];
+  latitude?: number;
+  longitude?: number;
 }
 
 interface User {
@@ -332,6 +335,31 @@ export default function ListingDetails() {
                       <span className="text-gray-400">No amenities listed</span>
                     )}
                   </div>
+                </div>
+                
+                {/* Location Map */}
+                <div className="mt-8">
+                  <h3 className="text-black font-semibold mb-4">Location</h3>
+                  {listing.latitude && listing.longitude ? (
+                    <PrivacyMap
+                      latitude={listing.latitude}
+                      longitude={listing.longitude}
+                      city={listing.city}
+                      state={listing.state}
+                      height="250px"
+                    />
+                  ) : (
+                    <div className="bg-gray-100 rounded-lg p-4 text-center">
+                      <p className="text-gray-500">
+                        {listing.city && listing.state 
+                          ? `Location in ${listing.city}, ${listing.state}` 
+                          : 'Location not available'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Map coordinates not available for this listing
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

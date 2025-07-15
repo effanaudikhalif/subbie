@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaSearch } from 'react-icons/fa';
 import { DateRange } from 'react-date-range';
+import { Loader } from '@googlemaps/js-api-loader';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import Navbar from './Navbar';
@@ -27,6 +28,55 @@ export default function SearchBar({
   setGuests: (v: string) => void;
   onSearch: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initAutocomplete = async () => {
+      if (!inputRef.current) return;
+      
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const loader = new Loader({
+          apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+          version: 'weekly',
+          libraries: ['places']
+        });
+
+        const google = await loader.load();
+        
+        const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+          types: ['geocode'], // Allow cities and general locations
+          componentRestrictions: { country: ['us', 'ca'] }, // Restrict to US and Canada
+          fields: ['address_components', 'formatted_address']
+        });
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          
+          if (place.formatted_address) {
+            setWhere(place.formatted_address);
+          }
+        });
+
+      } catch (err) {
+        console.error('Error loading Google Maps:', err);
+        setError('Failed to load location autocomplete');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+      initAutocomplete();
+    } else {
+      setError('Google Maps API key not configured');
+    }
+  }, [setWhere]);
+
   const checkIn = dateRange[0].startDate
     ? new Date(dateRange[0].startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Add dates';
@@ -37,15 +87,25 @@ export default function SearchBar({
   return (
     <div className="w-full max-w-2xl bg-white rounded-full shadow flex items-center px-1 py-0 relative">
       {/* Where */}
-      <div className="flex-[1.3] px-4 py-1 flex flex-col items-start justify-center">
+      <div className="flex-[1.3] px-4 py-1 flex flex-col items-start justify-center relative">
         <div className="font-medium text-black mb-0.5 text-sm">Where</div>
         <input
+          ref={inputRef}
           type="text"
           value={where}
           onChange={e => setWhere(e.target.value)}
           placeholder="Search destinations"
           className="w-full bg-transparent outline-none border-none text-gray-700 placeholder-gray-400 text-sm"
+          disabled={isLoading}
         />
+        {isLoading && (
+          <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+        {error && (
+          <div className="absolute top-full left-0 text-red-500 text-xs mt-1">{error}</div>
+        )}
       </div>
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check in */}

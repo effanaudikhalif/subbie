@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
+import PrivacyMap from "../../components/PrivacyMap";
 import { useRouter } from 'next/navigation';
 
 interface ListingImage {
@@ -15,6 +16,7 @@ interface Listing {
   user_id: string;
   title: string;
   description: string;
+  address: string;
   city: string;
   state: string;
   price_per_night: number;
@@ -27,6 +29,8 @@ interface Listing {
   amenities?: any[];
   occupants?: string[];
   status?: string; // Added for filtering
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Booking {
@@ -52,6 +56,7 @@ export default function MyListingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approvedBookings' | 'messages'>('all');
+  const [deletingListing, setDeletingListing] = useState<string | null>(null);
 
   // Messages tab state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -169,6 +174,40 @@ export default function MyListingsPage() {
     window.addEventListener('bookingStatusChanged', handleStatusChange);
     return () => window.removeEventListener('bookingStatusChanged', handleStatusChange);
   }, []);
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (!confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingListing(listingId);
+    try {
+      const response = await fetch(`http://localhost:4000/api/listings/${listingId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setListings(prev => prev.filter(l => l.id !== listingId));
+        if (selectedListing?.id === listingId) {
+          setSelectedListing(null);
+        }
+        alert('Listing deleted successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete listing: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting listing:', error);
+      alert('Failed to delete listing. Please try again.');
+    } finally {
+      setDeletingListing(null);
+    }
+  };
+
+  const handleEditListing = (listingId: string) => {
+    router.push(`/edit-listing/${listingId}`);
+  };
 
   // Filtered lists for tabs
   const pendingListings = listings.filter(l => l.status === 'pending');
@@ -383,7 +422,12 @@ export default function MyListingsPage() {
               {selectedBooking ? (
                 <ApprovedBookingDetailsView booking={selectedBooking} showApproveButton={false} />
               ) : selectedListing ? (
-                <ListingDetailsView listing={selectedListing} />
+                <ListingDetailsView 
+                  listing={selectedListing} 
+                  onDelete={handleDeleteListing}
+                  isDeleting={deletingListing === selectedListing.id}
+                  onEdit={handleEditListing}
+                />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select an item to view details</div>
               )}
@@ -395,7 +439,17 @@ export default function MyListingsPage() {
   );
 }
 
-function ListingDetailsView({ listing }: { listing: Listing }) {
+function ListingDetailsView({ 
+  listing, 
+  onDelete, 
+  isDeleting,
+  onEdit
+}: { 
+  listing: Listing;
+  onDelete: (listingId: string) => Promise<void>;
+  isDeleting: boolean;
+  onEdit: (listingId: string) => void;
+}) {
   // Image grid logic
   let images = listing.images && listing.images.length > 0 ? listing.images : [
     { url: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80" }
@@ -415,7 +469,28 @@ function ListingDetailsView({ listing }: { listing: Listing }) {
   return (
     <div className="w-full min-h-screen bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8">
-        <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-black">{listing.title}</h1>
+          <div className="flex gap-3">
+            <button
+              onClick={() => onEdit(listing.id)}
+              className="px-4 py-2 rounded-lg font-semibold transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Edit Listing
+            </button>
+            <button
+              onClick={() => onDelete(listing.id)}
+              disabled={isDeleting}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                isDeleting 
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Listing'}
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '400px', minHeight: '200px' }}>
           {/* First column: one big image spanning two rows */}
           <div className="relative md:row-span-2 h-full w-full">
@@ -512,6 +587,33 @@ function ListingDetailsView({ listing }: { listing: Listing }) {
               )}
             </div>
           </div>
+        </div>
+        
+        {/* Location Map */}
+        <div className="mt-8">
+          <h3 className="text-black font-semibold mb-4">Location</h3>
+          {listing.latitude && listing.longitude ? (
+            <PrivacyMap
+              latitude={listing.latitude}
+              longitude={listing.longitude}
+              city={listing.city}
+              state={listing.state}
+              address={listing.address}
+              showFullAddress={true}
+              height="250px"
+            />
+          ) : (
+            <div className="bg-gray-100 rounded-lg p-4 text-center">
+              <p className="text-gray-500">
+                {listing.city && listing.state 
+                  ? `Location in ${listing.city}, ${listing.state}` 
+                  : 'Location not available'}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Map coordinates not available for this listing
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ interface ListingCardProps {
   title: string;
   city: string;
   state: string;
+  neighborhood?: string;
   description: string;
   pricePerNight: number;
   href?: string;
@@ -17,6 +18,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   title,
   city,
   state,
+  neighborhood,
   description,
   pricePerNight,
   href
@@ -32,7 +34,9 @@ const ListingCard: React.FC<ListingCardProps> = ({
         <img src={image} alt={title} className="rounded-xl w-full h-48 object-cover" />
       </div>
       <div className="font-semibold text-lg mb-1">{title}</div>
-      <div className="text-gray-500 text-sm mb-1">{city}, {state}</div>
+      <div className="text-gray-500 text-sm mb-1">
+        {neighborhood && `${neighborhood}, `}{city}, {state}
+      </div>
       <div className="text-gray-500 text-sm mb-2">{description}</div>
       <div className="flex items-center text-sm mb-2">
         <span className="font-bold text-black mr-1">${pricePerNight.toFixed(2)}</span>

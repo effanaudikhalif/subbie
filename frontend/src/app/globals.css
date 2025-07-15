@@ -34,3 +34,15 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   width: 0px;
   background: transparent;
 }
+
+/* Custom styling for rectangular map markers with curved corners */
+.rectangular-marker-label {
+  background: white;
+  border: 2px solid black;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-weight: bold;
+  color: black;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

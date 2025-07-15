@@ -102,10 +102,13 @@ create table public.listings (
     title             text not null check (char_length(title) <= 120),
     description       text,
     address           text,          -- e.g. "123 Comm Ave Apt 3B"
+    unit              text,          -- e.g. "Apt 3B"
     city              text,
     state             text,
     zip               text,
     country           text default 'USA',
+    latitude          numeric(10, 8), -- for map coordinates
+    longitude         numeric(11, 8), -- for map coordinates
 
     -- Pricing & availability
     price_per_night   numeric(10,2) not null check (price_per_night >= 0),

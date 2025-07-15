@@ -3,15 +3,21 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import { useAuth } from '../../hooks/useAuth';
+import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
+import MapPreview from '../../components/MapPreview';
 
 interface FormData {
   property_type: 'house' | 'apartment';
   guest_space: 'entire_place' | 'room' | 'shared_room';
   address: string;
+  unit: string; // Added unit field
   city: string;
   state: string;
   zip: string;
   country: string;
+  neighborhood: string;
+  latitude?: number;
+  longitude?: number;
   max_occupancy: number;
   bedrooms: number;
   bathrooms: number;
@@ -33,10 +39,14 @@ export default function BecomeHost() {
     property_type: 'apartment',
     guest_space: 'entire_place',
     address: '',
+    unit: '', // Added unit field
     city: '',
     state: '',
     zip: '',
     country: 'USA',
+    neighborhood: '',
+    latitude: undefined,
+    longitude: undefined,
     max_occupancy: 1,
     bedrooms: 1,
     bathrooms: 1,
@@ -111,6 +121,29 @@ export default function BecomeHost() {
     e.target.value = '';
   };
 
+  const handleAddressSelect = (addressData: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+    neighborhood?: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      address: addressData.street,
+      city: addressData.city,
+      state: addressData.state,
+      zip: addressData.zip,
+      country: addressData.country,
+      neighborhood: addressData.neighborhood || prev.neighborhood,
+      latitude: addressData.latitude,
+      longitude: addressData.longitude
+    }));
+  };
+
   const nextStep = () => {
     if (currentStep < 13) {
       setCurrentStep(currentStep + 1);
@@ -139,10 +172,14 @@ export default function BecomeHost() {
       submitData.append('property_type', formData.property_type);
       submitData.append('guest_space', formData.guest_space);
       submitData.append('address', formData.address);
+      submitData.append('unit', formData.unit);
       submitData.append('city', formData.city);
       submitData.append('state', formData.state);
       submitData.append('zip', formData.zip);
       submitData.append('country', formData.country);
+      submitData.append('neighborhood', formData.neighborhood);
+      if (formData.latitude) submitData.append('latitude', formData.latitude.toString());
+      if (formData.longitude) submitData.append('longitude', formData.longitude.toString());
       submitData.append('max_occupancy', formData.max_occupancy.toString());
       submitData.append('bedrooms', formData.bedrooms.toString());
       submitData.append('bathrooms', formData.bathrooms.toString());
@@ -235,65 +272,109 @@ export default function BecomeHost() {
 
       case 3:
         return (
-          <div className="max-w-md mx-auto">
+          <div className="max-w-4xl mx-auto">
             <h2 className="text-2xl font-bold mb-6 text-black">Where's your place located?</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">Country/region</label>
-                <input
-                  type="text"
-                  value={formData.country}
-                  onChange={(e) => handleInputChange('country', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="USA"
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - Address Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
+                  <GoogleMapsAutocomplete
+                    onAddressSelect={handleAddressSelect}
+                    placeholder="Start typing your address..."
+                  />
+                  <p className="text-sm text-gray-600 mt-1">Type your address and select from the suggestions</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-black">Street address</label>
+                    <input
+                      type="text"
+                      value={formData.address}
+                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-black">Apt, unit, suite</label>
+                    <input
+                      type="text"
+                      value={formData.unit}
+                      onChange={(e) => handleInputChange('unit', e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      placeholder="Apt 3B"
+                    />
+                  </div>
+                </div>
+                
+                              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">Neighborhood</label>
+                  <input
+                    type="text"
+                    value={formData.neighborhood}
+                    onChange={(e) => handleInputChange('neighborhood', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                    placeholder="Allston"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                    placeholder="Boston"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">Street address</label>
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="123 Main St"
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                    placeholder="MA"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">Zip code</label>
+                  <input
+                    type="text"
+                    value={formData.zip}
+                    onChange={(e) => handleInputChange('zip', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                    placeholder="02115"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">Apt, unit, suite (if applicable)</label>
-                <input
-                  type="text"
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="Apt 3B"
-                />
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-black">Country</label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                    placeholder="USA"
+                  />
+                </div>
               </div>
+
+              {/* Right Column - Map Preview */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-black">City/town</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="Boston"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">State/territory</label>
-                <input
-                  type="text"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="MA"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">Zip code</label>
-                <input
-                  type="text"
-                  value={formData.zip}
-                  onChange={(e) => handleInputChange('zip', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                  placeholder="02115"
+                <label className="block text-sm font-medium mb-2 text-black">Map Preview</label>
+                <MapPreview
+                  latitude={formData.latitude}
+                  longitude={formData.longitude}
+                  address={`${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`}
+                  height="400px"
                 />
               </div>
             </div>

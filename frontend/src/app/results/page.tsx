@@ -32,9 +32,15 @@ export default function Results() {
   }, []);
 
   // Filter listings based on 'appliedWhere' (case-insensitive, partial match)
-  const filteredListings = listings.filter(listing =>
-    listing.city?.toLowerCase().includes(appliedWhere.toLowerCase())
-  );
+  // Search in city, state, and neighborhood
+  const filteredListings = listings.filter(listing => {
+    const searchTerm = appliedWhere.toLowerCase();
+    return (
+      listing.city?.toLowerCase().includes(searchTerm) ||
+      listing.state?.toLowerCase().includes(searchTerm) ||
+      listing.neighborhood?.toLowerCase().includes(searchTerm)
+    );
+  });
 
   console.log('Filtered listings:', filteredListings);
 
@@ -70,6 +76,7 @@ export default function Results() {
               title={listing.title}
               city={listing.city}
               state={listing.state}
+              neighborhood={listing.neighborhood}
               description={listing.description}
               pricePerNight={listing.price_per_night}
             />

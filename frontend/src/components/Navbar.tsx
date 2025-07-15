@@ -3,6 +3,7 @@ import React, { useState, ReactNode, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
 import { usePathname } from "next/navigation";
+import Logo from "./Logo";
 
 interface NavbarProps {
   children?: ReactNode;
@@ -38,12 +39,10 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-y-2 px-4 sm:px-8 py-4 bg-white shadow-sm backdrop-blur-md">
+      <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between gap-y-2 pr-4 sm:pr-8 py-6 bg-white shadow-sm backdrop-blur-md overflow-hidden h-25">
         {/* Left: Logo */}
-        <div className="text-2xl font-bold tracking-tight text-gray-900 pl-4 pt-2 pb-2">
-          <Link href="/">
-            <span className="font-extrabold text-2xl text-black cursor-pointer hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 rounded transition">Subly</span>
-          </Link>
+        <div className="flex items-center">
+          <Logo className="hover:opacity-80 transition-opacity" />
         </div>
         {/* Center: SearchBar, children, or my-listings tabs */}
         <div className="flex-1 flex justify-center items-center">
@@ -95,7 +94,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
           )}
         </div>
         {/* Right: Desktop nav */}
-        <nav className="hidden sm:flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-gray-700 text-base font-medium max-w-full pr-4 pt-2 pb-2">
+        <nav className="hidden sm:flex flex-wrap items-center justify-end gap-x-4 gap-y-2 text-gray-700 text-base font-medium max-w-full">
           {!user ? (
             <Link href="/login" className="hover:text-blue-700">Log in</Link>
           ) : (
