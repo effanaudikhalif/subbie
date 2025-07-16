@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from "next/navigation";
 import Navbar from '../../components/Navbar';
@@ -27,7 +27,7 @@ export default function Results() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [guests, setGuests] = useState(searchParams?.get('guests') || '');
   const [listings, setListings] = useState<any[]>([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
+  const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
 
   useEffect(() => {
     fetch('http://localhost:4000/api/listings')
@@ -37,6 +37,16 @@ export default function Results() {
         setListings(Array.isArray(data) ? data : []);
       })
       .catch(() => setListings([]));
+  }, []);
+
+  // Fetch average ratings for listings
+  useEffect(() => {
+    fetch('http://localhost:4000/api/listings/average-ratings')
+      .then(res => res.json())
+      .then(data => {
+        setAverageRatings(data);
+      })
+      .catch(() => setAverageRatings({}));
   }, []);
 
   // Update appliedWhere when URL parameters change
@@ -150,7 +160,14 @@ export default function Results() {
     return matches;
   });
 
-  console.log('Filtered listings:', filteredListings);
+  // Add average ratings to filtered listings
+  const listingsWithRatings = filteredListings.map(listing => ({
+    ...listing,
+    averageRating: averageRatings[listing.id]?.average_rating,
+    totalReviews: averageRatings[listing.id]?.total_reviews
+  }));
+
+  console.log('Filtered listings:', listingsWithRatings);
 
 
 
@@ -204,13 +221,8 @@ export default function Results() {
                 bathrooms={listing.bathrooms}
                 price_per_night={listing.price_per_night}
                 dateRange={dateRange}
-                currentImageIndex={currentImageIndex[listing.id] || 0}
-                onImageChange={(listingId, newIndex) => {
-                  setCurrentImageIndex(prev => ({
-                    ...prev,
-                    [listingId]: newIndex
-                  }));
-                }}
+                averageRating={averageRatings[listing.id]?.average_rating}
+                totalReviews={averageRatings[listing.id]?.total_reviews}
               />
             ))}
           </div>
@@ -219,8 +231,9 @@ export default function Results() {
         {/* Right side - Map Preview */}
         <div className="w-1/2 h-[calc(100vh-6rem)] p-6 flex-shrink-0">
           <LocationMapPreview 
+            key={`${appliedWhere}-${filteredListings.length}`}
             searchLocation={appliedWhere}
-            listings={filteredListings}
+            listings={listingsWithRatings}
             className="h-full"
             dateRange={dateRange}
           />

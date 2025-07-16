@@ -4,7 +4,10 @@ import Navbar from "../../components/Navbar";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
 import PrivacyMap from "../../components/PrivacyMap";
-import { useRouter } from 'next/navigation';
+import StripeConnect from "../../components/StripeConnect";
+import PaymentHistory from "../../components/PaymentHistory";
+import CancellationForm from "../../components/CancellationForm";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface ListingImage {
   url: string;
@@ -50,12 +53,13 @@ export default function MyListingsPage() {
   const { user } = useAuth();
   const userId = typeof user?.id === 'string' ? user.id : null;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approvedBookings' | 'messages'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages' | 'stripe'>('all');
   const [deletingListing, setDeletingListing] = useState<string | null>(null);
 
   // Messages tab state
@@ -66,6 +70,171 @@ export default function MyListingsPage() {
   const [loadingConvos, setLoadingConvos] = useState(false);
   const [bookingConversationId, setBookingConversationId] = useState<string | null>(null);
   const [bookingConversationLoading, setBookingConversationLoading] = useState(false);
+  
+  // Stripe connection status state
+  const [stripeConnected, setStripeConnected] = useState(false);
+
+  // Review popup state for host reviewing renter
+  const [showRenterReviewPopup, setShowRenterReviewPopup] = useState(false);
+  const [currentRenterReviewStep, setCurrentRenterReviewStep] = useState(0);
+  const [renterReviewData, setRenterReviewData] = useState({
+    punctuality: 0,
+    communication: 0,
+    property_care: 0,
+    compliance: 0,
+    comment: ''
+  });
+  const [reviewingRenterBooking, setReviewingRenterBooking] = useState<Booking | null>(null);
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<string[]>([]);
+  const [existingRenterReview, setExistingRenterReview] = useState<any>(null);
+  const [isEditingRenterReview, setIsEditingRenterReview] = useState(false);
+
+  // Cancellation form state
+  const [showCancellationForm, setShowCancellationForm] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+  const [cancellationLoading, setCancellationLoading] = useState(false);
+
+  const renterReviewSteps = [
+    { title: 'Punctuality', field: 'punctuality', description: 'Did the renter arrive and leave on time?' },
+    { title: 'Communication', field: 'communication', description: 'How well did the renter communicate?' },
+    { title: 'Property Care', field: 'property_care', description: 'How well did the renter care for your property?' },
+    { title: 'Compliance', field: 'compliance', description: 'Did the renter follow house rules?' }
+  ];
+
+  const handleRenterReviewStep = (rating: number) => {
+    const currentField = renterReviewSteps[currentRenterReviewStep].field as keyof typeof renterReviewData;
+    setRenterReviewData(prev => ({ ...prev, [currentField]: rating }));
+    if (currentRenterReviewStep < renterReviewSteps.length - 1) {
+      setCurrentRenterReviewStep(prev => prev + 1);
+    } else {
+      setCurrentRenterReviewStep(renterReviewSteps.length); // Move to comment step
+    }
+  };
+  const handleRenterBackStep = () => {
+    if (currentRenterReviewStep > 0) {
+      setCurrentRenterReviewStep(prev => prev - 1);
+    }
+  };
+  const openRenterReviewPopup = async (booking: Booking) => {
+    setReviewingRenterBooking(booking);
+    setShowRenterReviewPopup(true);
+    setCurrentRenterReviewStep(0);
+    setIsEditingRenterReview(false);
+    setExistingRenterReview(null);
+
+    // Check if user has already written a review for this booking
+    if (user) {
+      try {
+        const response = await fetch(`http://localhost:4000/api/renter-reviews`);
+        if (response.ok) {
+          const allReviews = await response.json();
+          const userReview = allReviews.find((review: any) => 
+            review.booking_id === booking.id && 
+            review.reviewer_id === user.id &&
+            review.reviewed_id === booking.guest_id
+          );
+          
+          if (userReview) {
+            setExistingRenterReview(userReview);
+            setIsEditingRenterReview(true);
+            setRenterReviewData({
+              punctuality: userReview.punctuality,
+              communication: userReview.communication,
+              property_care: userReview.property_care,
+              compliance: userReview.compliance,
+              comment: userReview.comment || ''
+            });
+          } else {
+            setRenterReviewData({
+              punctuality: 0,
+              communication: 0,
+              property_care: 0,
+              compliance: 0,
+              comment: ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking existing review:', error);
+        setRenterReviewData({
+          punctuality: 0,
+          communication: 0,
+          property_care: 0,
+          compliance: 0,
+          comment: ''
+        });
+      }
+    }
+  };
+  const handleSubmitRenterReview = async () => {
+    if (!reviewingRenterBooking || !user) return;
+    try {
+      let response;
+      
+      if (isEditingRenterReview && existingRenterReview) {
+        // Update existing review
+        response = await fetch(`http://localhost:4000/api/renter-reviews/${existingRenterReview.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reviewer_id: user.id,
+            ...renterReviewData
+          })
+        });
+      } else {
+        // Create new review
+        response = await fetch('http://localhost:4000/api/renter-reviews', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            booking_id: reviewingRenterBooking.id,
+            reviewer_id: user.id,
+            reviewed_id: reviewingRenterBooking.guest_id,
+            ...renterReviewData
+          })
+        });
+      }
+      
+      if (response.ok) {
+        alert(isEditingRenterReview ? 'Review updated successfully!' : 'Review submitted successfully!');
+        setShowRenterReviewPopup(false);
+        setCurrentRenterReviewStep(0);
+        setRenterReviewData({
+          punctuality: 0,
+          communication: 0,
+          property_care: 0,
+          compliance: 0,
+          comment: ''
+        });
+        setReviewingRenterBooking(null);
+        setExistingRenterReview(null);
+        setIsEditingRenterReview(false);
+        
+        // Update reviewed bookings state
+        if (!isEditingRenterReview && reviewingRenterBooking) {
+          setReviewedBookingIds(prev => [...prev, reviewingRenterBooking.id]);
+        }
+      } else {
+        const error = await response.json();
+        alert(`Failed to ${isEditingRenterReview ? 'update' : 'submit'} review: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert(`Failed to ${isEditingRenterReview ? 'update' : 'submit'} review. Please try again.`);
+    }
+  };
+  // Fetch already reviewed bookings for this host (on mount)
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`http://localhost:4000/api/renter-reviews/reviewer/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setReviewedBookingIds(data.map((r: any) => r.booking_id));
+        }
+      })
+      .catch(() => {});
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -209,18 +378,67 @@ export default function MyListingsPage() {
     router.push(`/edit-listing/${listingId}`);
   };
 
+  const handleCancelBooking = (booking: Booking) => {
+    setCancellingBooking(booking);
+    setShowCancellationForm(true);
+  };
+
+  const handleCancellationSubmit = async (reason: string, details: string) => {
+    if (!cancellingBooking) return;
+
+    setCancellationLoading(true);
+    try {
+      const response = await fetch(`http://localhost:4000/api/bookings/${cancellingBooking.id}/cancel-host`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cancellation_reason: reason,
+          cancellation_details: details
+        })
+      });
+
+      if (response.ok) {
+        alert('Booking cancelled successfully!');
+        // Update the booking status in the local state
+        setBookings(prev => prev.map(b => 
+          b.id === cancellingBooking.id ? { ...b, status: 'cancelled' } : b
+        ));
+        // Clear the selected booking if it was the cancelled one
+        if (selectedBooking?.id === cancellingBooking.id) {
+          setSelectedBooking(null);
+        }
+        setShowCancellationForm(false);
+        setCancellingBooking(null);
+      } else {
+        const error = await response.json();
+        alert(`Failed to cancel booking: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      alert('Failed to cancel booking. Please try again.');
+    } finally {
+      setCancellationLoading(false);
+    }
+  };
+
+  const handleCancellationClose = () => {
+    setShowCancellationForm(false);
+    setCancellingBooking(null);
+    setCancellationLoading(false);
+  };
+
   // Filtered lists for tabs
   const pendingListings = listings.filter(l => l.status === 'pending');
-  const approvedBookings = bookings.filter(b => b.status === 'approved');
+  const approvedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'approved');
   const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const completedBookings = bookings.filter(b => b.status === 'ended');
+  const cancelledBookings = bookings.filter(b => b.status === 'cancelled');
   let visibleList: any[] = [];
   if (activeTab === 'all') visibleList = listings;
-  else if (activeTab === 'pending') visibleList = pendingBookings;
-  else if (activeTab === 'approvedBookings') visibleList = approvedBookings;
 
   useEffect(() => {
     // Fetch conversationId for selectedBooking in requests/approved
-    if ((activeTab === 'pending' || activeTab === 'approvedBookings') && selectedBooking) {
+    if (selectedBooking) {
       setBookingConversationId(null);
       setBookingConversationLoading(true);
       fetch('http://localhost:4000/api/conversations/find-or-create', {
@@ -245,141 +463,264 @@ export default function MyListingsPage() {
       setBookingConversationId(null);
       setBookingConversationLoading(false);
     }
-  }, [selectedBooking, activeTab]);
+  }, [selectedBooking]);
+
+  // Handle URL parameter for Stripe onboarding return
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'stripe') {
+      setActiveTab('stripe');
+    }
+  }, [searchParams]);
 
   return (
-    <div className="flex flex-col bg-gray-50 min-h-screen">
+    <div className="flex flex-col bg-white min-h-screen">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="flex flex-1 pt-20">
-        {activeTab === 'messages' || activeTab === 'pending' || activeTab === 'approvedBookings' ? (
+      <div className="flex flex-1 pt-20 relative">
+        {activeTab === 'stripe' ? (
           <>
             {/* Sidebar */}
             <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <h2 className="text-xl font-bold mb-4 text-black">
-                {activeTab === 'messages' ? 'Inbox' : activeTab === 'pending' ? 'Requests' : 'Approved'}
-              </h2>
-              {activeTab === 'messages' ? (
-                loadingConvos ? (
-                  <div className="text-gray-400">Loading...</div>
-                ) : conversations.length === 0 ? (
-                  <div className="text-gray-400">No messages yet.</div>
-                ) : (
-                  <ul className="flex-1 overflow-y-auto">
-                    {conversations.map((c) => (
-                      <li
-                        key={c.id}
-                        className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedConvo?.id === c.id ? "bg-blue-50 border-blue-400" : ""}`}
-                        onClick={() => setSelectedConvo(c)}
-                      >
-                        <div className="font-semibold text-black">
-                          {guestProfiles[c.guest_id]?.name || "Guest"}
-                        </div>
-                        <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
-                      </li>
-                    ))}
-                  </ul>
-                )
+              <h2 className="text-xl font-bold mb-4 text-black">Settings</h2>
+              <div className="space-y-2">
+                <div
+                  className="rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 bg-blue-50 border-blue-400"
+                >
+                  <div className="font-semibold text-black text-base">Payment Account</div>
+                  <div className="text-xs text-gray-500">Manage your payments</div>
+                </div>
+              </div>
+            </div>
+            {/* Center: Payment Setup and History */}
+            <div className="flex-1">
+                              <div className="p-6">
+                  <div className="max-w-4xl mx-auto">
+                    <div className="space-y-8">
+                      <div>
+                        <StripeConnect onStatusChange={(status) => setStripeConnected(!!status?.connected)} />
+                      </div>
+                      <div>
+                        <PaymentHistory userId={userId || ''} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+          </>
+        ) : activeTab === 'messages' ? (
+          <>
+            {/* Sidebar */}
+            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
+              <h2 className="text-xl font-bold mb-4 text-black">Inbox</h2>
+              {loadingConvos ? (
+                <div className="text-gray-400">Loading...</div>
+              ) : conversations.length === 0 ? (
+                <div className="text-gray-400">No messages yet.</div>
               ) : (
-                loading ? (
-                  <div className="text-gray-400">Loading...</div>
-                ) : visibleList.length === 0 ? (
-                  <div className="text-gray-400">No bookings.</div>
-                ) : (
-                  <ul className="flex-1 overflow-y-auto">
-                    {visibleList.map((booking: Booking) => (
-                      <li
-                        key={booking.id}
-                        className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
-                        onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
-                      >
-                        <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
-                      </li>
-                    ))}
-                  </ul>
-                )
+                <ul className="flex-1 overflow-y-auto">
+                  {conversations.map((c) => (
+                    <li
+                      key={c.id}
+                      className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedConvo?.id === c.id ? "bg-blue-50 border-blue-400" : ""}`}
+                      onClick={() => setSelectedConvo(c)}
+                    >
+                      <div className="font-semibold text-black">
+                        {guestProfiles[c.guest_id]?.name || "Guest"}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
             {/* Center: Chat area */}
             <div className="flex-1 flex flex-col border-r border-gray-200">
-              {activeTab === 'messages' ? (
-                selectedConvo ? (
-                  <div className="flex-1 flex flex-col">
-                    <div className="border-b border-gray-200 px-6 py-4 bg-white">
-                      <div className="font-bold text-lg text-black">
-                        {guestProfiles[selectedConvo.guest_id]?.name || "Guest"}
-                      </div>
-                      <div className="text-xs text-gray-500">Listing: {listingTitles[selectedConvo.listing_id] || "Listing"}</div>
+              {selectedConvo ? (
+                <div className="flex-1 flex flex-col">
+                  <div className="border-b border-gray-200 px-6 py-4 bg-white">
+                    <div className="font-bold text-lg text-black">
+                      {guestProfiles[selectedConvo.guest_id]?.name || "Guest"}
                     </div>
-                    <div className="flex-1 overflow-y-auto">
-                      <ChatBox
-                        listingId={selectedConvo.listing_id}
-                        hostId={selectedConvo.host_id}
-                        allowHostChat={true}
-                        conversationId={selectedConvo.id}
-                        disableAutoScroll={true}
-                        fullWidth={true}
-                        hideHeader={true}
-                      />
-                    </div>
+                    <div className="text-xs text-gray-500">Listing: {listingTitles[selectedConvo.listing_id] || "Listing"}</div>
                   </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view messages</div>
-                )
+                  <div className="flex-1 overflow-y-auto">
+                    <ChatBox
+                      listingId={selectedConvo.listing_id}
+                      hostId={selectedConvo.host_id}
+                      allowHostChat={true}
+                      conversationId={selectedConvo.id}
+                      disableAutoScroll={true}
+                      fullWidth={true}
+                      hideHeader={true}
+                    />
+                  </div>
+                </div>
               ) : (
-                selectedBooking ? (
-                  <div className="flex-1 flex flex-col">
-                    <div className="border-b border-gray-200 px-6 py-4 bg-white">
-                      <div className="font-bold text-lg text-black">
-                        {selectedBooking.guest_id && guestProfiles[selectedBooking.guest_id]?.name || "Guest"}
-                      </div>
-                      <div className="text-xs text-gray-500">Listing: {selectedBooking.listing_id}</div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      {bookingConversationLoading ? (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-lg">Loading messages...</div>
-                      ) : bookingConversationId ? (
-                        <ChatBox
-                          listingId={selectedBooking.listing_id}
-                          hostId={selectedBooking.host_id}
-                          allowHostChat={true}
-                          conversationId={bookingConversationId}
-                          disableAutoScroll={true}
-                          fullWidth={true}
-                          hideHeader={true}
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-lg">No messages found.</div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a booking to view messages</div>
-                )
+                <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view messages</div>
               )}
             </div>
             {/* Right panel: Reservation/Request details */}
             <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col">
-              {activeTab === 'messages' ? (
-                selectedConvo ? (
-                  <MessagesReservationPanel 
-                    conversation={selectedConvo} 
-                    guest={guestProfiles[selectedConvo.guest_id]} 
-                    listingId={selectedConvo.listing_id}
-                  />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view reservation details</div>
-                )
+              {selectedConvo ? (
+                <MessagesReservationPanel 
+                  conversation={selectedConvo} 
+                  guest={guestProfiles[selectedConvo.guest_id]} 
+                  listingId={selectedConvo.listing_id}
+                />
               ) : (
-                selectedBooking ? (
-                  <BookingDetailsPanel 
-                    booking={selectedBooking} 
-                    guest={guestProfiles[selectedBooking.guest_id]} 
-                    listingId={selectedBooking.listing_id}
-                    showApproveButton={activeTab === 'pending'}
-                  />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a booking to view reservation details</div>
-                )
+                <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view reservation details</div>
+              )}
+            </div>
+          </>
+        ) : activeTab === 'bookings' ? (
+          <>
+            {/* Sidebar */}
+            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
+              <div className="flex-1 overflow-y-auto">
+                {/* Requests Section */}
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold mb-4 text-black">Pending</h2>
+                  {loading ? (
+                    <div className="text-gray-400">Loading...</div>
+                  ) : pendingBookings.length === 0 ? (
+                    <div className="text-gray-400">No pending requests.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {pendingBookings.map((booking: Booking) => (
+                        <li
+                          key={booking.id}
+                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
+                        >
+                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Approved Section */}
+                <div className="mt-6">
+                  <h2 className="text-xl font-bold mb-4 text-black">Approved</h2>
+                  {loading ? (
+                    <div className="text-gray-400">Loading...</div>
+                  ) : approvedBookings.length === 0 ? (
+                    <div className="text-gray-400">No approved bookings.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {approvedBookings.map((booking: Booking) => (
+                        <li
+                          key={booking.id}
+                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
+                        >
+                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
+                          {/* Cancel Booking button for host */}
+                          <button
+                            className="mt-2 px-4 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow"
+                            onClick={e => { e.stopPropagation(); handleCancelBooking(booking); }}
+                          >
+                            Cancel Booking
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Completed Section */}
+                <div className="mt-6">
+                  <h2 className="text-xl font-bold mb-4 text-black">Completed</h2>
+                  {loading ? (
+                    <div className="text-gray-400">Loading...</div>
+                  ) : completedBookings.length === 0 ? (
+                    <div className="text-gray-400">No completed bookings.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {completedBookings.map((booking: Booking) => (
+                        <li
+                          key={booking.id}
+                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
+                        >
+                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
+                          {/* Write Review button for host-to-renter review */}
+                          <button
+                            className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow"
+                            onClick={e => { e.stopPropagation(); openRenterReviewPopup(booking); }}
+                          >
+                            {reviewedBookingIds.includes(booking.id) ? 'Edit Review' : 'Write Review'}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {/* Cancelled Section */}
+                <div className="mt-6">
+                  <h2 className="text-xl font-bold mb-4 text-black">Cancelled</h2>
+                  {loading ? (
+                    <div className="text-gray-400">Loading...</div>
+                  ) : cancelledBookings.length === 0 ? (
+                    <div className="text-gray-400">No cancelled bookings.</div>
+                  ) : (
+                    <ul className="space-y-2">
+                      {cancelledBookings.map((booking: Booking) => (
+                        <li
+                          key={booking.id}
+                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
+                        >
+                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Center: Chat area */}
+            <div className="flex-1 flex flex-col border-r border-gray-200">
+              {selectedBooking ? (
+                <div className="flex-1 flex flex-col">
+                  <div className="border-b border-gray-200 px-6 py-4 bg-white">
+                    <div className="font-bold text-lg text-black">
+                      {selectedBooking.guest_id && guestProfiles[selectedBooking.guest_id]?.name || "Guest"}
+                    </div>
+                    <div className="text-xs text-gray-500">Listing: {selectedBooking.listing_id}</div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {bookingConversationLoading ? (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-lg">Loading messages...</div>
+                    ) : bookingConversationId ? (
+                      <ChatBox
+                        listingId={selectedBooking.listing_id}
+                        hostId={selectedBooking.host_id}
+                        allowHostChat={true}
+                        conversationId={bookingConversationId}
+                        disableAutoScroll={true}
+                        fullWidth={true}
+                        hideHeader={true}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-lg">No messages found.</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a booking to view messages</div>
+              )}
+            </div>
+            {/* Right panel: Reservation/Request details */}
+            <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col">
+              {selectedBooking ? (
+                <BookingDetailsPanel 
+                  booking={selectedBooking} 
+                  guest={guestProfiles[selectedBooking.guest_id]} 
+                  listingId={selectedBooking.listing_id}
+                  showApproveButton={selectedBooking.status === 'pending'}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a booking to view reservation details</div>
               )}
             </div>
           </>
@@ -400,41 +741,114 @@ export default function MyListingsPage() {
               </div>
               {loading ? (
                 <div className="text-gray-400">Loading...</div>
-              ) : visibleList.length === 0 ? (
-                <div className="text-gray-400">No listings.</div>
+              ) : listings.length === 0 ? (
+                <div className="text-gray-400">No listings yet.</div>
               ) : (
-                <ul className="flex-1 overflow-y-auto">
-                  {visibleList.map((listing: Listing) => (
+                <ul className="flex-1 overflow-y-auto space-y-2">
+                  {listings.map((listing) => (
                     <li
                       key={listing.id}
-                      className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
-                      onClick={() => { setSelectedListing(listing); setSelectedBooking(null); }}
+                      className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
+                      onClick={() => setSelectedListing(listing)}
                     >
-                      <div className="font-semibold text-black">{listing.title}</div>
-                      <div className="text-xs text-gray-500 truncate">{listing.city}, {listing.state}</div>
+                      <div className="font-semibold text-black text-base">{listing.title}</div>
+                      <div className="text-xs text-gray-500">{listing.city}, {listing.state}</div>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
-            {/* Details area */}
-            <div className="flex-1 flex flex-col">
-              {selectedBooking ? (
-                <ApprovedBookingDetailsView booking={selectedBooking} showApproveButton={false} />
-              ) : selectedListing ? (
-                <ListingDetailsView 
-                  listing={selectedListing} 
+            {/* Center: Listing details */}
+            <div className="flex-1">
+              {selectedListing ? (
+                <ListingDetailsView
+                  listing={selectedListing}
                   onDelete={handleDeleteListing}
                   isDeleting={deletingListing === selectedListing.id}
                   onEdit={handleEditListing}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select an item to view details</div>
+                <div className="flex items-center justify-center h-full text-gray-400 text-lg">Select a listing to view details</div>
               )}
             </div>
           </>
         )}
       </div>
+      {showRenterReviewPopup && (
+        <>
+          {/* Blur the center and right columns */}
+          <div className="absolute inset-0 z-30 flex">
+            <div className="w-80" />
+            <div className="flex-1 flex">
+              <div className="flex-1 backdrop-blur-sm bg-white/40" />
+              <div className="w-96 backdrop-blur-sm bg-white/40" />
+            </div>
+          </div>
+          {/* Popup */}
+          <div className="absolute left-80 top-0 z-40 flex justify-center items-center w-[calc(100%-20rem)] h-full">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-auto flex flex-col items-center">
+              {currentRenterReviewStep < renterReviewSteps.length ? (
+                <>
+                  <h2 className="text-xl font-bold mb-2">{renterReviewSteps[currentRenterReviewStep].title}</h2>
+                  <p className="text-gray-600 mb-4">{renterReviewSteps[currentRenterReviewStep].description}</p>
+                  <div className="flex gap-2 mb-6">
+                    {[1,2,3,4,5].map(star => (
+                      <button
+                        key={star}
+                        className={`text-3xl ${Number(renterReviewData[renterReviewSteps[currentRenterReviewStep].field as keyof typeof renterReviewData]) >= star ? 'text-yellow-400' : 'text-gray-300'}`}
+                        onClick={() => handleRenterReviewStep(star)}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="text-sm text-blue-600 hover:underline mb-2"
+                    onClick={handleRenterBackStep}
+                    disabled={currentRenterReviewStep === 0}
+                  >
+                    Back
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold mb-2">Comments</h2>
+                  <p className="text-gray-600 mb-4">Anything else you'd like to share about this renter?</p>
+                  <textarea
+                    className="w-full border rounded-lg p-2 mb-4"
+                    rows={4}
+                    value={renterReviewData.comment}
+                    onChange={e => setRenterReviewData(prev => ({ ...prev, comment: e.target.value }))}
+                    placeholder="Write your comments here..."
+                  />
+                  <div className="flex w-full justify-between">
+                    <button
+                      className="text-sm text-blue-600 hover:underline"
+                      onClick={handleRenterBackStep}
+                    >
+                      Back
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow"
+                      onClick={handleSubmitRenterReview}
+                    >
+                      {isEditingRenterReview ? 'Update Review' : 'Submit Review'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Cancellation Form Modal */}
+      <CancellationForm
+        isOpen={showCancellationForm}
+        onClose={handleCancellationClose}
+        onSubmit={handleCancellationSubmit}
+        isLoading={cancellationLoading}
+      />
     </div>
   );
 }
@@ -632,7 +1046,8 @@ function ApprovedBookingSidebarItem({ booking, guest, listing }: { booking: Book
 
 function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: Booking, showApproveButton?: boolean }) {
   const [listing, setListing] = useState<Listing | null>(null);
-  const [status, setStatus] = useState(booking.status);
+  // Use the status from the booking prop directly instead of local state
+  const status = booking.status;
   useEffect(() => {
     fetch(`http://localhost:4000/api/listings/${booking.listing_id}`)
       .then(res => res.json())
@@ -641,26 +1056,38 @@ function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: B
   }, [booking.listing_id]);
 
   const handleApprove = async () => {
-    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}`, {
+    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/accept`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        start_date: booking.start_date,
-        end_date: booking.end_date,
-        price_per_night: booking.price_per_night,
-        total_price: booking.total_price,
-        status: 'approved',
-        payment_status: booking.payment_status
-      })
+      headers: { 'Content-Type': 'application/json' }
     });
     if (res.ok) {
-      setStatus('approved');
       if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'approved' } }));
+        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'confirmed' } }));
       }
-      alert('Booking approved!');
+      alert('Booking confirmed! Payment has been captured.');
     } else {
-      alert('Failed to approve booking.');
+      const error = await res.json();
+      alert(`Failed to confirm booking: ${error.error}`);
+    }
+  };
+
+  const handleEndBooking = async () => {
+    if (!confirm('Are you sure you want to end this booking? This action cannot be undone.')) {
+      return;
+    }
+    
+    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/end`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'ended' } }));
+      }
+      alert('Booking ended successfully!');
+    } else {
+      const error = await res.json();
+      alert(`Failed to end booking: ${error.error}`);
     }
   };
 
@@ -687,6 +1114,14 @@ function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: B
             onClick={handleApprove}
           >
             Approve
+          </button>
+        )}
+        {status === 'confirmed' && (
+          <button
+            className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow"
+            onClick={handleEndBooking}
+          >
+            End Booking
           </button>
         )}
       </div>
@@ -772,7 +1207,8 @@ function MessagesReservationPanel({ conversation, guest, listingId }: { conversa
 function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: { booking: any, guest: any, listingId: string, showApproveButton?: boolean }) {
   const [listing, setListing] = React.useState<any | null>(null);
   const [currentImg, setCurrentImg] = React.useState(0);
-  const [status, setStatus] = React.useState(booking.status);
+  // Use the status from the booking prop directly instead of local state
+  const status = booking.status;
 
   React.useEffect(() => {
     async function fetchListing() {
@@ -783,26 +1219,38 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
   }, [listingId]);
 
   const handleApprove = async () => {
-    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}`, {
+    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/accept`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        start_date: booking.start_date,
-        end_date: booking.end_date,
-        price_per_night: booking.price_per_night,
-        total_price: booking.total_price,
-        status: 'approved',
-        payment_status: booking.payment_status
-      })
+      headers: { 'Content-Type': 'application/json' }
     });
     if (res.ok) {
-      setStatus('approved');
       if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'approved' } }));
+        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'confirmed' } }));
       }
-      alert('Booking approved!');
+      alert('Booking confirmed!');
     } else {
-      alert('Failed to approve booking.');
+      const error = await res.json();
+      alert(`Failed to confirm booking: ${error.error}`);
+    }
+  };
+
+  const handleEndBooking = async () => {
+    if (!confirm('Are you sure you want to end this booking? This action cannot be undone.')) {
+      return;
+    }
+    
+    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/end`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('bookingStatusChanged', { detail: { id: booking.id, status: 'ended' } }));
+      }
+      alert('Booking ended successfully!');
+    } else {
+      const error = await res.json();
+      alert(`Failed to end booking: ${error.error}`);
     }
   };
 
@@ -863,6 +1311,14 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
             onClick={handleApprove}
           >
             Approve
+          </button>
+        )}
+        {status === 'confirmed' && (
+          <button
+            className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow"
+            onClick={handleEndBooking}
+          >
+            End Booking
           </button>
         )}
       </div>

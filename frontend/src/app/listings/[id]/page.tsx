@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import SearchBar from "../../../components/Searchbar";
-import ChatBox from "../../../components/ChatBox";
 import PrivacyMap from "../../../components/PrivacyMap";
+import BookingForm from "../../../components/BookingForm";
+import ReviewsSection from "../../../components/ReviewsSection";
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -39,6 +40,7 @@ interface User {
   id: string;
   name: string;
   university_id: string;
+  avatar_url?: string;
 }
 
 interface University {
@@ -48,6 +50,7 @@ interface University {
 
 export default function ListingDetails() {
   const { id } = useParams();
+  const router = useRouter();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [host, setHost] = useState<User | null>(null);
@@ -69,31 +72,37 @@ export default function ListingDetails() {
     // Implement navigation or search logic if needed
   };
 
-  // Booking card state
-  const [bookingDateRange, setBookingDateRange] = useState([
-    {
-      startDate: undefined,
-      endDate: undefined,
-      key: 'selection',
-    },
-  ]);
-  const [bookingShowCalendar, setBookingShowCalendar] = useState(false);
-  const [bookingGuests, setBookingGuests] = useState('');
-  const [availableMinDate, setAvailableMinDate] = useState<Date | null>(null);
-  const [availableMaxDate, setAvailableMaxDate] = useState<Date | null>(null);
+  const handleMessageHost = async () => {
+    if (!user || !host) return;
+    
+    try {
+      // Create or find conversation
+      const response = await fetch('http://localhost:4000/api/conversations/find-or-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listing_id: listing?.id,
+          guest_id: user.id,
+          host_id: host.id,
+        }),
+      });
+      
+      if (response.ok) {
+        // Navigate to messages page with URL parameters to auto-select the conversation
+        router.push(`/messages?listingId=${listing?.id}&hostId=${host.id}`);
+      } else {
+        alert('Failed to create conversation. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      alert('Failed to create conversation. Please try again.');
+    }
+  };
 
-  let nights = 0;
-  let totalPrice = 0;
   function formatPrice(price: number) {
     const formatted = Number(price).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
     // Fallback: if $ is missing, prepend it
     return formatted.startsWith('$') ? formatted : `$${formatted}`;
-  }
-  if (listing && bookingDateRange[0].startDate && bookingDateRange[0].endDate) {
-    const start = new Date(bookingDateRange[0].startDate);
-    const end = new Date(bookingDateRange[0].endDate);
-    nights = Math.max(0, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    totalPrice = nights * (listing.price_per_night || 0);
   }
 
   useEffect(() => {
@@ -134,13 +143,7 @@ export default function ListingDetails() {
             setUniversity(uni);
           }
         }
-        // Fetch available dates for booking
-        const datesRes = await fetch(`http://localhost:4000/api/listings/${id}/available-dates`);
-        const dates = await datesRes.json();
-        if (dates.length > 0) {
-          setAvailableMinDate(new Date(dates[0]));
-          setAvailableMaxDate(new Date(dates[dates.length - 1]));
-        }
+
       } catch (e) {
         setListing(null);
         setHost(null);
@@ -212,37 +215,7 @@ export default function ListingDetails() {
     url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
   }));
 
-  const handleReserve = async () => {
-    if (!user || !listing) return;
-    if (!bookingDateRange[0].startDate || !bookingDateRange[0].endDate || !bookingGuests) {
-      alert("Please select check-in, check-out, and number of guests.");
-      return;
-    }
-    const nights = bookingDateRange[0].startDate && bookingDateRange[0].endDate
-      ? Math.max(0, Math.ceil((new Date(bookingDateRange[0].endDate).getTime() - new Date(bookingDateRange[0].startDate).getTime()) / (1000 * 60 * 60 * 24)))
-      : 0;
-    const booking = {
-      listing_id: listing.id,
-      guest_id: user.id,
-      host_id: listing.user_id,
-      start_date: bookingDateRange[0].startDate,
-      end_date: bookingDateRange[0].endDate,
-      price_per_night: listing.price_per_night,
-      total_price: nights * listing.price_per_night,
-      status: "pending",
-      payment_status: "unpaid"
-    };
-    const res = await fetch("http://localhost:4000/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(booking)
-    });
-    if (res.ok) {
-      alert("Booking request submitted!");
-    } else {
-      alert("Failed to submit booking.");
-    }
-  };
+
 
   return (
     <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
@@ -300,12 +273,32 @@ export default function ListingDetails() {
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left: Listing details */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">{host?.name ? host.name[0] : 'H'}</div>
-              <div>
-                <div className="text-black font-semibold">Hosted by {host?.name || 'Host'}</div>
-                <div className="text-gray-500 text-sm">{university ? `${university.name} student` : ''}</div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                {host?.avatar_url ? (
+                  <img 
+                    src={host.avatar_url} 
+                    alt={host.name || 'Host'} 
+                    className="w-12 h-12 rounded-full object-cover border border-gray-200"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                    {host?.name ? host.name[0] : 'H'}
+                  </div>
+                )}
+                <div>
+                  <div className="text-black font-semibold">Hosted by {host?.name || 'Host'}</div>
+                  <div className="text-gray-500 text-sm">{university ? `${university.name} student` : ''}</div>
+                </div>
               </div>
+              {user && user.id !== host?.id && (
+                <button
+                  onClick={handleMessageHost}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow"
+                >
+                  Message Host
+                </button>
+              )}
             </div>
             <hr className="my-6" />
             <div>
@@ -384,96 +377,45 @@ export default function ListingDetails() {
               </div>
             </div>
           </div>
-          {/* Right: Booking card placeholder */}
+          {/* Right: Booking form */}
           <div className="md:col-span-1">
-            <div className="bg-white rounded-2xl shadow p-6 sticky top-28 border border-gray-200 relative">
-              <div className="text-black text-2xl font-bold mb-2">
-                {nights > 0 ? (
-                  <>
-                    {formatPrice(totalPrice)} <span className="text-base font-normal text-gray-600">for {nights} night{nights > 1 ? 's' : ''}</span>
-                  </>
-                ) : (
-                  <>
+            <div className="sticky top-28">
+              {user && user.id !== listing.user_id ? (
+                <BookingForm
+                  listing={{
+                    id: listing.id,
+                    title: listing.title,
+                    price_per_night: listing.price_per_night,
+                    user_id: listing.user_id
+                  }}
+                  onSuccess={(booking) => {
+                    alert('Booking request submitted successfully! The host has 24 hours to respond.');
+                    // Optionally redirect to bookings page
+                    // window.location.href = '/bookings';
+                  }}
+                  onCancel={() => {
+                    // Handle cancel if needed
+                  }}
+                />
+              ) : (
+                <div className="bg-white rounded-2xl shadow p-6 border border-gray-200">
+                  <div className="text-black text-2xl font-bold mb-2">
                     {formatPrice(Number(listing?.price_per_night ?? 0))} <span className="text-base font-normal text-gray-600">per night</span>
-                  </>
-                )}
-              </div>
-              {/* Booking form */}
-              <div className="mt-4">
-                {/* Check-in/out and guests container */}
-                <div className="border rounded-xl mb-4 overflow-hidden">
-                  <div className="grid grid-cols-2 border-b">
-                    <div className="p-3 cursor-pointer" onClick={() => setBookingShowCalendar(!bookingShowCalendar)}>
-                      <div className="text-xs font-bold text-gray-700 uppercase mb-1">Check-in</div>
-                      <div className="text-gray-900 text-sm">
-                        {bookingDateRange[0].startDate ? new Date(bookingDateRange[0].startDate).toLocaleDateString() : 'Add date'}
-                      </div>
-                    </div>
-                    <div className="p-3 cursor-pointer border-l" onClick={() => setBookingShowCalendar(!bookingShowCalendar)}>
-                      <div className="text-xs font-bold text-gray-700 uppercase mb-1">Check-out</div>
-                      <div className="text-gray-900 text-sm">
-                        {bookingDateRange[0].endDate ? new Date(bookingDateRange[0].endDate).toLocaleDateString() : 'Add date'}
-                      </div>
-                    </div>
                   </div>
-                  <div className="p-3 flex flex-col">
-                    <div className="text-xs font-bold text-gray-700 uppercase mb-1">Guests</div>
-                    <input
-                      type="text"
-                      value={bookingGuests}
-                      onChange={e => setBookingGuests(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Add guests"
-                      className="w-full bg-transparent outline-none border-none text-gray-900 placeholder-gray-400 text-sm"
-                    />
+                  <div className="text-center text-gray-500 py-8">
+                    {user ? 'This is your own listing' : 'Please log in to book this listing'}
                   </div>
-                  {/* Calendar Dropdown */}
-                  {bookingShowCalendar && (
-                    <div className="absolute left-0 right-0 mx-auto top-24 z-50 bg-white rounded-xl shadow-lg">
-                      <DateRange
-                        ranges={bookingDateRange}
-                        onChange={(item: any) => {
-                          // Ensure minimum 1 night stay
-                          const selection = item.selection;
-                          if (selection.startDate && selection.endDate) {
-                            const startDate = new Date(selection.startDate);
-                            const endDate = new Date(selection.endDate);
-                            const diffTime = endDate.getTime() - startDate.getTime();
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                            
-                            // If end date is same as or before start date, set end date to 1 day after start date
-                            if (diffDays < 1) {
-                              const newEndDate = new Date(startDate);
-                              newEndDate.setDate(newEndDate.getDate() + 1);
-                              setBookingDateRange([{
-                                ...selection,
-                                endDate: newEndDate
-                              }]);
-                            } else {
-                              setBookingDateRange([selection]);
-                            }
-                          } else {
-                            setBookingDateRange([selection]);
-                          }
-                        }}
-                        moveRangeOnFirstSelection={false}
-                        editableDateInputs={true}
-                        minDate={availableMinDate || new Date()}
-                        maxDate={availableMaxDate || undefined}
-                        rangeColors={["#2563eb"]}
-                      />
-                    </div>
-                  )}
                 </div>
-                <button className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-xl transition" onClick={handleReserve} type="button">Reserve</button>
-                <div className="text-center text-gray-500 text-sm mt-2">You won't be charged yet</div>
-              </div>
+              )}
             </div>
           </div>
         </div>
-        {/* Chat box for messaging the host */}
-        {host && user && user.id !== host.id && (
-          <ChatBox listingId={listing.id} hostId={host.id} disableAutoScroll={true} />
-        )}
+
+        {/* Reviews Section */}
+        <div className="mt-12">
+          <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
+          <ReviewsSection listingId={listing.id} />
+        </div>
       </div>
     </div>
   );

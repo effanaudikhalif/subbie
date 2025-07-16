@@ -59,6 +59,35 @@ module.exports = (pool) => {
     }
   });
 
+  // Get average ratings for listings
+  router.get('/average-ratings', async (req, res) => {
+    try {
+      const { rows } = await pool.query(`
+        SELECT 
+          l.id as listing_id,
+          AVG((hr.cleanliness_rating + hr.accuracy_rating + hr.communication_rating + hr.location_rating + hr.value_rating) / 5.0) as average_rating,
+          COUNT(hr.id) as total_reviews
+        FROM listings l
+        LEFT JOIN bookings b ON l.id = b.listing_id
+        LEFT JOIN host_reviews hr ON hr.booking_id = b.id
+        GROUP BY l.id
+        HAVING COUNT(hr.id) > 0
+      `);
+      
+      const ratingsMap = {};
+      rows.forEach(row => {
+        ratingsMap[row.listing_id] = {
+          average_rating: parseFloat(row.average_rating),
+          total_reviews: parseInt(row.total_reviews)
+        };
+      });
+      
+      res.json(ratingsMap);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Get listing by id
   router.get('/:id', async (req, res) => {
     try {

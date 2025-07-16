@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
 import Navbar from "../../components/Navbar";
+import { useSearchParams } from "next/navigation";
 
 interface Conversation {
   id: string;
@@ -34,6 +35,7 @@ interface Message {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const userId = typeof user?.id === 'string' ? user.id : null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -50,10 +52,8 @@ export default function MessagesPage() {
       setLoading(true);
       const res = await fetch(`http://localhost:4000/api/conversations/user/${userId}`);
       const data = await res.json();
-      // Get all conversations where user is either host or guest
-      const userConversations = data.filter((c: Conversation) => 
-        c.host_id === userId || c.guest_id === userId
-      );
+      // Only get conversations where user is the guest (renter), not the host
+      const userConversations = data.filter((c: Conversation) => c.guest_id === userId);
       // Fetch messages for each conversation to check if there are actual messages
       const conversationsWithMessages = await Promise.all(
         userConversations.map(async (conversation: Conversation) => {
@@ -64,13 +64,55 @@ export default function MessagesPage() {
         })
       );
       if (isMounted) {
-        setConversations(conversationsWithMessages.filter(c => c.hasMessages));
+        const listingId = searchParams.get('listingId');
+        const hostId = searchParams.get('hostId');
+        
+        // If we have URL parameters, include all conversations (even without messages)
+        // Otherwise, only show conversations with messages
+        const shouldShowAllConversations = !!(listingId && hostId && userId);
+        const filteredConversations = shouldShowAllConversations 
+          ? conversationsWithMessages 
+          : conversationsWithMessages.filter(c => c.hasMessages);
+        
+        setConversations(filteredConversations);
+        
+        // Check if we should auto-select a conversation based on URL params
+        if (listingId && hostId && userId) {
+          // Find the conversation for this specific listing and host
+          const targetConversation = filteredConversations.find(
+            c => c.listing_id === listingId && c.host_id === hostId
+          );
+          
+          if (targetConversation) {
+            setSelected(targetConversation);
+          }
+        }
+        
         setLoading(false);
       }
     }
     fetchConversations();
     return () => { isMounted = false; };
   }, [userId]);
+
+  // Handle URL parameter changes for auto-selecting conversations
+  useEffect(() => {
+    if (!userId || !conversations.length) return;
+    
+    const listingId = searchParams.get('listingId');
+    const hostId = searchParams.get('hostId');
+    
+    if (listingId && hostId) {
+      // Find the conversation for this specific listing and host
+      const targetConversation = conversations.find(
+        c => c.listing_id === listingId && c.host_id === hostId
+      );
+      
+      if (targetConversation) {
+        setSelected(targetConversation);
+      }
+    }
+  }, [searchParams, userId, conversations]);
 
   // Fetch guest profiles, listing titles, and listing details for sidebar and right panel
   useEffect(() => {
@@ -128,10 +170,7 @@ export default function MessagesPage() {
                   onClick={() => setSelected(c)}
                 >
                   <div className="font-semibold text-black">
-                    {c.guest_id === userId 
-                      ? guestProfiles[c.host_id]?.name || "Host" 
-                      : guestProfiles[c.guest_id]?.name || "Guest"
-                    }
+                    {guestProfiles[c.host_id]?.name || "Host"}
                   </div>
                   <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
                 </li>
@@ -145,10 +184,7 @@ export default function MessagesPage() {
             <div className="flex-1 flex flex-col">
               <div className="border-b border-gray-200 px-6 py-4 bg-white">
                 <div className="font-bold text-lg text-black">
-                  {selected.guest_id === userId 
-                    ? guestProfiles[selected.host_id]?.name || "Host" 
-                    : guestProfiles[selected.guest_id]?.name || "Guest"
-                  }
+                  {guestProfiles[selected.host_id]?.name || "Host"}
                 </div>
                 <div className="text-xs text-gray-500">Listing: {listingTitles[selected.listing_id] || "Listing"}</div>
               </div>
@@ -156,7 +192,7 @@ export default function MessagesPage() {
                 <ChatBox 
                   listingId={selected.listing_id} 
                   hostId={selected.host_id} 
-                  allowHostChat={selected.host_id === userId} 
+                  allowHostChat={false} 
                   conversationId={selected.id} 
                   disableAutoScroll={true}
                   fullWidth={true}
@@ -179,37 +215,17 @@ export default function MessagesPage() {
               <div className="text-gray-500 mb-2">{listingDetails[selected.listing_id].city}, {listingDetails[selected.listing_id].state}</div>
               <div className="text-gray-700 mb-4">{listingDetails[selected.listing_id].description}</div>
               <div className="flex items-center gap-3 mb-4">
-                {/* Show the other user's avatar and info */}
-                {selected.guest_id === userId ? (
-                  guestProfiles[selected.host_id]?.avatar_url ? (
-                    <img src={guestProfiles[selected.host_id].avatar_url} alt={guestProfiles[selected.host_id].name} className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
-                      {guestProfiles[selected.host_id]?.name ? guestProfiles[selected.host_id].name[0] : 'U'}
-                    </div>
-                  )
+                {/* Show the host's avatar and info since user is always the guest */}
+                {guestProfiles[selected.host_id]?.avatar_url ? (
+                  <img src={guestProfiles[selected.host_id].avatar_url} alt={guestProfiles[selected.host_id].name} className="w-10 h-10 rounded-full object-cover" />
                 ) : (
-                  guestProfiles[selected.guest_id]?.avatar_url ? (
-                    <img src={guestProfiles[selected.guest_id].avatar_url} alt={guestProfiles[selected.guest_id].name} className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
-                      {guestProfiles[selected.guest_id]?.name ? guestProfiles[selected.guest_id].name[0] : 'U'}
-                    </div>
-                  )
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                    {guestProfiles[selected.host_id]?.name ? guestProfiles[selected.host_id].name[0] : 'H'}
+                  </div>
                 )}
                 <div>
-                  <div className="text-black font-semibold">
-                    {selected.guest_id === userId
-                      ? `Hosted by ${guestProfiles[selected.host_id]?.name || 'Host'}`
-                      : `Guest: ${guestProfiles[selected.guest_id]?.name || 'Guest'}`
-                    }
-                  </div>
-                  <div className="text-gray-500 text-sm">
-                    {selected.guest_id === userId
-                      ? guestProfiles[selected.host_id]?.email
-                      : guestProfiles[selected.guest_id]?.email
-                    }
-                  </div>
+                  <div className="font-semibold text-black">{guestProfiles[selected.host_id]?.name || "Host"}</div>
+                  <div className="text-xs text-gray-500">Host</div>
                 </div>
               </div>
             </div>

@@ -6,11 +6,12 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
-  phone?: string;
   university_id: string;
   university_name?: string;
   major?: string;
-  year?: number;
+  graduation_year?: number;
+  education_level?: string;
+  about_me?: string;
   avatar_url?: string;
   stripe_account?: string;
   created_at: string;

@@ -13,8 +13,8 @@ interface ListingCardProps {
   price_per_night: number;
   dateRange?: Array<{ startDate: Date; endDate: Date; key: string }>;
   href?: string;
-  currentImageIndex?: number;
-  onImageChange?: (listingId: string, newIndex: number) => void;
+  averageRating?: number;
+  totalReviews?: number;
 }
 
 const ListingCard: React.FC<ListingCardProps> = ({
@@ -29,25 +29,26 @@ const ListingCard: React.FC<ListingCardProps> = ({
   price_per_night,
   dateRange,
   href,
-  currentImageIndex = 0,
-  onImageChange
+  averageRating,
+  totalReviews
 }) => {
   const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const handleNextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (images.length > 1 && onImageChange) {
-      onImageChange(id, (currentImageIndex + 1) % images.length);
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }
   };
 
   const handlePrevImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (images.length > 1 && onImageChange) {
-      onImageChange(id, currentImageIndex === 0 ? images.length - 1 : currentImageIndex - 1);
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => prev === 0 ? images.length - 1 : prev - 1);
     }
   };
 
@@ -271,25 +272,35 @@ const ListingCard: React.FC<ListingCardProps> = ({
             </div>
           </div>
           
-          {/* Beds • Baths */}
+          {/* Beds • Rating */}
           <div className="text-gray-500 text-sm mb-2">
-            {bedrooms} bed{bedrooms !== 1 ? 's' : ''} • {bathrooms} bath{bathrooms !== 1 ? 's' : ''}
+            {bedrooms} bed{bedrooms !== 1 ? 's' : ''} • {averageRating ? (
+              <>
+                <span className="text-black">★</span>
+                <span className="ml-1">{averageRating.toFixed(1)}</span>
+                {totalReviews && (
+                  <span className="ml-1">({totalReviews})</span>
+                )}
+              </>
+            ) : (
+              <span className="text-gray-400">No reviews</span>
+            )}
           </div>
           
-          {/* Price per night • Total for nights */}
+          {/* Price for nights */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <span className="font-bold text-black text-lg">${Math.round(price_per_night)}</span>
-              <span className="text-gray-500 text-sm ml-1">per night</span>
-              {totalPrice && nights && (
+              {totalPrice && nights ? (
                 <>
-                  <span className="text-gray-500 text-sm mx-1">•</span>
-                  <span className="font-bold text-black text-lg">
-                    ${Math.round(totalPrice)}
-                  </span>
+                  <span className="font-bold text-black text-lg">${Math.round(totalPrice)}</span>
                   <span className="text-gray-500 text-sm ml-1">
                     for {nights} night{nights !== 1 ? 's' : ''}
                   </span>
+                </>
+              ) : (
+                <>
+                  <span className="font-bold text-black text-lg">${Math.round(price_per_night)}</span>
+                  <span className="text-gray-500 text-sm ml-1">per night</span>
                 </>
               )}
             </div>

@@ -30,7 +30,7 @@ export default function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState<{ [key: string]: number }>({});
+  const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
 
   useEffect(() => {
     if (!user) {
@@ -55,6 +55,16 @@ export default function WishlistPage() {
 
     fetchWishlist();
   }, [user]);
+
+  // Fetch average ratings for listings
+  useEffect(() => {
+    fetch('http://localhost:4000/api/listings/average-ratings')
+      .then(res => res.json())
+      .then(data => {
+        setAverageRatings(data);
+      })
+      .catch(() => setAverageRatings({}));
+  }, []);
 
   // Handle removing item from wishlist
   const handleRemoveFromWishlist = (listingId: string) => {
@@ -137,13 +147,8 @@ export default function WishlistPage() {
                   bedrooms={item.bedrooms}
                   bathrooms={item.bathrooms}
                   price_per_night={item.price_per_night}
-                  currentImageIndex={currentImageIndex[item.listing_id] || 0}
-                  onImageChange={(listingId, newIndex) => {
-                    setCurrentImageIndex(prev => ({
-                      ...prev,
-                      [listingId]: newIndex
-                    }));
-                  }}
+                  averageRating={averageRatings[item.listing_id]?.average_rating}
+                  totalReviews={averageRatings[item.listing_id]?.total_reviews}
                 />
               ))}
             </div>

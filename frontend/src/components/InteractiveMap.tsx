@@ -12,18 +12,31 @@ interface Listing {
   latitude?: number;
   longitude?: number;
   images?: Array<{ url: string }>;
+  name?: string;
+  avatar_url?: string;
+  university_name?: string;
+  bedrooms?: number;
+  bathrooms?: number;
+  averageRating?: number;
+  totalReviews?: number;
 }
 
 interface InteractiveMapProps {
   listings: Listing[];
   searchLocation?: string;
   className?: string;
+  dateRange?: Array<{
+    startDate: Date | null;
+    endDate: Date | null;
+    key: string;
+  }>;
 }
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
   listings,
   searchLocation,
-  className = ""
+  className = "",
+  dateRange
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,12 +109,26 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
             const lng = parseFloat(listing.longitude as any);
             
             if (!isNaN(lat) && !isNaN(lng)) {
+              // Calculate price based on date range if available
+              let displayPrice = listing.price_per_night;
+              let priceText = `$${Math.round(displayPrice)}`;
+              let priceLabel = `$${Math.round(displayPrice)}`;
+              
+              if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+                const checkIn = new Date(dateRange[0].startDate);
+                const checkOut = new Date(dateRange[0].endDate);
+                const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                displayPrice = nights * listing.price_per_night;
+                priceText = `$${Math.round(displayPrice)} for ${nights} night${nights !== 1 ? 's' : ''}`;
+                priceLabel = `$${Math.round(displayPrice)}`;
+              }
+              
               const marker = new google.maps.Marker({
                 position: { lat, lng },
                 map: mapInstance,
                 title: listing.title,
                 label: {
-                  text: `$${listing.price_per_night}`,
+                  text: priceLabel,
                   className: 'map-marker-label'
                 }
               });
@@ -112,7 +139,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
                   <div style="padding: 10px; max-width: 200px;">
                     <h3 style="margin: 0 0 5px 0; font-weight: bold;">${listing.title}</h3>
                     <p style="margin: 0 0 5px 0; color: #666;">${listing.neighborhood || listing.city}, ${listing.state}</p>
-                    <p style="margin: 0; font-weight: bold; color: #000;">$${listing.price_per_night}/night</p>
+                    <p style="margin: 0; font-weight: bold; color: #000;">${priceText}</p>
                   </div>
                 `
               });

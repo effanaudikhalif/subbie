@@ -244,8 +244,15 @@ create table public.bookings (
 
     -- Booking state
     status           text default 'pending',     -- pending | confirmed | cancelled
-    payment_status   text default 'unpaid',      -- unpaid | paid | refunded
-    -- payment_intent_id text,                  -- (nullable) for Stripe later
+    payment_status   text default 'preauthorized', -- preauthorized | paid | refunded | released
+    payment_intent_id text,                     -- Stripe PaymentIntent ID for pre-authorization
+    expires_at       timestamptz,               -- When the booking request expires (24 hours from creation)
+
+    -- Cancellation details
+    cancellation_reason    varchar(255),        -- Reason for cancellation
+    cancellation_details   text,                -- Additional cancellation details
+    cancelled_by          varchar(10) check (cancelled_by in ('host', 'guest')), -- Who cancelled
+    cancelled_at          timestamptz,          -- When the booking was cancelled
 
     created_at       timestamptz default now(),
     updated_at       timestamptz default now()
@@ -297,6 +304,88 @@ create policy "guest or host can update status"
 create policy "host can delete"
   on public.bookings for delete
   using (auth.uid() = host_id);
+
+----------------------------------------------------------
+-- REVIEWS  (mutual reviews after completed bookings)
+----------------------------------------------------------
+create table public.reviews (
+    id               uuid primary key default gen_random_uuid(),
+    
+    -- FK to the booking this review is for
+    booking_id       uuid not null
+                     references public.bookings(id) on delete cascade,
+    
+    -- Who wrote the review
+    reviewer_id      uuid not null
+                     references public.users(id) on delete restrict,
+    
+    -- Who is being reviewed
+    reviewee_id      uuid not null
+                     references public.users(id) on delete restrict,
+    
+    -- Review content - individual ratings
+    cleanliness_rating    integer not null check (cleanliness_rating >= 1 and cleanliness_rating <= 5),
+    accuracy_rating       integer not null check (accuracy_rating >= 1 and accuracy_rating <= 5),
+    communication_rating  integer not null check (communication_rating >= 1 and communication_rating <= 5),
+    location_rating       integer not null check (location_rating >= 1 and location_rating <= 5),
+    value_rating         integer not null check (value_rating >= 1 and value_rating <= 5),
+    comment              text,
+    
+    created_at       timestamptz default now(),
+    updated_at       timestamptz default now()
+);
+
+-- Add computed average rating column
+ALTER TABLE public.reviews ADD COLUMN average_rating numeric(3,2) GENERATED ALWAYS AS (
+    (cleanliness_rating + accuracy_rating + communication_rating + location_rating + value_rating) / 5.0
+) STORED;
+
+----------------------------------------------------------
+-- Trigger → auto-update updated_at on changes
+----------------------------------------------------------
+create or replace function public.set_review_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+
+create trigger trg_review_updated_at
+before update on public.reviews
+for each row execute procedure public.set_review_updated_at();
+
+----------------------------------------------------------
+-- Helpful indexes
+----------------------------------------------------------
+create index review_booking_idx on public.reviews (booking_id);
+create index review_reviewer_idx on public.reviews (reviewer_id);
+create index review_reviewee_idx on public.reviews (reviewee_id);
+create index review_rating_idx on public.reviews (rating);
+
+----------------------------------------------------------
+-- Row-Level Security (RLS)
+----------------------------------------------------------
+alter table public.reviews enable row level security;
+
+-- 1. Anyone can read reviews (public)
+create policy "anyone can read reviews"
+  on public.reviews for select
+  using (true);
+
+-- 2. Reviewer can create their own review
+create policy "reviewer can create review"
+  on public.reviews for insert
+  with check (auth.uid() = reviewer_id);
+
+-- 3. Reviewer can update their own review (within time limit)
+create policy "reviewer can update review"
+  on public.reviews for update
+  using (auth.uid() = reviewer_id);
+
+-- 4. Reviewer can delete their own review (within time limit)
+create policy "reviewer can delete review"
+  on public.reviews for delete
+  using (auth.uid() = reviewer_id);
 
 --V2
 
@@ -497,3 +586,29 @@ alter table public.wishlist enable row level security;
 create policy "users can manage their own wishlist"
   on public.wishlist for all
   using (auth.uid() = user_id);
+
+-- MIGRATION: Add aspect ratings and computed average_rating to reviews table
+-- Run this manually if upgrading an existing database
+/*
+ALTER TABLE public.reviews
+  ADD COLUMN IF NOT EXISTS cleanliness_rating integer,
+  ADD COLUMN IF NOT EXISTS accuracy_rating integer,
+  ADD COLUMN IF NOT EXISTS communication_rating integer,
+  ADD COLUMN IF NOT EXISTS location_rating integer,
+  ADD COLUMN IF NOT EXISTS value_rating integer;
+
+-- Remove old single rating column if it exists
+ALTER TABLE public.reviews
+  DROP COLUMN IF EXISTS rating;
+
+-- Add computed average_rating column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='reviews' AND column_name='average_rating'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.reviews ADD COLUMN average_rating numeric(3,2) GENERATED ALWAYS AS ((cleanliness_rating + accuracy_rating + communication_rating + location_rating + value_rating) / 5.0) STORED;';
+  END IF;
+END$$;
+*/

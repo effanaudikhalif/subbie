@@ -19,6 +19,8 @@ interface Listing {
   university_name?: string;
   bedrooms?: number;
   bathrooms?: number;
+  averageRating?: number;
+  totalReviews?: number;
 }
 
 interface LocationMapPreviewProps {
@@ -32,7 +34,7 @@ interface LocationMapPreviewProps {
   }>;
 }
 
-const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
+const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   searchLocation,
   listings = [],
   className = "",
@@ -230,9 +232,9 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                 const lng = parseFloat(listing.longitude as any);
                 
                 if (!isNaN(lat) && !isNaN(lng)) {
-                  // Calculate total price if dates are selected
+                  // Calculate price based on date range if available
                   let displayPrice = listing.price_per_night;
-                  let priceText = `$${Math.round(listing.price_per_night)}`;
+                  let priceText = `$${Math.round(displayPrice)}`;
                   
                   if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
                     const checkIn = new Date(dateRange[0].startDate);
@@ -480,19 +482,26 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                 </div>
               </div>
               
-              {/* Beds • Baths */}
+              {/* Beds • Rating */}
               <div className="text-gray-500 text-sm mb-2">
-                {selectedListing.bedrooms || 1} bed{(selectedListing.bedrooms || 1) !== 1 ? 's' : ''} • {selectedListing.bathrooms || 1} bath{(selectedListing.bathrooms || 1) !== 1 ? 's' : ''}
+                {selectedListing.bedrooms || 1} bed{(selectedListing.bedrooms || 1) !== 1 ? 's' : ''} • {selectedListing.averageRating ? (
+                  <>
+                    <span className="text-black">★</span>
+                    <span className="ml-1">{selectedListing.averageRating.toFixed(1)}</span>
+                    {selectedListing.totalReviews && (
+                      <span className="ml-1">({selectedListing.totalReviews})</span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-gray-400">No reviews</span>
+                )}
               </div>
               
-              {/* Price per night • Total for nights */}
+              {/* Price for nights */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
-                  <span className="font-bold text-black text-lg">${Math.round(selectedListing.price_per_night)}</span>
-                  <span className="text-gray-500 text-sm ml-1">per night</span>
-                  {dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate && (
+                  {dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate ? (
                     <>
-                      <span className="text-gray-500 text-sm mx-1">•</span>
                       <span className="font-bold text-black text-lg">
                         ${(() => {
                           const checkIn = new Date(dateRange[0].startDate);
@@ -516,6 +525,11 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
                         })()}
                       </span>
                     </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-black text-lg">${Math.round(selectedListing.price_per_night)}</span>
+                      <span className="text-gray-500 text-sm ml-1">per night</span>
+                    </>
                   )}
                 </div>
               </div>
@@ -525,6 +539,6 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = ({
       )}
     </div>
   );
-};
+});
 
 export default LocationMapPreview; 

@@ -14,18 +14,20 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const [uploading, setUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    phone: "",
     major: "",
-    year: ""
+    graduation_year: "",
+    education_level: "",
+    about_me: ""
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (profile) {
       setEditForm({
-        phone: profile.phone || "",
         major: profile.major || "",
-        year: profile.year ? profile.year.toString() : ""
+        graduation_year: profile.graduation_year ? profile.graduation_year.toString() : "",
+        education_level: profile.education_level || "",
+        about_me: profile.about_me || ""
       });
     }
   }, [profile]);
@@ -72,9 +74,10 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     if (!isEditing) {
       // Reset form when entering edit mode
       setEditForm({
-        phone: profile?.phone || "",
         major: profile?.major || "",
-        year: profile?.year ? profile.year.toString() : ""
+        graduation_year: profile?.graduation_year ? profile.graduation_year.toString() : "",
+        education_level: profile?.education_level || "",
+        about_me: profile?.about_me || ""
       });
     }
   };
@@ -93,9 +96,10 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           university_id: profile?.university_id,
           name: profile?.name,
           email: profile?.email,
-          phone: editForm.phone,
           major: editForm.major,
-          year: editForm.year ? parseInt(editForm.year) : null,
+          graduation_year: editForm.graduation_year ? parseInt(editForm.graduation_year) : null,
+          education_level: editForm.education_level,
+          about_me: editForm.about_me,
           stripe_account: profile?.stripe_account
         }),
       });
@@ -120,9 +124,10 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     setIsEditing(false);
     // Reset form to original values
     setEditForm({
-      phone: profile?.phone || "",
       major: profile?.major || "",
-      year: profile?.year ? profile.year.toString() : ""
+      graduation_year: profile?.graduation_year ? profile.graduation_year.toString() : "",
+      education_level: profile?.education_level || "",
+      about_me: profile?.about_me || ""
     });
   };
 
@@ -248,26 +253,29 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
                   <div className="space-y-3">
-                    <div>
+                    <div className="min-h-[3rem]">
                       <span className="block text-xs text-gray-500">Full Name</span>
                       <span className="block text-base text-gray-900 font-medium">{profile?.name || "Not provided"}</span>
                     </div>
-                    <div>
+                    <div className="min-h-[3rem]">
                       <span className="block text-xs text-gray-500">Email Address</span>
                       <span className="block text-base text-gray-900 font-medium">{profile?.email}</span>
                     </div>
-                    <div>
-                      <span className="block text-xs text-gray-500">Phone Number</span>
+
+                    <div className="min-h-[3rem]">
+                      <span className="block text-xs text-gray-500">About Me</span>
                       {isEditing ? (
-                        <input
-                          type="tel"
-                          value={editForm.phone}
-                          onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                          placeholder="Enter phone number"
+                        <textarea
+                          value={editForm.about_me}
+                          onChange={(e) => setEditForm({...editForm, about_me: e.target.value})}
+                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-20 resize-none"
+                          placeholder="Tell us about yourself..."
+                          rows={3}
                         />
                       ) : (
-                        <span className="block text-base text-gray-900 font-medium">{profile?.phone || "Not provided"}</span>
+                        <span className="block text-base text-gray-900 font-medium">
+                          {profile?.about_me || "Not provided"}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -277,31 +285,51 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-800 mb-4">University Information</h3>
                   <div className="space-y-3">
-                    <div>
+                    <div className="min-h-[3rem]">
                       <span className="block text-xs text-gray-500">University</span>
                       <span className="block text-base text-gray-900 font-medium">{profile?.university_name || "Not selected"}</span>
                     </div>
-                    <div>
+                    <div className="min-h-[3rem]">
+                      <span className="block text-xs text-gray-500">Education Level</span>
+                      {isEditing ? (
+                        <select
+                          value={editForm.education_level}
+                          onChange={(e) => setEditForm({...editForm, education_level: e.target.value})}
+                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
+                        >
+                          <option value="">Select your education level</option>
+                          <option value="undergraduate">Undergraduate</option>
+                          <option value="graduate">Graduate</option>
+                          <option value="phd">PhD</option>
+                          <option value="other">Other</option>
+                        </select>
+                      ) : (
+                        <span className="block text-base text-gray-900 font-medium">
+                          {profile?.education_level ? profile.education_level.charAt(0).toUpperCase() + profile.education_level.slice(1) : "Not provided"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-h-[3rem]">
                       <span className="block text-xs text-gray-500">Major</span>
                       {isEditing ? (
                         <input
                           type="text"
                           value={editForm.major}
                           onChange={(e) => setEditForm({...editForm, major: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
                           placeholder="Enter your major"
                         />
                       ) : (
                         <span className="block text-base text-gray-900 font-medium">{profile?.major || "Not provided"}</span>
                       )}
                     </div>
-                    <div>
-                      <span className="block text-xs text-gray-500">Year</span>
+                    <div className="min-h-[3rem]">
+                      <span className="block text-xs text-gray-500">Graduation Year</span>
                       {isEditing ? (
                         <select
-                          value={editForm.year}
-                          onChange={(e) => setEditForm({...editForm, year: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          value={editForm.graduation_year}
+                          onChange={(e) => setEditForm({...editForm, graduation_year: e.target.value})}
+                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
                         >
                           <option value="">Select your graduation year</option>
                           <option value="2025">Class of 2025</option>
@@ -312,7 +340,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                         </select>
                       ) : (
                         <span className="block text-base text-gray-900 font-medium">
-                          {profile?.year ? `Class of ${profile.year}` : "Not provided"}
+                          {profile?.graduation_year ? `Class of ${profile.graduation_year}` : "Not provided"}
                         </span>
                       )}
                     </div>

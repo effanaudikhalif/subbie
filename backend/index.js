@@ -1,6 +1,7 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 const { Pool } = require('pg');
 const universitiesRouter = require('./routes/universities');
@@ -11,8 +12,9 @@ const bookingsRouter = require('./routes/bookings');
 const conversationsRouter = require('./routes/conversations');
 const messagesRouter = require('./routes/messages');
 const wishlistRouter = require('./routes/wishlist');
-
-dotenv.config();
+const stripeConnectRouter = require('./routes/stripe-connect');
+const hostReviewsRouter = require('./routes/host-reviews');
+const renterReviewsRouter = require('./routes/renter-reviews');
 
 const app = express();
 app.use(cors());
@@ -27,7 +29,7 @@ app.use('/uploads', (req, res, next) => {
 }, express.static(path.join(__dirname, 'uploads')));
 
 const pool = new Pool({
-  connectionString: process.env.SUPABASE_DB_URL,
+  connectionString: process.env.DATABASE_URL,
 });
 
 app.use((req, res, next) => {
@@ -67,6 +69,15 @@ app.use('/api/messages', messagesRouterInstance);
 
 const wishlistRouterInstance = wishlistRouter(pool);
 app.use('/api/wishlist', wishlistRouterInstance);
+
+const stripeConnectRouterInstance = stripeConnectRouter(pool);
+app.use('/api/stripe-connect', stripeConnectRouterInstance);
+
+const hostReviewsRouterInstance = hostReviewsRouter(pool);
+app.use('/api/host-reviews', hostReviewsRouterInstance);
+
+const renterReviewsRouterInstance = renterReviewsRouter(pool);
+app.use('/api/renter-reviews', renterReviewsRouterInstance);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

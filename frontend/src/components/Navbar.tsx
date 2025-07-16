@@ -9,8 +9,8 @@ import ProfileModal from "./ProfileModal";
 interface NavbarProps {
   children?: ReactNode;
   fixed?: boolean;
-  activeTab?: 'all' | 'pending' | 'approvedBookings' | 'messages';
-  setActiveTab?: (tab: 'all' | 'pending' | 'approvedBookings' | 'messages') => void;
+  activeTab?: 'all' | 'bookings' | 'messages' | 'stripe';
+  setActiveTab?: (tab: 'all' | 'bookings' | 'messages' | 'stripe') => void;
 }
 
 export default function Navbar({ children, fixed = true, activeTab, setActiveTab }: NavbarProps) {
@@ -62,23 +62,13 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
               </button>
               <button
                 className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'pending'
+                  activeTab === 'bookings'
                     ? 'text-black border-b-2 border-black'
                     : 'text-gray-500'
                 }`}
-                onClick={() => setActiveTab?.('pending')}
+                onClick={() => setActiveTab?.('bookings')}
               >
-                Requests
-              </button>
-              <button
-                className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'approvedBookings'
-                    ? 'text-black border-b-2 border-black'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab?.('approvedBookings')}
-              >
-                Approved
+                Bookings
               </button>
               <button
                 className={`pb-1 font-semibold transition-colors ${
@@ -89,6 +79,16 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 onClick={() => setActiveTab?.('messages')}
               >
                 Messages
+              </button>
+              <button
+                className={`pb-1 font-semibold transition-colors ${
+                  activeTab === 'stripe'
+                    ? 'text-black border-b-2 border-black'
+                    : 'text-gray-500'
+                }`}
+                onClick={() => setActiveTab?.('stripe')}
+              >
+                Settings
               </button>
             </div>
           ) : (
@@ -147,27 +147,31 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                     >
                       Profile
                     </button>
-                    <Link
-                      href="/bookings"
-                      className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Bookings
-                    </Link>
-                    <Link
-                      href="/messages"
-                      className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Messages
-                    </Link>
-                    <Link
-                      href="/wishlist"
-                      className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
-                      onClick={() => setProfileDropdownOpen(false)}
-                    >
-                      Wishlist
-                    </Link>
+                    {pathname !== '/my-listings' && (
+                      <>
+                        <Link
+                          href="/bookings"
+                          className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          Bookings
+                        </Link>
+                        <Link
+                          href="/messages"
+                          className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          Messages
+                        </Link>
+                        <Link
+                          href="/wishlist"
+                          className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          Wishlist
+                        </Link>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -247,27 +251,31 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                       >
                         Profile
                       </button>
-                      <Link
-                        href="/bookings"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Bookings
-                      </Link>
-                      <Link
-                        href="/messages"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Messages
-                      </Link>
-                      <Link
-                        href="/wishlist"
-                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-b-lg block w-full cursor-pointer"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Wishlist
-                      </Link>
+                      {pathname !== '/my-listings' && (
+                        <>
+                          <Link
+                            href="/bookings"
+                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            Bookings
+                          </Link>
+                          <Link
+                            href="/messages"
+                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            Messages
+                          </Link>
+                          <Link
+                            href="/wishlist"
+                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            Wishlist
+                          </Link>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
