@@ -169,7 +169,33 @@ export default function Results() {
 
   console.log('Filtered listings:', listingsWithRatings);
 
-
+  // Function to determine if search is for a specific address or broader location
+  const getSearchTitle = (searchTerm: string) => {
+    if (!searchTerm || searchTerm.trim() === '') {
+      return 'your search';
+    }
+    
+    const term = searchTerm.toLowerCase();
+    
+    // Check if it's a specific address (contains street numbers, specific building names, etc.)
+    const hasStreetNumber = /\d/.test(searchTerm);
+    const hasSpecificBuilding = searchTerm.includes('building') || searchTerm.includes('apartment') || 
+                               searchTerm.includes('suite') || searchTerm.includes('unit') ||
+                               searchTerm.includes('floor') || searchTerm.includes('room');
+    const hasStreetName = searchTerm.includes('street') || searchTerm.includes('avenue') || 
+                          searchTerm.includes('road') || searchTerm.includes('drive') ||
+                          searchTerm.includes('lane') || searchTerm.includes('way') ||
+                          searchTerm.includes('blvd') || searchTerm.includes('st') ||
+                          searchTerm.includes('ave') || searchTerm.includes('rd');
+    
+    // If it looks like a specific address, use "near"
+    if (hasStreetNumber || hasSpecificBuilding || (hasStreetName && hasStreetNumber)) {
+      return `near ${searchTerm}`;
+    }
+    
+    // Otherwise, use "in" for broader locations (cities, states, neighborhoods)
+    return `in ${searchTerm}`;
+  };
 
   const handleSearch = () => {
     console.log('handleSearch called with where:', where);
@@ -200,43 +226,44 @@ export default function Results() {
       </Navbar>
       
       {/* Split Layout: Listings on left, Map preview on right */}
-      <div className="flex h-[calc(100vh-4rem)] pt-8">
-        {/* Left side - Listings */}
-        <div className="w-1/2 overflow-y-auto p-6 h-full listings-container">
-          <h2 className="text-xl text-black font-semibold mb-6">
-            {filteredListings.length} places in {appliedWhere || 'your search'}
-          </h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {filteredListings.map(listing => (
-              <ListingCard
-                key={listing.id}
-                id={listing.id}
-                title={listing.title}
-                images={listing.images || []}
-                name={listing.name}
-                avatar_url={listing.avatar_url}
-                university_name={listing.university_name}
-                bedrooms={listing.bedrooms}
-                bathrooms={listing.bathrooms}
-                price_per_night={listing.price_per_night}
-                dateRange={dateRange}
-                averageRating={averageRatings[listing.id]?.average_rating}
-                totalReviews={averageRatings[listing.id]?.total_reviews}
-              />
-            ))}
+      <div className="h-[calc(100vh-4rem)] pt-13 pb-6">
+        <div className="flex h-full">
+          {/* Left side - Listings */}
+          <div className="w-1/2 overflow-y-auto px-6 h-full listings-container">
+            <h2 className="text-xl text-black font-semibold mb-6">
+              {filteredListings.length} places {getSearchTitle(appliedWhere)}
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filteredListings.map(listing => (
+                <ListingCard
+                  key={listing.id}
+                  id={listing.id}
+                  title={listing.title}
+                  images={listing.images || []}
+                  name={listing.name}
+                  avatar_url={listing.avatar_url}
+                  university_name={listing.university_name}
+                  bedrooms={listing.bedrooms}
+                  bathrooms={listing.bathrooms}
+                  price_per_night={listing.price_per_night}
+                  dateRange={dateRange}
+                  averageRating={averageRatings[listing.id]?.average_rating}
+                  totalReviews={averageRatings[listing.id]?.total_reviews}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-        
-        {/* Right side - Map Preview */}
-        <div className="w-1/2 h-[calc(100vh-6rem)] p-6 flex-shrink-0">
-          <LocationMapPreview 
-            key={`${appliedWhere}-${filteredListings.length}`}
-            searchLocation={appliedWhere}
-            listings={listingsWithRatings}
-            className="h-full"
-            dateRange={dateRange}
-          />
+          
+          {/* Right side - Map Preview */}
+          <div className="w-1/2 h-full overflow-hidden flex-shrink-0 px-6">
+            <LocationMapPreview 
+              searchLocation={appliedWhere}
+              listings={listingsWithRatings}
+              className="h-full w-full"
+              dateRange={dateRange}
+            />
+          </div>
         </div>
       </div>
     </div>

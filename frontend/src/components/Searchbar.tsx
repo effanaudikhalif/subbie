@@ -6,6 +6,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import Navbar from './Navbar';
+import './google-autocomplete.css';
 
 export default function SearchBar({
   where,
@@ -29,6 +30,7 @@ export default function SearchBar({
   onSearch: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,15 +51,20 @@ export default function SearchBar({
         const google = await loader.load();
         
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          types: ['geocode'], // Allow cities and general locations
+          types: ['establishment', 'geocode'], // Prioritize establishments first
           componentRestrictions: { country: ['us', 'ca'] }, // Restrict to US and Canada
-          fields: ['address_components', 'formatted_address']
+          fields: ['address_components', 'formatted_address', 'name', 'place_id'],
+          strictBounds: false
         });
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           
           if (place.formatted_address) {
+            // Clear the input first, then set the formatted address to avoid duplication
+            if (inputRef.current) {
+              inputRef.current.value = '';
+            }
             setWhere(place.formatted_address);
           }
         });
@@ -77,6 +84,23 @@ export default function SearchBar({
     }
   }, [setWhere]);
 
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+        setShowCalendar(false);
+      }
+    };
+
+    if (showCalendar) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendar, setShowCalendar]);
+
   const checkIn = dateRange[0].startDate
     ? new Date(dateRange[0].startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Add dates';
@@ -94,6 +118,7 @@ export default function SearchBar({
           type="text"
           value={where}
           onChange={e => setWhere(e.target.value)}
+          onFocus={() => setShowCalendar(false)}
           placeholder="Search destinations"
           className="w-full bg-transparent outline-none border-none text-gray-700 placeholder-gray-400 text-sm"
           disabled={isLoading}
@@ -145,7 +170,7 @@ export default function SearchBar({
       </button>
       {/* Calendar Dropdown */}
       {showCalendar && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 bg-white rounded-xl shadow-lg">
+        <div ref={calendarRef} className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 bg-white rounded-xl shadow-lg">
           <DateRange
             ranges={dateRange}
             onChange={(item: any) => {

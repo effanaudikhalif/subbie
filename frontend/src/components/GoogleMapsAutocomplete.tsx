@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
+import './google-autocomplete.css';
 
 interface AddressData {
   street: string;
@@ -134,7 +135,7 @@ const GoogleMapsAutocomplete: React.FC<GoogleMapsAutocompleteProps> = ({
         ref={inputRef}
         type="text"
         placeholder={placeholder}
-        className={`w-full p-3 border border-gray-300 rounded-lg text-black ${className} ${
+        className={`w-full p-2 border border-gray-300 rounded-lg text-black text-sm ${className} ${
           error ? 'border-red-500' : ''
         }`}
         disabled={isLoading}

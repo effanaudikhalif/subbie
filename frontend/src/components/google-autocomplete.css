@@ -1,0 +1,59 @@
+/* Custom styling for Google Maps Autocomplete dropdown */
+.pac-container {
+  border-radius: 0.75rem !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04) !important;
+  border: 1px solid #e5e7eb !important;
+  font-family: inherit !important;
+  margin-top: 0.5rem !important;
+  padding: 0.25rem 0 !important;
+  background: #fff !important;
+  z-index: 9999 !important;
+  min-width: 350px !important;
+}
+
+.pac-item {
+  display: flex !important;
+  align-items: center !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.95rem !important;
+  color: #222 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  transition: background 0.15s;
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  line-height: 1.5 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background: #f3f4f6 !important;
+}
+
+.pac-icon {
+  filter: grayscale(1) brightness(0.6);
+  margin-right: 12px !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
+}
+
+.pac-item-query, .pac-matched {
+  font-weight: 500 !important;
+  color: #111827 !important;
+  font-family: inherit !important;
+  font-size: 0.95rem !important;
+  line-height: 1.5 !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+  direction: ltr !important;
+}
+
+.pac-logo:after {
+  display: none !important;
+} 

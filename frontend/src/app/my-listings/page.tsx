@@ -429,6 +429,8 @@ export default function MyListingsPage() {
 
   // Filtered lists for tabs
   const pendingListings = listings.filter(l => l.status === 'pending');
+  const activeListings = listings.filter(l => l.status === 'active' || l.status === 'approved' || !l.status);
+  const inactiveListings = listings.filter(l => l.status === 'inactive' || l.status === 'pending' || l.status === 'cancelled');
   const approvedBookings = bookings.filter(b => b.status === 'confirmed' || b.status === 'approved');
   const pendingBookings = bookings.filter(b => b.status === 'pending');
   const completedBookings = bookings.filter(b => b.status === 'ended');
@@ -728,7 +730,7 @@ export default function MyListingsPage() {
           <>
             {/* Sidebar */}
             <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <h2 className="text-xl font-bold mb-4 text-black">Listings</h2>
+              <h2 className="text-xl font-bold mb-4 text-black">Active Listings</h2>
               {/* Add Listings button styled as a card */}
               <div
                 className="mb-2 rounded-lg p-3 cursor-pointer transition border border-dashed border-blue-400 hover:bg-blue-50 flex flex-col items-start justify-center text-left bg-white"
@@ -741,11 +743,11 @@ export default function MyListingsPage() {
               </div>
               {loading ? (
                 <div className="text-gray-400">Loading...</div>
-              ) : listings.length === 0 ? (
-                <div className="text-gray-400">No listings yet.</div>
+              ) : activeListings.length === 0 ? (
+                <div className="text-gray-400">No active listings.</div>
               ) : (
-                <ul className="flex-1 overflow-y-auto space-y-2">
-                  {listings.map((listing) => (
+                <ul className="space-y-2 mb-6">
+                  {activeListings.map((listing) => (
                     <li
                       key={listing.id}
                       className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
@@ -757,6 +759,29 @@ export default function MyListingsPage() {
                   ))}
                 </ul>
               )}
+
+              {/* Inactive Listings Section */}
+              <div className="mt-6">
+                <h2 className="text-xl font-bold mb-4 text-black">Inactive Listings</h2>
+                {loading ? (
+                  <div className="text-gray-400">Loading...</div>
+                ) : inactiveListings.length === 0 ? (
+                  <div className="text-gray-400">No inactive listings.</div>
+                ) : (
+                  <ul className="space-y-2">
+                    {inactiveListings.map((listing) => (
+                      <li
+                        key={listing.id}
+                        className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
+                        onClick={() => setSelectedListing(listing)}
+                      >
+                        <div className="font-semibold text-black text-base">{listing.title}</div>
+                        <div className="text-xs text-gray-500">{listing.city}, {listing.state}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
             {/* Center: Listing details */}
             <div className="flex-1">

@@ -51,6 +51,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   const [infoWindowPosition, setInfoWindowPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const prevSearchLocationRef = useRef<string | undefined>(undefined);
 
   const handleNextImage = (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
@@ -149,6 +150,13 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   };
 
   useEffect(() => {
+    // Only update map if searchLocation actually changed (not when typing)
+    if (prevSearchLocationRef.current === searchLocation) {
+      return;
+    }
+    
+    prevSearchLocationRef.current = searchLocation;
+    
     const initMap = async () => {
       if (!mapRef.current || !searchLocation) return;
 
@@ -333,6 +341,8 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
         <div className="absolute inset-0 pointer-events-none">
           <Link 
             href={`/listings/${selectedListing.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="absolute bg-white rounded-xl shadow-lg overflow-hidden pointer-events-auto cursor-pointer hover:shadow-xl transition-shadow"
             style={{
               maxWidth: '280px',
