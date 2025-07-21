@@ -58,6 +58,26 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
   overscroll-behavior: contain; /* Prevent bounce/overscroll */
 }
 
+/* Hide scrollbar for map container */
+.map-container::-webkit-scrollbar {
+  display: none;
+}
+.map-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  overscroll-behavior: contain; /* Prevent bounce/overscroll */
+}
+
+/* Hide scrollbar utility class */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  overscroll-behavior: contain; /* Prevent bounce/overscroll */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Prevent overscroll on all elements */
 * {
   overscroll-behavior: contain;

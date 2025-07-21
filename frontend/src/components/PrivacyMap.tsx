@@ -7,6 +7,7 @@ interface PrivacyMapProps {
   longitude?: number;
   city?: string;
   state?: string;
+  neighborhood?: string;
   address?: string;
   showFullAddress?: boolean;
   className?: string;
@@ -18,6 +19,7 @@ const PrivacyMap: React.FC<PrivacyMapProps> = ({
   longitude,
   city,
   state,
+  neighborhood,
   address,
   showFullAddress = false,
   className = "",
@@ -166,14 +168,9 @@ const PrivacyMap: React.FC<PrivacyMapProps> = ({
       
       {city && state && (
         <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700">
-          <strong>Location:</strong> {city}, {state}
-          {showFullAddress && address && (
-            <p className="text-xs text-gray-600 mt-1">
-              <strong>Address:</strong> {address}
-            </p>
-          )}
+          {neighborhood && `${neighborhood}, `}{city}, {state}
           {!showFullAddress && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-1">
               Exact address hidden for privacy
             </p>
           )}

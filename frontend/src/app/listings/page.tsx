@@ -11,8 +11,9 @@ import Link from 'next/link';
 export default function Results() {
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Local state for search bar input fields
   const [where, setWhere] = useState(searchParams?.get('where') || '');
-  const [appliedWhere, setAppliedWhere] = useState(searchParams?.get('where') || '');
   const [dateRange, setDateRange] = useState([
     {
       startDate: searchParams?.get('checkin') ? new Date(searchParams.get('checkin')!) : new Date(),
@@ -28,18 +29,33 @@ export default function Results() {
   const [guests, setGuests] = useState(searchParams?.get('guests') || '');
   const [listings, setListings] = useState<any[]>([]);
   const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
+  // State for map bounds
+  const [visibleBounds, setVisibleBounds] = useState<{ sw: { lat: number, lng: number }, ne: { lat: number, lng: number } } | null>(null);
+  // Add a key to force map refresh
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
+
+  // Applied values from URL/query params (used for filtering)
+  const appliedWhere = searchParams?.get('where') || '';
+  const appliedGuests = searchParams?.get('guests') || '';
+  const appliedCheckin = searchParams?.get('checkin') || '';
+  const appliedCheckout = searchParams?.get('checkout') || '';
+  const appliedDateRange = [
+    {
+      startDate: appliedCheckin ? new Date(appliedCheckin) : null,
+      endDate: appliedCheckout ? new Date(appliedCheckout) : null,
+      key: 'selection',
+    },
+  ];
 
   useEffect(() => {
     fetch('http://localhost:4000/api/listings')
       .then(res => res.json())
       .then(data => {
-        console.log('API listings:', data);
         setListings(Array.isArray(data) ? data : []);
       })
       .catch(() => setListings([]));
   }, []);
 
-  // Fetch average ratings for listings
   useEffect(() => {
     fetch('http://localhost:4000/api/listings/average-ratings')
       .then(res => res.json())
@@ -49,118 +65,109 @@ export default function Results() {
       .catch(() => setAverageRatings({}));
   }, []);
 
-  // Update appliedWhere when URL parameters change
-  useEffect(() => {
-    const whereParam = searchParams?.get('where');
-    console.log('URL whereParam:', whereParam);
-    if (whereParam) {
-      setAppliedWhere(whereParam);
-      setWhere(whereParam);
-    }
-  }, [searchParams, setWhere]);
-
-  // Filter listings based on 'appliedWhere' (case-insensitive, partial match)
-  // Search in city, state, and neighborhood
-  console.log('AppliedWhere:', appliedWhere);
+  // Filter listings based on applied values from URL/query params and map bounds
   const filteredListings = listings.filter(listing => {
-    // If no search term, show all listings
-    if (!appliedWhere || appliedWhere.trim() === '') {
-      return true;
-    }
-    
-    const searchTerm = appliedWhere.toLowerCase();
-    
-    // Parse Google Maps formatted address (e.g., "Boston, MA, USA")
-    let searchParts = [];
-    if (searchTerm.includes(',')) {
-      searchParts = searchTerm.split(',').map(part => part.trim().toLowerCase());
-    } else {
-      searchParts = [searchTerm];
-    }
-    
-    // State abbreviation mapping for all 50 US states
-    const stateAbbreviations: { [key: string]: string } = {
-      'alabama': 'al', 'al': 'al',
-      'alaska': 'ak', 'ak': 'ak',
-      'arizona': 'az', 'az': 'az',
-      'arkansas': 'ar', 'ar': 'ar',
-      'california': 'ca', 'ca': 'ca',
-      'colorado': 'co', 'co': 'co',
-      'connecticut': 'ct', 'ct': 'ct',
-      'delaware': 'de', 'de': 'de',
-      'florida': 'fl', 'fl': 'fl',
-      'georgia': 'ga', 'ga': 'ga',
-      'hawaii': 'hi', 'hi': 'hi',
-      'idaho': 'id', 'id': 'id',
-      'illinois': 'il', 'il': 'il',
-      'indiana': 'in', 'in': 'in',
-      'iowa': 'ia', 'ia': 'ia',
-      'kansas': 'ks', 'ks': 'ks',
-      'kentucky': 'ky', 'ky': 'ky',
-      'louisiana': 'la', 'la': 'la',
-      'maine': 'me', 'me': 'me',
-      'maryland': 'md', 'md': 'md',
-      'massachusetts': 'ma', 'ma': 'ma',
-      'michigan': 'mi', 'mi': 'mi',
-      'minnesota': 'mn', 'mn': 'mn',
-      'mississippi': 'ms', 'ms': 'ms',
-      'missouri': 'mo', 'mo': 'mo',
-      'montana': 'mt', 'mt': 'mt',
-      'nebraska': 'ne', 'ne': 'ne',
-      'nevada': 'nv', 'nv': 'nv',
-      'new hampshire': 'nh', 'nh': 'nh',
-      'new jersey': 'nj', 'nj': 'nj',
-      'new mexico': 'nm', 'nm': 'nm',
-      'new york': 'ny', 'ny': 'ny',
-      'north carolina': 'nc', 'nc': 'nc',
-      'north dakota': 'nd', 'nd': 'nd',
-      'ohio': 'oh', 'oh': 'oh',
-      'oklahoma': 'ok', 'ok': 'ok',
-      'oregon': 'or', 'or': 'or',
-      'pennsylvania': 'pa', 'pa': 'pa',
-      'rhode island': 'ri', 'ri': 'ri',
-      'south carolina': 'sc', 'sc': 'sc',
-      'south dakota': 'sd', 'sd': 'sd',
-      'tennessee': 'tn', 'tn': 'tn',
-      'texas': 'tx', 'tx': 'tx',
-      'utah': 'ut', 'ut': 'ut',
-      'vermont': 'vt', 'vt': 'vt',
-      'virginia': 'va', 'va': 'va',
-      'washington': 'wa', 'wa': 'wa',
-      'west virginia': 'wv', 'wv': 'wv',
-      'wisconsin': 'wi', 'wi': 'wi',
-      'wyoming': 'wy', 'wy': 'wy'
-    };
-    
-    // Check if any part of the search matches any location field
-    const matches = searchParts.some(part => {
-      const cityMatch = listing.city?.toLowerCase().includes(part);
-      
-      // Check state match with abbreviation support
-      let stateMatch = listing.state?.toLowerCase().includes(part);
-      if (!stateMatch && stateAbbreviations[part]) {
-        stateMatch = listing.state?.toLowerCase().includes(stateAbbreviations[part]);
+    // Map bounds filter
+    if (visibleBounds && listing.latitude && listing.longitude) {
+      const lat = parseFloat(listing.latitude);
+      const lng = parseFloat(listing.longitude);
+      if (
+        lat < visibleBounds.sw.lat || lat > visibleBounds.ne.lat ||
+        lng < visibleBounds.sw.lng || lng > visibleBounds.ne.lng
+      ) {
+        return false;
       }
-      
-      const neighborhoodMatch = listing.neighborhood?.toLowerCase().includes(part);
-      return cityMatch || stateMatch || neighborhoodMatch;
-    });
-    
-    console.log('Search debugging:', {
-      searchTerm,
-      searchParts,
-      matches,
-      listingCity: listing.city,
-      listingState: listing.state,
-      listingNeighborhood: listing.neighborhood,
-      listingId: listing.id
-    });
-    
-    console.log(`Listing ${listing.id}: ${matches ? 'MATCH' : 'NO MATCH'}`);
-    return matches;
+    }
+    // Location filter
+    if (appliedWhere && appliedWhere.trim() !== '') {
+      const searchTerm = appliedWhere.toLowerCase();
+      let searchParts = [];
+      if (searchTerm.includes(',')) {
+        searchParts = searchTerm.split(',').map(part => part.trim().toLowerCase());
+      } else {
+        searchParts = [searchTerm];
+      }
+      const stateAbbreviations: { [key: string]: string } = {
+        'alabama': 'al', 'al': 'al',
+        'alaska': 'ak', 'ak': 'ak',
+        'arizona': 'az', 'az': 'az',
+        'arkansas': 'ar', 'ar': 'ar',
+        'california': 'ca', 'ca': 'ca',
+        'colorado': 'co', 'co': 'co',
+        'connecticut': 'ct', 'ct': 'ct',
+        'delaware': 'de', 'de': 'de',
+        'florida': 'fl', 'fl': 'fl',
+        'georgia': 'ga', 'ga': 'ga',
+        'hawaii': 'hi', 'hi': 'hi',
+        'idaho': 'id', 'id': 'id',
+        'illinois': 'il', 'il': 'il',
+        'indiana': 'in', 'in': 'in',
+        'iowa': 'ia', 'ia': 'ia',
+        'kansas': 'ks', 'ks': 'ks',
+        'kentucky': 'ky', 'ky': 'ky',
+        'louisiana': 'la', 'la': 'la',
+        'maine': 'me', 'me': 'me',
+        'maryland': 'md', 'md': 'md',
+        'massachusetts': 'ma', 'ma': 'ma',
+        'michigan': 'mi', 'mi': 'mi',
+        'minnesota': 'mn', 'mn': 'mn',
+        'mississippi': 'ms', 'ms': 'ms',
+        'missouri': 'mo', 'mo': 'mo',
+        'montana': 'mt', 'mt': 'mt',
+        'nebraska': 'ne', 'ne': 'ne',
+        'nevada': 'nv', 'nv': 'nv',
+        'new hampshire': 'nh', 'nh': 'nh',
+        'new jersey': 'nj', 'nj': 'nj',
+        'new mexico': 'nm', 'nm': 'nm',
+        'new york': 'ny', 'ny': 'ny',
+        'north carolina': 'nc', 'nc': 'nc',
+        'north dakota': 'nd', 'nd': 'nd',
+        'ohio': 'oh', 'oh': 'oh',
+        'oklahoma': 'ok', 'ok': 'ok',
+        'oregon': 'or', 'or': 'or',
+        'pennsylvania': 'pa', 'pa': 'pa',
+        'rhode island': 'ri', 'ri': 'ri',
+        'south carolina': 'sc', 'sc': 'sc',
+        'south dakota': 'sd', 'sd': 'sd',
+        'tennessee': 'tn', 'tn': 'tn',
+        'texas': 'tx', 'tx': 'tx',
+        'utah': 'ut', 'ut': 'ut',
+        'vermont': 'vt', 'vt': 'vt',
+        'virginia': 'va', 'va': 'va',
+        'washington': 'wa', 'wa': 'wa',
+        'west virginia': 'wv', 'wv': 'wv',
+        'wisconsin': 'wi', 'wi': 'wi',
+        'wyoming': 'wy', 'wy': 'wy'
+      };
+      const matches = searchParts.some(part => {
+        const cityMatch = listing.city?.toLowerCase().includes(part);
+        let stateMatch = listing.state?.toLowerCase().includes(part);
+        if (!stateMatch && stateAbbreviations[part]) {
+          stateMatch = listing.state?.toLowerCase().includes(stateAbbreviations[part]);
+        }
+        const neighborhoodMatch = listing.neighborhood?.toLowerCase().includes(part);
+        return cityMatch || stateMatch || neighborhoodMatch;
+      });
+      if (!matches) return false;
+    }
+    // Guests filter
+    if (appliedGuests && Number(appliedGuests) > 0) {
+      if (listing.max_occupancy < Number(appliedGuests)) return false;
+    }
+    // Date range filter
+    if (appliedCheckin && appliedCheckout && listing.start_date && listing.end_date) {
+      const checkin = new Date(appliedCheckin);
+      const checkout = new Date(appliedCheckout);
+      const availableStart = new Date(listing.start_date);
+      const availableEnd = new Date(listing.end_date);
+      // Only include listings where the entire requested range is within the available range
+      if (checkin < availableStart || checkout > availableEnd) {
+        return false;
+      }
+    }
+    return true;
   });
 
-  // Add average ratings to filtered listings
   const listingsWithRatings = filteredListings.map(listing => ({
     ...listing,
     averageRating: averageRatings[listing.id]?.average_rating,
@@ -168,6 +175,7 @@ export default function Results() {
   }));
 
   console.log('Filtered listings:', listingsWithRatings);
+  console.log('Filtered listings with coords:', listingsWithRatings.filter(l => l.latitude && l.longitude));
 
   // Function to determine if search is for a specific address or broader location
   const getSearchTitle = (searchTerm: string) => {
@@ -198,15 +206,14 @@ export default function Results() {
   };
 
   const handleSearch = () => {
-    console.log('handleSearch called with where:', where);
     const params = new URLSearchParams();
     if (where) params.set("where", where);
     if (dateRange[0].startDate) params.set("checkin", dateRange[0].startDate.toISOString().split("T")[0]);
     if (dateRange[0].endDate) params.set("checkout", dateRange[0].endDate.toISOString().split("T")[0]);
     if (guests) params.set("guests", guests);
     const url = `/listings?${params.toString()}`;
-    console.log('Navigating to:', url);
     router.push(url);
+    setMapRefreshKey(prev => prev + 1); // Force map to refresh
   };
 
   return (
@@ -230,38 +237,44 @@ export default function Results() {
         <div className="flex h-full">
           {/* Left side - Listings */}
           <div className="w-1/2 overflow-y-auto px-6 h-full listings-container">
-            <h2 className="text-xl text-black font-semibold mb-6">
-              {filteredListings.length} places {getSearchTitle(appliedWhere)}
+            <h2 className="merriweather-medium text-black font-bold mb-0.5 text-sm mb-6">
+              {filteredListings.length} places within map area
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredListings.map(listing => (
-                <ListingCard
-                  key={listing.id}
-                  id={listing.id}
-                  title={listing.title}
-                  images={listing.images || []}
-                  name={listing.name}
-                  avatar_url={listing.avatar_url}
-                  university_name={listing.university_name}
-                  bedrooms={listing.bedrooms}
-                  bathrooms={listing.bathrooms}
-                  price_per_night={listing.price_per_night}
-                  dateRange={dateRange}
-                  averageRating={averageRatings[listing.id]?.average_rating}
-                  totalReviews={averageRatings[listing.id]?.total_reviews}
-                />
-              ))}
+              {filteredListings.map(listing => {
+                console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                return (
+                  <ListingCard
+                    key={listing.id}
+                    id={listing.id}
+                    title={listing.title}
+                    images={listing.images || []}
+                    name={listing.name}
+                    avatar_url={listing.avatar_url}
+                    university_name={listing.university_name}
+                    bedrooms={listing.bedrooms}
+                    bathrooms={listing.bathrooms}
+                    price_per_night={listing.price_per_night}
+                    dateRange={dateRange}
+                    averageRating={averageRatings[listing.id]?.average_rating}
+                    totalReviews={averageRatings[listing.id]?.total_reviews}
+                    amenities={listing.amenities || []}
+                  />
+                );
+              })}
             </div>
           </div>
           
           {/* Right side - Map Preview */}
-          <div className="w-1/2 h-full overflow-hidden flex-shrink-0 px-6">
+          <div className="w-1/2 h-full overflow-hidden flex-shrink-0 px-6 map-container">
             <LocationMapPreview 
+              key={mapRefreshKey}
               searchLocation={appliedWhere}
-              listings={listingsWithRatings}
+              listings={filteredListings}
               className="h-full w-full"
               dateRange={dateRange}
+              onBoundsChange={setVisibleBounds}
             />
           </div>
         </div>

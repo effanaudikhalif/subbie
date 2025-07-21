@@ -145,7 +145,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId }) => {
     const partialStarPercentage = (rating % 1) * 100;
     
     return (
-      <div className="flex">
+      <div className="flex text-lg">
         {[1, 2, 3, 4, 5].map((star) => {
           if (star <= fullStars) {
             return <span key={star} className="text-black">★</span>;
@@ -180,7 +180,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId }) => {
     ) / 5;
 
     return (
-      <div className="border border-gray-200 rounded-lg p-4">
+      <div className="border border-black rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
             {review.reviewer_avatar ? (
@@ -221,37 +221,79 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId }) => {
     <>
       <div className="space-y-8">
         {/* Overall Rating and Category Ratings */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="flex items-center">
           {/* Overall Rating */}
-          <div className="md:col-span-1">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4">Overall rating</h4>
-            <div className="flex items-center mb-4">
-              <span className="text-3xl font-bold text-black">{averageRatings?.overall.toFixed(1)}</span>
-              <div className="ml-2">
+          <div className="flex items-center mr-12">
+            <div className="flex items-center">
+              <span className="text-6xl font-bold text-black">{averageRatings?.overall.toFixed(1)}</span>
+              <div className="ml-4">
                 {averageRatings?.overall && renderStars(averageRatings.overall)}
-                <p className="text-sm text-gray-600">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
+                <p className="text-base text-gray-600 mt-2">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
           </div>
 
           {/* Category Ratings */}
-          <div className="md:col-span-2">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="flex-1">
+            <div className="grid grid-cols-5 gap-0">
               {[
-                { name: 'Cleanliness', rating: averageRatings?.cleanliness, icon: '🧹' },
-                { name: 'Accuracy', rating: averageRatings?.accuracy, icon: '✓' },
-                { name: 'Communication', rating: averageRatings?.communication, icon: '💬' },
-                { name: 'Location', rating: averageRatings?.location, icon: '📍' },
-                { name: 'Value', rating: averageRatings?.value, icon: '💰' },
+                { 
+                  name: 'Cleanliness', 
+                  rating: averageRatings?.cleanliness, 
+                  icon: (
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  )
+                },
+                { 
+                  name: 'Accuracy', 
+                  rating: averageRatings?.accuracy, 
+                  icon: (
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )
+                },
+                { 
+                  name: 'Communication', 
+                  rating: averageRatings?.communication, 
+                  icon: (
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  )
+                },
+                { 
+                  name: 'Location', 
+                  rating: averageRatings?.location, 
+                  icon: (
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )
+                },
+                { 
+                  name: 'Value', 
+                  rating: averageRatings?.value, 
+                  icon: (
+                    <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  )
+                },
               ].map((category) => (
-                <div key={category.name} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="mr-2">{category.icon}</span>
-                    <span className="text-sm text-gray-700">{category.name}</span>
+                <div key={category.name} className="flex flex-col items-center text-center">
+                  <div className="mb-2">
+                    {category.icon}
                   </div>
-                  <span className="text-sm font-medium text-gray-900">
+                  <div className="text-sm text-gray-700 mb-4">
+                    {category.name}
+                  </div>
+                  <div className="text-lg font-bold text-gray-900">
                     {category.rating?.toFixed(1)}
-                  </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -260,23 +302,22 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId }) => {
 
         {/* Individual Reviews */}
         <div className="space-y-6">
-          <h4 className="text-lg font-semibold text-gray-900">Recent reviews</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.slice(0, 4).map((review) => (
-              <ReviewCard key={review.id} review={review} />
-            ))}
-          </div>
-          
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {reviews.slice(0, 4).map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+
           {reviews.length > 4 && (
-            <div className="text-center">
+            <div className="col-span-1 md:col-span-2 flex">
               <button 
                 onClick={() => setShowAllReviews(true)}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 Show all {reviews.length} reviews
               </button>
             </div>
           )}
+        </div>
         </div>
       </div>
 

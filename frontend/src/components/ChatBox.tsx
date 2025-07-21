@@ -144,7 +144,7 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
     <div
       className={
         fullWidth
-          ? "bg-gray-50 rounded-2xl shadow p-4 h-full flex flex-col"
+          ? "h-full flex flex-col"
           : "bg-gray-50 rounded-2xl shadow p-4 mt-8 max-w-2xl mx-auto border border-gray-200"
       }
     >
@@ -154,8 +154,8 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
       <div
         className={
           fullWidth
-            ? "flex-1 bg-white rounded-xl p-4 mb-4 border border-gray-100 flex flex-col"
-            : "h-64 overflow-y-auto bg-white rounded-xl p-4 mb-4 border border-gray-100 flex flex-col"
+            ? "flex-1 bg-white rounded-xl p-3 mb-3 border border-gray-100 flex flex-col overflow-y-auto scrollbar-hide"
+            : "h-64 overflow-y-auto bg-white rounded-xl p-4 mb-4 border border-gray-100 flex flex-col scrollbar-hide"
         }
         style={fullWidth ? undefined : { minHeight: 200 }}
       >
@@ -191,18 +191,18 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
         )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSend} className="flex gap-2">
+      <form onSubmit={handleSend} className="flex gap-2 flex-shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Type your message..."
           disabled={sending}
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2 rounded-full font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
           disabled={sending || !input.trim()}
         >
           Send

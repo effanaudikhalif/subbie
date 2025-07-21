@@ -32,13 +32,15 @@ interface LocationMapPreviewProps {
     endDate: Date | null;
     key: string;
   }>;
+  onBoundsChange?: (bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }) => void;
 }
 
 const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   searchLocation,
   listings = [],
   className = "",
-  dateRange
+  dateRange,
+  onBoundsChange
 }) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -52,6 +54,10 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const prevSearchLocationRef = useRef<string | undefined>(undefined);
+  // Track the red marker for the searched location
+  const redMarkerRef = useRef<google.maps.Marker | null>(null);
+  // Store the geocoded coordinates of the search term
+  const searchLocationCoords = useRef<{ lat: number, lng: number } | null>(null);
 
   const handleNextImage = (listingId: string) => {
     const listing = listings.find(l => l.id === listingId);
@@ -149,6 +155,99 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
     }
   };
 
+  // Function to add markers to the map
+  const addMarkersToMap = (mapInstance: google.maps.Map) => {
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+
+    // Remove previous red marker if it exists
+    if (redMarkerRef.current) {
+      redMarkerRef.current.setMap(null);
+      redMarkerRef.current = null;
+    }
+
+    // Add a red marker for the searched location using geocoded coords
+    if (searchLocation && searchLocationCoords.current) {
+      redMarkerRef.current = new google.maps.Marker({
+        position: searchLocationCoords.current,
+        map: mapInstance,
+        title: searchLocation,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          scaledSize: new google.maps.Size(32, 32)
+        }
+      });
+    }
+
+    // Add markers for each listing
+    const newMarkers: google.maps.Marker[] = [];
+    console.log('LocationMapPreview: Adding markers for', listings.length, 'listings');
+    console.log('LocationMapPreview: All listings data:', listings);
+    listings.forEach(listing => {
+      console.log('Listing:', listing.id, 'has coords:', listing.latitude, listing.longitude);
+      console.log('Listing:', listing.id, 'coords type:', typeof listing.latitude, typeof listing.longitude);
+      if (listing.latitude && listing.longitude) {
+        const lat = parseFloat(listing.latitude as any);
+        const lng = parseFloat(listing.longitude as any);
+        
+        console.log('Listing:', listing.id, 'parsed coords:', lat, lng, 'isNaN:', isNaN(lat), isNaN(lng));
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+          // Calculate price based on date range if available
+          let displayPrice = listing.price_per_night;
+          let priceText = `$${Math.round(displayPrice)}`;
+          
+          if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+            const checkIn = new Date(dateRange[0].startDate);
+            const checkOut = new Date(dateRange[0].endDate);
+            const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+            displayPrice = nights * listing.price_per_night;
+            priceText = `$${Math.round(displayPrice)}`;
+          }
+          
+          console.log('LocationMapPreview: Creating marker for listing', listing.id, 'at position:', { lat, lng });
+          
+          const marker = new google.maps.Marker({
+            position: { lat, lng },
+            map: mapInstance,
+            title: listing.title,
+            // Custom rectangular marker
+            icon: {
+              path: 'M-10,-8 L10,-8 L10,8 L-10,8 Z', // Rectangle path
+              scale: 1,
+              fillColor: '#FFFFFF',
+              fillOpacity: 1,
+              strokeColor: '#000000',
+              strokeWeight: 2,
+            },
+            label: {
+              text: priceText,
+              className: 'rectangular-marker-label',
+              color: '#000000',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }
+          });
+
+          // Simple marker click handler
+          marker.addListener('click', () => {
+            setSelectedListing(listing);
+            setInfoWindowPosition({ lat, lng });
+          });
+
+          newMarkers.push(marker);
+          console.log('LocationMapPreview: Marker created successfully for listing', listing.id);
+        } else {
+          console.log('LocationMapPreview: Invalid coordinates for listing', listing.id);
+        }
+      } else {
+        console.log('LocationMapPreview: No coordinates for listing', listing.id);
+      }
+    });
+
+    setMarkers(newMarkers);
+  };
+
   useEffect(() => {
     // Only update map if searchLocation actually changed (not when typing)
     if (prevSearchLocationRef.current === searchLocation) {
@@ -182,28 +281,12 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
           if (status === 'OK' && results && results[0]) {
             const location = results[0].geometry.location;
             center = { lat: location.lat(), lng: location.lng() };
-            
-            // Determine zoom level based on the type of location
-            let zoom = 12; // Default zoom
-            
-            // Check if it's a neighborhood (usually has "neighborhood" in the result)
-            const isNeighborhood = results[0].types.includes('sublocality') || 
-                                 results[0].types.includes('sublocality_level_1') ||
-                                 searchLocation.toLowerCase().includes('neighborhood') ||
-                                 searchLocation.split(',').length > 2; // Multiple parts suggest neighborhood
-            
-            if (isNeighborhood) {
-              zoom = 15; // Zoom in more for neighborhoods
-            } else if (results[0].types.includes('locality')) {
-              zoom = 12; // City level
-            } else if (results[0].types.includes('administrative_area_level_1')) {
-              zoom = 8; // State level
-            }
+            searchLocationCoords.current = center;
             
             // Create the map
             const mapInstance = new google.maps.Map(mapRef.current!, {
               center,
-              zoom,
+              zoom: 12, // fallback zoom
               mapTypeControl: false,
               streetViewControl: false,
               fullscreenControl: false,
@@ -216,76 +299,32 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               ]
             });
 
-            setMap(mapInstance);
+            // If viewport is available, fit the map to the bounds
+            if (results[0].geometry.viewport) {
+              mapInstance.fitBounds(results[0].geometry.viewport);
+            } else {
+              mapInstance.setCenter(center);
+              mapInstance.setZoom(12);
+            }
 
-            // Clear existing markers
-            markers.forEach(marker => marker.setMap(null));
-
-            // Add a red marker for the searched location
-            new google.maps.Marker({
-              position: center,
-              map: mapInstance,
-              title: searchLocation,
-              icon: {
-                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                scaledSize: new google.maps.Size(32, 32)
-              }
-            });
-
-            // Add markers for each listing
-            const newMarkers: google.maps.Marker[] = [];
-            listings.forEach(listing => {
-              if (listing.latitude && listing.longitude) {
-                const lat = parseFloat(listing.latitude as any);
-                const lng = parseFloat(listing.longitude as any);
-                
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  // Calculate price based on date range if available
-                  let displayPrice = listing.price_per_night;
-                  let priceText = `$${Math.round(displayPrice)}`;
-                  
-                  if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
-                    const checkIn = new Date(dateRange[0].startDate);
-                    const checkOut = new Date(dateRange[0].endDate);
-                    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                    displayPrice = nights * listing.price_per_night;
-                    priceText = `$${Math.round(displayPrice)}`;
-                  }
-                  
-                  const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map: mapInstance,
-                    title: listing.title,
-                    // Custom rectangular marker
-                    icon: {
-                      path: 'M-10,-8 L10,-8 L10,8 L-10,8 Z', // Rectangle path
-                      scale: 1,
-                      fillColor: '#FFFFFF',
-                      fillOpacity: 1,
-                      strokeColor: '#000000',
-                      strokeWeight: 2,
-                    },
-                    label: {
-                      text: priceText,
-                      className: 'rectangular-marker-label',
-                      color: '#000000',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
-                    }
+            // Listen for map bounds changes
+            if (onBoundsChange) {
+              google.maps.event.addListener(mapInstance, 'idle', () => {
+                const bounds = mapInstance.getBounds();
+                if (bounds) {
+                  const sw = bounds.getSouthWest();
+                  const ne = bounds.getNorthEast();
+                  onBoundsChange({
+                    sw: { lat: sw.lat(), lng: sw.lng() },
+                    ne: { lat: ne.lat(), lng: ne.lng() }
                   });
-
-                  // Simple marker click handler
-                  marker.addListener('click', () => {
-                    setSelectedListing(listing);
-                    setInfoWindowPosition({ lat, lng });
-                  });
-
-                  newMarkers.push(marker);
                 }
-              }
-            });
+              });
+            }
 
-            setMarkers(newMarkers);
+            setMap(mapInstance);
+            // Add markers after map is created
+            addMarkersToMap(mapInstance);
 
           } else {
             setError('Location not found');
@@ -305,7 +344,15 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
     } else if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
       setError('Google Maps API key not configured');
     }
-  }, [searchLocation, listings]);
+  }, [searchLocation]);
+
+  // Update markers when listings change
+  useEffect(() => {
+    if (map && listings.length > 0) {
+      console.log('LocationMapPreview: Updating markers for', listings.length, 'listings');
+      addMarkersToMap(map);
+    }
+  }, [listings, map]);
 
   if (!searchLocation) {
     return (
@@ -354,18 +401,25 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
             }}
           >
             {/* Image Container */}
-            <div className="relative">
+            <div className="relative group/image-area">
               <img 
                 src={(() => {
                   const currentIndex = currentImageIndices[selectedListing.id] || 0;
                   const imageUrl = selectedListing.images && selectedListing.images.length > 0 
-                    ? `http://localhost:4000${selectedListing.images[currentIndex]?.url || selectedListing.images[0].url}` 
+                    ? `http://localhost:4000${selectedListing.images[currentImageIndices[selectedListing.id] || 0]?.url || selectedListing.images[0].url}` 
                     : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
                   return imageUrl;
                 })()}
                 alt={selectedListing.title} 
-                className="w-full h-48 object-cover" 
+                className="w-full h-48 object-cover transition-transform duration-300 group-hover/image-area:scale-105" 
               />
+              
+              {/* Image Counter - bottom right */}
+              {selectedListing.images && selectedListing.images.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full z-10">
+                  {(currentImageIndices[selectedListing.id] || 0) + 1} / {selectedListing.images.length}
+                </div>
+              )}
               
               {/* Heart Icon */}
               <button 
@@ -409,7 +463,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                   {/* Left Arrow - only show if not on first image */}
                   {(currentImageIndices[selectedListing.id] || 0) > 0 && (
                     <button 
-                      className="absolute top-1/2 left-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                      className="absolute top-1/2 left-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform opacity-0 group-hover/image-area:opacity-100"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -425,7 +479,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                   {/* Right Arrow - only show if not on last image */}
                   {(currentImageIndices[selectedListing.id] || 0) < selectedListing.images.length - 1 && (
                     <button 
-                      className="absolute top-1/2 right-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                      className="absolute top-1/2 right-3 transform -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform opacity-0 group-hover/image-area:opacity-100"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -459,88 +513,60 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
             </div>
             
             {/* Content */}
-            <div className="p-4">
+            <div className="p-4 flex flex-col h-full justify-between min-h-[100px]">
               {/* Title */}
-              <div className="text-black font-semibold text-lg mb-2">
-                {selectedListing.title}
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 w-full">{selectedListing.title}</h3>
               </div>
-              
-              {/* Profile picture, Name, and University */}
-              <div className="flex items-center mb-2">
-                {selectedListing.avatar_url ? (
-                  <img 
-                    src={selectedListing.avatar_url} 
-                    alt={selectedListing.name || 'Host'} 
-                    className="w-8 h-8 rounded-full mr-3 flex-shrink-0 object-cover"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 mr-3 flex-shrink-0">
-                    <div className="w-full h-full rounded-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-gray-600 text-sm font-medium">
-                        {selectedListing.name ? selectedListing.name.charAt(0).toUpperCase() : 'H'}
-                      </span>
+              {/* Host Info */}
+              {selectedListing.name && (
+                <div className="flex items-center mb-2">
+                  {selectedListing.avatar_url ? (
+                    <img
+                      src={selectedListing.avatar_url}
+                      alt={selectedListing.name}
+                      className="w-10 h-10 rounded-full mr-3"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-300 rounded-full mr-3 flex items-center justify-center">
+                      <span className="text-lg text-gray-600 font-semibold">{selectedListing.name.charAt(0)}</span>
                     </div>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-gray-900 text-sm font-medium">
-                    {selectedListing.name || 'Host'}
-                  </div>
-                  <div className="text-gray-500 text-xs">
-                    {selectedListing.university_name || 'University'}
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-700">{selectedListing.name}</span>
+                    {selectedListing.university_name && (
+                      <span className="text-sm text-gray-500">{selectedListing.university_name}</span>
+                    )}
                   </div>
                 </div>
-              </div>
-              
-              {/* Beds • Rating */}
-              <div className="text-gray-500 text-sm mb-2">
-                {selectedListing.bedrooms || 1} bed{(selectedListing.bedrooms || 1) !== 1 ? 's' : ''} • {selectedListing.averageRating ? (
+              )}
+              {/* Property Details */}
+              <div className="flex items-center text-sm text-gray-600 mb-2">
+                <span>{selectedListing.bedrooms} bed{selectedListing.bedrooms !== 1 ? 's' : ''}</span>
+                {selectedListing.averageRating ? (
                   <>
-                    <span className="text-black">★</span>
-                    <span className="ml-1">{selectedListing.averageRating.toFixed(1)}</span>
-                    {selectedListing.totalReviews && (
-                      <span className="ml-1">({selectedListing.totalReviews})</span>
-                    )}
+                    <span className="mx-1">•</span>
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 text-yellow-400 fill-current mr-1" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span>{selectedListing.averageRating.toFixed(1)}</span>
+                      {selectedListing.totalReviews && (
+                        <span className="text-gray-500 ml-1">({selectedListing.totalReviews} review{selectedListing.totalReviews !== 1 ? 's' : ''})</span>
+                      )}
+                    </span>
                   </>
                 ) : (
-                  <span className="text-gray-400">No reviews</span>
+                  <>
+                    <span className="mx-1">•</span>
+                    <span className="text-gray-500">No reviews</span>
+                  </>
                 )}
               </div>
-              
-              {/* Price for nights */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate ? (
-                    <>
-                      <span className="font-bold text-black text-lg">
-                        ${(() => {
-                          const checkIn = new Date(dateRange[0].startDate);
-                          const checkOut = new Date(dateRange[0].endDate);
-                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                          const totalPrice = nights * selectedListing.price_per_night;
-                          return Math.round(totalPrice);
-                        })()}
-                      </span>
-                      <span className="text-gray-500 text-sm ml-1">
-                        for {(() => {
-                          const checkIn = new Date(dateRange[0].startDate);
-                          const checkOut = new Date(dateRange[0].endDate);
-                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                          return nights;
-                        })()} night{(() => {
-                          const checkIn = new Date(dateRange[0].startDate);
-                          const checkOut = new Date(dateRange[0].endDate);
-                          const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                          return nights !== 1 ? 's' : '';
-                        })()}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-bold text-black text-lg">${Math.round(selectedListing.price_per_night)}</span>
-                      <span className="text-gray-500 text-sm ml-1">per night</span>
-                    </>
-                  )}
+              {/* Price at the bottom */}
+              <div className="mb-2">
+                <div className="text-sm font-medium text-gray-700">
+                  ${Number(selectedListing.price_per_night).toFixed(2)} per night
                 </div>
               </div>
             </div>

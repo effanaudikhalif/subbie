@@ -42,6 +42,7 @@ module.exports = (pool) => {
           FROM listings l 
           LEFT JOIN users u ON l.user_id = u.id
           LEFT JOIN universities univ ON u.university_id = univ.id
+          WHERE l.status IS NULL OR l.status IN ('active', 'approved')
         `);
         rows = result.rows;
       }
@@ -234,11 +235,22 @@ module.exports = (pool) => {
 
       // Update amenities
       if (amenities) {
+        // Parse amenities if it's a JSON string
+        let amenitiesArray = amenities;
+        if (typeof amenities === 'string') {
+          try {
+            amenitiesArray = JSON.parse(amenities);
+          } catch (e) {
+            console.error('Error parsing amenities:', e);
+            amenitiesArray = [];
+          }
+        }
+        
         // Delete existing amenities
         await pool.query('DELETE FROM listing_amenities WHERE listing_id = $1', [id]);
         
         // Insert new amenities
-        for (const amenity of amenities) {
+        for (const amenity of amenitiesArray) {
           await pool.query(
             'INSERT INTO listing_amenities (listing_id, amenity) VALUES ($1, $2)',
             [id, amenity]
@@ -248,11 +260,22 @@ module.exports = (pool) => {
 
       // Update occupants
       if (occupants) {
+        // Parse occupants if it's a JSON string
+        let occupantsArray = occupants;
+        if (typeof occupants === 'string') {
+          try {
+            occupantsArray = JSON.parse(occupants);
+          } catch (e) {
+            console.error('Error parsing occupants:', e);
+            occupantsArray = [];
+          }
+        }
+        
         // Delete existing occupants
         await pool.query('DELETE FROM listing_occupants WHERE listing_id = $1', [id]);
         
         // Insert new occupants
-        for (const occupant of occupants) {
+        for (const occupant of occupantsArray) {
           await pool.query(
             'INSERT INTO listing_occupants (listing_id, occupant) VALUES ($1, $2)',
             [id, occupant]
@@ -300,6 +323,22 @@ module.exports = (pool) => {
       res.json(rows[0]);
     } catch (err) {
       console.error('Error updating listing:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Update listing status
+  router.put('/:id/status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const { rows } = await pool.query(
+        'UPDATE listings SET status = $1 WHERE id = $2 RETURNING *',
+        [status, id]
+      );
+      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      res.json(rows[0]);
+    } catch (err) {
       res.status(500).json({ error: err.message });
     }
   });

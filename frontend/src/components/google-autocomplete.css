@@ -1,14 +1,21 @@
 /* Custom styling for Google Maps Autocomplete dropdown */
 .pac-container {
-  border-radius: 0.75rem !important;
+  border-radius: 0 !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1.5px 4px rgba(0,0,0,0.04) !important;
   border: 1px solid #e5e7eb !important;
   font-family: inherit !important;
-  margin-top: 0.5rem !important;
-  padding: 0.25rem 0 !important;
+  margin-top: 0.7rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0.25rem !important;
   background: #fff !important;
   z-index: 9999 !important;
   min-width: 350px !important;
+}
+
+/* Remove top margin/padding from first item */
+.pac-item:first-child {
+  margin-top: 0 !important;
+  padding-top: 0.75rem !important;
 }
 
 .pac-item {

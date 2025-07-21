@@ -149,6 +149,7 @@ export default function WishlistPage() {
                   price_per_night={item.price_per_night}
                   averageRating={averageRatings[item.listing_id]?.average_rating}
                   totalReviews={averageRatings[item.listing_id]?.total_reviews}
+                  wishlistMode={true}
                 />
               ))}
             </div>

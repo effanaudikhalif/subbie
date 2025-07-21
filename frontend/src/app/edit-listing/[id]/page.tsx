@@ -6,18 +6,11 @@ import { useAuth } from '../../../hooks/useAuth';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import MapPreview from '../../../components/MapPreview';
 
-interface ListingImage {
-  url: string;
-  order_index?: number;
-}
-
-interface Listing {
-  id: string;
-  user_id: string;
-  title: string;
-  description: string;
+interface FormData {
+  property_type: 'house' | 'apartment';
+  guest_space: 'entire_place' | 'room' | 'shared_room';
   address: string;
-  unit?: string;
+  unit: string;
   city: string;
   state: string;
   zip: string;
@@ -30,9 +23,9 @@ interface Listing {
   bathrooms: number;
   occupants: string[];
   amenities: string[];
-  images: ListingImage[];
-  property_type?: string;
-  guest_space?: string;
+  photos: File[];
+  title: string;
+  description: string;
   price_per_night: number;
   start_date: string;
   end_date: string;
@@ -45,29 +38,45 @@ export default function EditListing() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [formData, setFormData] = useState<Partial<Listing>>({});
-  const [photoReplacements, setPhotoReplacements] = useState<{ [key: number]: File }>({});
-  const [photoPreviews, setPhotoPreviews] = useState<{ [key: number]: string }>({});
+  const [listing, setListing] = useState<any>(null);
+  const [formData, setFormData] = useState<FormData>({
+    property_type: 'apartment',
+    guest_space: 'entire_place',
+    address: '',
+    unit: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: '',
+    neighborhood: '',
+    latitude: undefined,
+    longitude: undefined,
+    max_occupancy: 1,
+    bedrooms: 1,
+    bathrooms: 1,
+    occupants: [],
+    amenities: [],
+    photos: [],
+    title: '',
+    description: '',
+    price_per_night: 100,
+    start_date: '',
+    end_date: ''
+  });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   // Load existing listing data
   useEffect(() => {
-    // Cleanup preview URLs when component unmounts
-    return () => {
-      Object.values(photoPreviews).forEach(url => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
-    };
-  }, [photoPreviews]);
-
-  useEffect(() => {
     const fetchListing = async () => {
+      setLoading(true);
       try {
         const response = await fetch(`http://localhost:4000/api/listings/${id}`);
         if (response.ok) {
           const listingData = await response.json();
+                      console.log('listingData.images:', listingData.images); // Debug: see what backend returns
           setListing(listingData);
           setFormData({
             property_type: listingData.property_type || 'apartment',
@@ -77,7 +86,7 @@ export default function EditListing() {
             city: listingData.city || '',
             state: listingData.state || '',
             zip: listingData.zip || '',
-            country: listingData.country || 'USA',
+            country: listingData.country || '',
             neighborhood: listingData.neighborhood || '',
             latitude: listingData.latitude,
             longitude: listingData.longitude,
@@ -86,9 +95,10 @@ export default function EditListing() {
             bathrooms: listingData.bathrooms || 1,
             occupants: listingData.occupants || [],
             amenities: listingData.amenities?.map((a: any) => a.code || a) || [],
+            photos: listingData.images?.map((img: any) => `http://localhost:4000${img.url}`) || [], // Map images to full URLs
             title: listingData.title || '',
             description: listingData.description || '',
-            price_per_night: listingData.price_per_night || 0,
+            price_per_night: listingData.price_per_night !== undefined && listingData.price_per_night !== null ? listingData.price_per_night : 100,
             start_date: listingData.start_date ? new Date(listingData.start_date).toISOString().split('T')[0] : '',
             end_date: listingData.end_date ? new Date(listingData.end_date).toISOString().split('T')[0] : ''
           });
@@ -111,24 +121,35 @@ export default function EditListing() {
   }, [id, router]);
 
   const amenities = [
-    { code: 'wifi', name: 'Wi-Fi', category: 'core' },
-    { code: 'tv', name: 'TV', category: 'core' },
-    { code: 'kitchen', name: 'Kitchen', category: 'core' },
-    { code: 'washer', name: 'Washer', category: 'core' },
-    { code: 'free_parking', name: 'Free parking on premises', category: 'core' },
-    { code: 'paid_parking', name: 'Paid parking on premises', category: 'core' },
-    { code: 'aircon', name: 'Air conditioning', category: 'core' },
-    { code: 'workspace', name: 'Dedicated workspace', category: 'core' },
+    // Living Essentials
+    { code: 'wifi', name: 'Wi-Fi', category: 'living' },
+    { code: 'tv', name: 'TV', category: 'living' },
+    { code: 'kitchen', name: 'Kitchen', category: 'living' },
+    { code: 'washer', name: 'Washer', category: 'living' },
+    { code: 'air_conditioning', name: 'Air conditioning', category: 'living' },
+    { code: 'free_parking', name: 'Free parking', category: 'living' },
+    { code: 'paid_parking', name: 'Paid parking', category: 'living' },
+    
+    // College Essentials
+    { code: 'dedicated_workspace', name: 'Dedicated workspace', category: 'college' },
+    { code: 'quiet_study', name: 'Quiet study area', category: 'college' },
+    { code: 'high_speed_internet', name: 'High-speed Wi-Fi', category: 'college' },
+    { code: 'printer_access', name: 'Printer access', category: 'college' },
+    { code: 'coffee_station', name: 'Coffee station', category: 'college' },
+    { code: 'whiteboard', name: 'Whiteboard', category: 'college' },
+    { code: 'group_study', name: 'Group study area', category: 'college' },
+    
+    // Extra
     { code: 'pool', name: 'Pool', category: 'extra' },
     { code: 'hot_tub', name: 'Hot tub', category: 'extra' },
     { code: 'patio', name: 'Patio', category: 'extra' },
-    { code: 'bbq', name: 'BBQ grill', category: 'extra' },
+    { code: 'bbq_grill', name: 'BBQ grill', category: 'extra' },
     { code: 'outdoor_dining', name: 'Outdoor dining area', category: 'extra' },
     { code: 'fire_pit', name: 'Fire pit', category: 'extra' },
     { code: 'pool_table', name: 'Pool table', category: 'extra' },
     { code: 'indoor_fireplace', name: 'Indoor fireplace', category: 'extra' },
     { code: 'piano', name: 'Piano', category: 'extra' },
-    { code: 'gym', name: 'Exercise equipment', category: 'extra' },
+    { code: 'gym_access', name: 'Exercise equipment', category: 'extra' },
     { code: 'lake_access', name: 'Lake access', category: 'extra' },
     { code: 'beach_access', name: 'Beach access', category: 'extra' },
     { code: 'outdoor_shower', name: 'Outdoor shower', category: 'extra' }
@@ -141,25 +162,25 @@ export default function EditListing() {
     { value: 'roommate', label: 'Roommate' }
   ];
 
-  const handleInputChange = (field: keyof Listing, value: any) => {
+  const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleAmenityToggle = (amenityCode: string) => {
     setFormData(prev => ({
       ...prev,
-      amenities: prev.amenities?.includes(amenityCode)
+      amenities: prev.amenities.includes(amenityCode)
         ? prev.amenities.filter(a => a !== amenityCode)
-        : [...(prev.amenities || []), amenityCode]
+        : [...prev.amenities, amenityCode]
     }));
   };
 
   const handleOccupantToggle = (occupant: string) => {
     setFormData(prev => ({
       ...prev,
-      occupants: prev.occupants?.includes(occupant)
+      occupants: prev.occupants.includes(occupant)
         ? prev.occupants.filter(o => o !== occupant)
-        : [...(prev.occupants || []), occupant]
+        : [...prev.occupants, occupant]
     }));
   };
 
@@ -186,33 +207,117 @@ export default function EditListing() {
     }));
   };
 
-  const handlePhotoReplacement = (index: number, file: File | null) => {
-    if (file) {
-      setPhotoReplacements(prev => ({ ...prev, [index]: file }));
-      // Create preview URL for the new image
-      const previewUrl = URL.createObjectURL(file);
-      setPhotoPreviews(prev => ({ ...prev, [index]: previewUrl }));
-    } else {
-      setPhotoReplacements(prev => {
-        const newReplacements = { ...prev };
-        delete newReplacements[index];
-        return newReplacements;
-      });
-      // Remove preview URL and cleanup blob
-      setPhotoPreviews(prev => {
-        const newPreviews = { ...prev };
-        if (newPreviews[index]) {
-          URL.revokeObjectURL(newPreviews[index]);
-          delete newPreviews[index];
-        }
-        return newPreviews;
-      });
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setFormData(prev => ({
+      ...prev,
+      photos: [...prev.photos, ...files].slice(0, 7) // Keep max 7 photos
+    }));
+    // Reset the input value to allow re-uploading the same file
+    e.target.value = '';
+  };
+
+  // Helper function to render error messages
+  const renderError = (field: string) => {
+    if (errors[field]) {
+      return (
+        <div className="text-red-500 text-sm mt-1 flex items-center">
+          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          {errors[field]}
+        </div>
+      );
     }
+    return null;
+  };
+
+  // Validation functions for each step
+  const validateStep = (step: number): boolean => {
+    const newErrors: {[key: string]: string} = {};
+    
+    switch (step) {
+      case 1:
+        if (!formData.property_type) {
+          newErrors.property_type = 'Please select a property type';
+        }
+        break;
+      case 2:
+        if (!formData.guest_space) {
+          newErrors.guest_space = 'Please select a guest space type';
+        }
+        break;
+      case 3:
+        if (!formData.address.trim()) {
+          newErrors.address = 'Address is required';
+        }
+        if (!formData.city.trim()) {
+          newErrors.city = 'City is required';
+        }
+        if (!formData.state.trim()) {
+          newErrors.state = 'State is required';
+        }
+        if (!formData.zip.trim()) {
+          newErrors.zip = 'ZIP code is required';
+        }
+        if (!formData.country.trim()) {
+          newErrors.country = 'Country is required';
+        }
+        break;
+      case 4:
+        if (formData.max_occupancy < 1) {
+          newErrors.max_occupancy = 'Maximum occupancy must be at least 1';
+        }
+        break;
+      case 5:
+        // No validation needed - occupants can be empty (guest might be alone)
+        break;
+      case 6:
+        if (formData.amenities.length === 0) {
+          newErrors.amenities = 'Please select at least one amenity';
+        }
+        break;
+      case 7:
+        // No validation needed for photos in edit mode
+        break;
+      case 8:
+        if (!formData.title.trim()) {
+          newErrors.title = 'Title is required';
+        } else if (formData.title.length > 30) {
+          newErrors.title = 'Title must be 30 characters or less';
+        }
+        break;
+      case 9:
+        if (!formData.description.trim()) {
+          newErrors.description = 'Description is required';
+        } else if (formData.description.length > 500) {
+          newErrors.description = 'Description must be 500 characters or less';
+        }
+        break;
+      case 10:
+        if (!formData.price_per_night || formData.price_per_night <= 0) {
+          newErrors.price_per_night = 'Price must be greater than 0';
+        }
+        break;
+      case 11:
+        if (!formData.start_date.trim()) {
+          newErrors.start_date = 'Start date is required';
+        }
+        if (!formData.end_date.trim()) {
+          newErrors.end_date = 'End date is required';
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const nextStep = () => {
-    if (currentStep < 13) {
+    if (validateStep(currentStep)) {
+      if (currentStep < 11) {
       setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -227,78 +332,54 @@ export default function EditListing() {
     setSubmitting(true);
 
     try {
-      // Create FormData for multipart/form-data if there are photo replacements
-      const hasPhotoReplacements = Object.keys(photoReplacements).length > 0;
+      // Create FormData for file upload
+      const submitData = new FormData();
+      submitData.append('title', formData.title);
+      submitData.append('description', formData.description);
+      submitData.append('address', formData.address);
+      submitData.append('unit', formData.unit);
+      submitData.append('city', formData.city);
+      submitData.append('state', formData.state);
+      submitData.append('zip', formData.zip);
+      submitData.append('country', formData.country);
+      submitData.append('neighborhood', formData.neighborhood);
+      if (formData.latitude) submitData.append('latitude', formData.latitude.toString());
+      if (formData.longitude) submitData.append('longitude', formData.longitude.toString());
+      submitData.append('price_per_night', formData.price_per_night.toString());
+      submitData.append('start_date', formData.start_date);
+      submitData.append('end_date', formData.end_date);
+      submitData.append('max_occupancy', formData.max_occupancy.toString());
+      submitData.append('property_type', formData.property_type);
+      submitData.append('guest_space', formData.guest_space);
+      submitData.append('bedrooms', formData.bedrooms.toString());
+      submitData.append('bathrooms', formData.bathrooms.toString());
+      submitData.append('amenities', JSON.stringify(formData.amenities));
+      submitData.append('occupants', JSON.stringify(formData.occupants));
+
+      // Add new photos (File objects)
+      const newPhotos = formData.photos.filter(photo => photo instanceof File);
+      newPhotos.forEach((photo, index) => {
+        submitData.append('photo_replacements', photo);
+        submitData.append('photo_indices', index.toString());
+      });
+
+      // Debug: Log the amenities being sent
+      console.log('Amenities being sent:', formData.amenities);
+      console.log('Amenity codes that exist in frontend:', amenities.map(a => a.code));
+      console.log('Amenity codes being sent:', formData.amenities);
       
-      let response;
-      if (hasPhotoReplacements) {
-        const formDataToSend = new FormData();
-        
-        // Add all the listing data
-        formDataToSend.append('title', formData.title || '');
-        formDataToSend.append('description', formData.description || '');
-        formDataToSend.append('address', formData.address || '');
-        formDataToSend.append('unit', formData.unit || '');
-        formDataToSend.append('city', formData.city || '');
-        formDataToSend.append('state', formData.state || '');
-        formDataToSend.append('zip', formData.zip || '');
-        formDataToSend.append('country', formData.country || '');
-        formDataToSend.append('neighborhood', formData.neighborhood || '');
-        formDataToSend.append('latitude', formData.latitude?.toString() || '');
-        formDataToSend.append('longitude', formData.longitude?.toString() || '');
-        formDataToSend.append('price_per_night', formData.price_per_night?.toString() || '');
-        formDataToSend.append('start_date', formData.start_date || '');
-        formDataToSend.append('end_date', formData.end_date || '');
-        formDataToSend.append('max_occupancy', formData.max_occupancy?.toString() || '');
-        formDataToSend.append('property_type', formData.property_type || '');
-        formDataToSend.append('guest_space', formData.guest_space || '');
-        formDataToSend.append('bedrooms', formData.bedrooms?.toString() || '');
-        formDataToSend.append('bathrooms', formData.bathrooms?.toString() || '');
-        formDataToSend.append('amenities', JSON.stringify(formData.amenities || []));
-        formDataToSend.append('occupants', JSON.stringify(formData.occupants || []));
-        
-        // Add photo replacements
-        Object.entries(photoReplacements).forEach(([index, file]) => {
-          formDataToSend.append('photo_replacements', file);
-          formDataToSend.append('photo_indices', index);
-        });
-        
-        response = await fetch(`http://localhost:4000/api/listings/${id}`, {
-          method: 'PUT',
-          body: formDataToSend
-        });
-      } else {
-        // Regular JSON update without photos
-        response = await fetch(`http://localhost:4000/api/listings/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: formData.title,
-            description: formData.description,
-            address: formData.address,
-            unit: formData.unit,
-            city: formData.city,
-            state: formData.state,
-            zip: formData.zip,
-            country: formData.country,
-            neighborhood: formData.neighborhood,
-            latitude: formData.latitude,
-            longitude: formData.longitude,
-            price_per_night: formData.price_per_night,
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            max_occupancy: formData.max_occupancy,
-            property_type: formData.property_type,
-            guest_space: formData.guest_space,
-            bedrooms: formData.bedrooms,
-            bathrooms: formData.bathrooms,
-            amenities: formData.amenities,
-            occupants: formData.occupants
-          })
-        });
+      // Check if any sent amenities don't exist in our frontend list
+      const invalidAmenities = formData.amenities.filter(code => 
+        !amenities.some(amenity => amenity.code === code)
+      );
+      if (invalidAmenities.length > 0) {
+        console.error('Invalid amenity codes being sent:', invalidAmenities);
       }
+
+      const response = await fetch(`http://localhost:4000/api/listings/${id}`, {
+          method: 'PUT',
+        body: submitData
+      });
 
       if (response.ok) {
         alert('Listing updated successfully!');
@@ -315,20 +396,34 @@ export default function EditListing() {
     }
   };
 
-  if (loading) {
+  if (!user) {
     return (
-      <div className="min-h-screen bg-white pt-16">
+      <div className="bg-white min-h-screen">
         <Navbar />
-        <div className="max-w-md mx-auto mt-16 text-center text-gray-500">Loading...</div>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-black">Please log in to edit a listing</h1>
+            <button
+              onClick={() => router.push('/login')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Log In
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!listing) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-white pt-16">
+      <div className="bg-white min-h-screen">
         <Navbar />
-        <div className="max-w-md mx-auto mt-16 text-center text-red-500">Listing not found.</div>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4 text-black">Loading...</h1>
+          </div>
+        </div>
       </div>
     );
   }
@@ -337,51 +432,88 @@ export default function EditListing() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Which of these best describes your place?</h2>
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Which of these best describes your place?</h2>
             <div className="space-y-4">
               {[
-                { value: 'house', label: 'House' },
-                { value: 'apartment', label: 'Apartment' }
+                { value: 'house', label: 'House', icon: (
+                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                  </svg>
+                ) },
+                { value: 'apartment', label: 'Apartment', icon: (
+                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  </svg>
+                ) }
               ].map(option => (
-                <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="property_type"
-                    value={option.value}
-                    checked={formData.property_type === option.value}
-                    onChange={(e) => handleInputChange('property_type', e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-lg text-black">{option.label}</span>
-                </label>
+                <div
+                  key={option.value}
+                  onClick={() => handleInputChange('property_type', option.value)}
+                  className={`flex items-center justify-between p-6 border-2 rounded-xl cursor-pointer hover:border-gray-500 transition-colors ${
+                    formData.property_type === option.value
+                      ? 'border-black'
+                      : errors.property_type
+                      ? 'border-red-500'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <span className="text-xl font-medium text-black">{option.label}</span>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    {option.icon}
+                  </div>
+                </div>
               ))}
+              {renderError('property_type')}
             </div>
           </div>
         );
 
       case 2:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">What type of place will guests have?</h2>
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">What type of place will guests have?</h2>
             <div className="space-y-4">
               {[
-                { value: 'entire_place', label: 'An entire place' },
-                { value: 'room', label: 'A room' },
-                { value: 'shared_room', label: 'A shared room' }
+                { value: 'entire_place', label: 'An entire place', description: 'Guests have the whole place to themselves', icon: (
+                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+                  </svg>
+                ) },
+                { value: 'room', label: 'A room', description: 'Guests have their own room in a home, plus access to shared spaces', icon: (
+                  <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <rect x="3" y="10" width="18" height="7" rx="2" fill="currentColor" stroke="currentColor" />
+                    <rect x="6" y="7" width="5" height="4" rx="2" fill="currentColor" stroke="currentColor" />
+                    <rect x="15" y="7" width="3" height="4" rx="1.5" fill="currentColor" stroke="currentColor" />
+                  </svg>
+                ) },
+                { value: 'shared_room', label: 'A shared room', description: 'Guests sleep in a shared room with others', icon: (
+                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
+                  </svg>
+                ) }
               ].map(option => (
-                <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="guest_space"
-                    value={option.value}
-                    checked={formData.guest_space === option.value}
-                    onChange={(e) => handleInputChange('guest_space', e.target.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-lg text-black">{option.label}</span>
-                </label>
+                <div
+                  key={option.value}
+                  onClick={() => handleInputChange('guest_space', option.value)}
+                  className={`flex items-center justify-between p-6 border-2 rounded-xl cursor-pointer hover:border-gray-500 transition-colors ${
+                    formData.guest_space === option.value
+                      ? 'border-black'
+                      : errors.guest_space
+                      ? 'border-red-500'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-xl font-medium text-black">{option.label}</span>
+                    <span className="text-sm text-gray-600">{option.description}</span>
+                  </div>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    {option.icon}
+                  </div>
+                </div>
               ))}
+              {renderError('guest_space')}
             </div>
           </div>
         );
@@ -389,97 +521,113 @@ export default function EditListing() {
       case 3:
         return (
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Where's your place located?</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <h2 className="text-3xl font-bold mb-8 text-center text-black">Where's your place located?</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column - Address Form */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
                   <GoogleMapsAutocomplete
                     onAddressSelect={handleAddressSelect}
+                    className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
                     placeholder="Start typing your address..."
                   />
-                  <p className="text-sm text-gray-600 mt-1">Type your address and select from the suggestions</p>
+                  <p className="text-xs text-gray-600 mt-1">Type your address and select from the suggestions</p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">Street address</label>
+                    <label className="block text-sm font-medium mb-1 text-black">Street address</label>
                     <input
                       type="text"
-                      value={formData.address || ''}
+                      value={formData.address}
                       onChange={(e) => handleInputChange('address', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                        errors.address ? 'border-red-500' : 'border-gray-400'
+                      }`}
                       placeholder="123 Main St"
                     />
+                    {renderError('address')}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">Apt, unit, suite</label>
+                    <label className="block text-sm font-medium mb-1 text-black">Apt, unit, suite</label>
                     <input
                       type="text"
-                      value={formData.unit || ''}
+                      value={formData.unit}
                       onChange={(e) => handleInputChange('unit', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
                       placeholder="Apt 3B"
                     />
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">Neighborhood</label>
+                    <label className="block text-sm font-medium mb-1 text-black">Neighborhood</label>
                     <input
                       type="text"
-                      value={formData.neighborhood || ''}
+                    value={formData.neighborhood}
                       onChange={(e) => handleInputChange('neighborhood', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
                       placeholder="Allston"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">City</label>
+                    <label className="block text-sm font-medium mb-1 text-black">City</label>
                     <input
                       type="text"
-                      value={formData.city || ''}
+                    value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                        errors.city ? 'border-red-500' : 'border-gray-400'
+                      }`}
                       placeholder="Boston"
                     />
+                  {renderError('city')}
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">State</label>
+                    <label className="block text-sm font-medium mb-1 text-black">State</label>
                     <input
                       type="text"
-                      value={formData.state || ''}
+                    value={formData.state}
                       onChange={(e) => handleInputChange('state', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                        errors.state ? 'border-red-500' : 'border-gray-400'
+                      }`}
                       placeholder="MA"
                     />
+                  {renderError('state')}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2 text-black">Zip code</label>
+                    <label className="block text-sm font-medium mb-1 text-black">Zip code</label>
                     <input
                       type="text"
-                      value={formData.zip || ''}
+                    value={formData.zip}
                       onChange={(e) => handleInputChange('zip', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                        errors.zip ? 'border-red-500' : 'border-gray-400'
+                      }`}
                       placeholder="02115"
                     />
+                  {renderError('zip')}
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-black">Country</label>
+                  <label className="block text-sm font-medium mb-1 text-black">Country</label>
                   <input
                     type="text"
-                    value={formData.country || ''}
+                    value={formData.country}
                     onChange={(e) => handleInputChange('country', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-black"
-                    placeholder="USA"
+                    className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                      errors.country ? 'border-red-500' : 'border-gray-400'
+                    }`}
+                    placeholder="Country"
                   />
+                  {renderError('country')}
                 </div>
               </div>
 
@@ -499,238 +647,616 @@ export default function EditListing() {
 
       case 4:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">How many people can stay here?</h2>
-            <input
-              type="number"
-              min="1"
-              value={formData.max_occupancy || 1}
-              onChange={(e) => handleInputChange('max_occupancy', parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
-            />
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold mb-8 text-center text-black">How many people can stay here?</h2>
+            <div className="space-y-6">
+              {/* Guests */}
+              <div className="flex items-center justify-between py-4 border-b border-gray-400">
+                <div>
+                  <h3 className="text-lg font-medium text-black">Guests</h3>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => handleInputChange('max_occupancy', Math.max(1, formData.max_occupancy - 1))}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="w-16 text-center text-lg font-medium text-black">{formData.max_occupancy}</span>
+                  <button
+                    onClick={() => handleInputChange('max_occupancy', formData.max_occupancy + 1)}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Bedrooms */}
+              <div className="flex items-center justify-between py-4 border-b border-gray-400">
+                <div>
+                  <h3 className="text-lg font-medium text-black">Bedrooms</h3>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => handleInputChange('bedrooms', Math.max(1, formData.bedrooms - 1))}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="w-16 text-center text-lg font-medium text-black">{formData.bedrooms}</span>
+                  <button
+                    onClick={() => handleInputChange('bedrooms', formData.bedrooms + 1)}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Bathrooms */}
+              <div className="flex items-center justify-between py-4">
+                <div>
+                  <h3 className="text-lg font-medium text-black">Bathrooms</h3>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => handleInputChange('bathrooms', Math.max(1, formData.bathrooms - 0.5))}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="w-16 text-center text-lg font-medium text-black">{formData.bathrooms}</span>
+                  <button
+                    onClick={() => handleInputChange('bathrooms', formData.bathrooms + 0.5)}
+                    className="text-black text-2xl font-medium hover:text-gray-600 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 5:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">How many bedrooms?</h2>
-            <input
-              type="number"
-              min="0"
-              value={formData.bedrooms || 1}
-              onChange={(e) => handleInputChange('bedrooms', parseInt(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
-            />
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Who else might be there?</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* First Column */}
+              <div className="space-y-4">
+                {occupants.slice(0, 2).map(occupant => (
+                  <div
+                    key={occupant.value}
+                    onClick={() => handleOccupantToggle(occupant.value)}
+                    className={`flex items-center justify-between p-6 border-2 rounded-xl cursor-pointer hover:border-gray-500 transition-colors ${
+                      formData.occupants.includes(occupant.value)
+                        ? 'border-black bg-gray-50'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    <span className="text-base font-medium text-black">{occupant.label}</span>
+                    <span className="w-6 h-6 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                      {formData.occupants.includes(occupant.value) && (
+                        <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Second Column */}
+              <div className="space-y-4">
+                {occupants.slice(2).map(occupant => (
+                  <div
+                    key={occupant.value}
+                    onClick={() => handleOccupantToggle(occupant.value)}
+                    className={`flex items-center justify-between p-6 border-2 rounded-xl cursor-pointer hover:border-gray-500 transition-colors ${
+                      formData.occupants.includes(occupant.value)
+                        ? 'border-black bg-gray-50'
+                        : 'border-gray-300'
+                    }`}
+                  >
+                    <span className="text-base font-medium text-black">{occupant.label}</span>
+                    <span className="w-6 h-6 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                      {formData.occupants.includes(occupant.value) && (
+                        <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         );
 
       case 6:
+        // Split extra amenities
+        const extraAmenities = amenities.filter(a => a.category === 'extra');
+        const extraCol1 = extraAmenities.slice(0, 7);
+        const extraCol2 = extraAmenities.slice(7);
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">How many bathrooms?</h2>
-            <input
-              type="number"
-              min="1"
-              step="0.5"
-              value={formData.bathrooms || 1}
-              onChange={(e) => handleInputChange('bathrooms', parseFloat(e.target.value))}
-              className="w-full p-3 border border-gray-300 rounded-lg text-center text-2xl text-black"
-            />
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              {/* Living Essentials */}
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-black">Living Essentials</h3>
+                <div className="space-y-3">
+                  {amenities.filter(amenity => amenity.category === 'living').map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+          </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* College Essentials */}
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-black">College Essentials</h3>
+                <div className="space-y-3">
+                  {amenities.filter(amenity => amenity.category === 'college').map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+              ))}
+            </div>
+          </div>
+
+              {/* Extra - Column 1 */}
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-black">Extra</h3>
+                <div className="space-y-3">
+                  {extraCol1.map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra - Column 2 */}
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-black">&nbsp;</h3>
+                <div className="space-y-3">
+                  {extraCol2.map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 7:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Who else might be there?</h2>
-            <div className="space-y-4">
-              {occupants.map(occupant => (
-                <label key={occupant.value} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.occupants?.includes(occupant.value) || false}
-                    onChange={() => handleOccupantToggle(occupant.value)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-lg text-black">{occupant.label}</span>
-                </label>
-              ))}
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Upload photos</h2>
+            {formData.photos.length === 0 ? (
+              <div className="border-2 border-dashed border-gray-400 rounded-xl p-8 hover:border-gray-500 transition-colors relative">
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
+                  key={`file-input-${currentStep}`}
+                />
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-black" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                    </svg>
+                  </div>
+                  <p className="text-lg text-gray-600">Click to upload photos</p>
+                  <p className="text-sm text-gray-500 mt-2">Drag and drop or click to browse</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px', maxWidth: '1400px', width: '100%' }}>
+                  {/* First column: one big image spanning two rows */}
+                  <div className="relative md:row-span-2 h-full w-full">
+                    {formData.photos[0] ? (
+                      <>
+                        <img
+                          src={typeof formData.photos[0] === 'string' ? formData.photos[0] : URL.createObjectURL(formData.photos[0])}
+                          alt="Preview 1"
+                          className="w-full h-full object-cover rounded-2xl"
+                          style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                        />
+                        <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-3 py-1 rounded-lg text-sm font-medium">
+                          Cover Photo
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              photos: prev.photos.filter((_, i) => i !== 0)
+                            }));
+                          }}
+                          className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
+                        >
+                          ×
+                        </button>
+                      </>
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
+                            <input
+                              type="file"
+                          multiple
+                              accept="image/*"
+                          onChange={handlePhotoUpload}
+                          className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
+                          key={`file-input-cover-${currentStep}`}
+                        />
+                        <div className="text-center">
+                          <div className="w-12 h-12 mx-auto mb-2 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                            </svg>
+                          </div>
+                          <p className="text-sm text-gray-500">Add photo</p>
+                        </div>
+                            </div>
+                          )}
+                        </div>
+                  {/* Second column: two stacked images */}
+                  {[1, 2].map((index) => (
+                    <div key={index} className="relative h-full w-full">
+                      {formData.photos[index] ? (
+                        <>
+                          <img
+                            src={typeof formData.photos[index] === 'string' ? formData.photos[index] : URL.createObjectURL(formData.photos[index])}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover rounded-2xl"
+                            style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                photos: prev.photos.filter((_, i) => i !== index)
+                              }));
+                            }}
+                            className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
+                            key={`file-input-${index}-${currentStep}`}
+                          />
+                          <div className="text-center">
+                            <div className="w-8 h-8 mx-auto mb-1 flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                              </svg>
+                      </div>
+                            <p className="text-xs text-gray-500">Add</p>
+              </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {/* Third column: two stacked images */}
+                  {[3, 4].map((index) => (
+                    <div key={index} className="relative h-full w-full">
+                      {formData.photos[index] ? (
+                        <>
+                          <img
+                            src={typeof formData.photos[index] === 'string' ? formData.photos[index] : URL.createObjectURL(formData.photos[index])}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover rounded-2xl"
+                            style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                photos: prev.photos.filter((_, i) => i !== index)
+                              }));
+                            }}
+                            className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
+                          >
+                            ×
+                          </button>
+                        </>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
+                            key={`file-input-${index}-${currentStep}`}
+                          />
+                          <div className="text-center">
+                            <div className="w-8 h-8 mx-auto mb-1 flex items-center justify-center">
+                              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                              </svg>
+                            </div>
+                            <p className="text-xs text-gray-500">Add</p>
+                          </div>
+                        </div>
+                      )}
+                </div>
+                  ))}
+                </div>
+                {/* Add More Photos Button */}
+                {formData.photos.length >= 5 && (
+                  <div className="mt-6 flex justify-center gap-4">
+                    {formData.photos.length < 7 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const input = document.createElement('input');
+                          input.type = 'file';
+                          input.multiple = true;
+                          input.accept = 'image/*';
+                          input.onchange = (e) => {
+                            const files = Array.from((e.target as HTMLInputElement).files || []);
+                            const newPhotos = [...formData.photos, ...files].slice(0, 7);
+                            setFormData(prev => ({ ...prev, photos: newPhotos }));
+                          };
+                          input.click();
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-400 rounded-lg text-gray-700 hover:border-gray-500 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add More Photos
+                      </button>
+                    )}
+                    {formData.photos.length > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPhotoModal(true);
+                          setCurrentPhotoIndex(0);
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-400 rounded-lg text-gray-700 hover:border-gray-500 hover:bg-gray-50 transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View All Photos ({formData.photos.length})
+                      </button>
+                    )}
             </div>
+                )}
+              </>
+            )}
           </div>
         );
 
       case 8:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Amenities</h2>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {amenities.map(amenity => (
-                <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.amenities?.includes(amenity.code) || false}
-                    onChange={() => handleAmenityToggle(amenity.code)}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-lg text-black">{amenity.name}</span>
-                </label>
-              ))}
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Write a title</h2>
+            <div className="relative">
+            <input
+              type="text"
+                value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+                className={`w-full p-4 border rounded-lg text-black text-lg focus:outline-none focus:ring-2 focus:ring-black ${
+                  errors.title ? 'border-red-500' : 'border-gray-400'
+                }`}
+              placeholder="Cozy apartment near campus"
+                maxLength={30}
+            />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                {formData.title.length}/30
+              </div>
             </div>
+            {renderError('title')}
           </div>
         );
 
       case 9:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Edit Photos</h2>
-            <div className="space-y-4">
-                                          {listing.images && listing.images.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {listing.images.map((image, index) => {
-                    const imageUrl = image.url.startsWith('/uploads/') ? `http://localhost:4000${image.url}` : image.url;
-                    console.log(`Rendering image ${index}:`, imageUrl);
-                    return (
-                      <div key={index} className="relative group">
-                        <img
-                          src={photoPreviews[index] || imageUrl}
-                          alt={`Photo ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-gray-300"
-                          onError={(e) => {
-                            console.error('Failed to load image:', photoPreviews[index] || imageUrl);
-                            // If preview fails, fallback to original image
-                            if (photoPreviews[index]) {
-                              e.currentTarget.src = imageUrl;
-                              // Clean up the invalid preview
-                              setPhotoPreviews(prev => {
-                                const newPreviews = { ...prev };
-                                if (newPreviews[index]) {
-                                  URL.revokeObjectURL(newPreviews[index]);
-                                  delete newPreviews[index];
-                                }
-                                return newPreviews;
-                              });
-                            } else {
-                              e.currentTarget.style.display = 'none';
-                            }
-                          }}
-                          onLoad={() => console.log(`Successfully loaded image ${index}:`, photoPreviews[index] || imageUrl)}
-                        />
-                        
-                        {/* Simple replace button below image */}
-                        <div className="mt-2 text-center">
-                          <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium">
-                            {photoReplacements[index] ? 'Photo Selected' : 'Replace Photo'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handlePhotoReplacement(index, e.target.files?.[0] || null)}
-                              className="hidden"
-                            />
-                          </label>
-                          {photoReplacements[index] && (
-                            <div className="text-xs text-green-600 font-medium mt-1">
-                              {photoReplacements[index].name}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                  );
-                })}
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
+            <div className="relative">
+            <textarea
+                value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+                className={`w-full p-4 border rounded-lg text-black text-lg focus:outline-none focus:ring-2 focus:ring-black ${
+                  errors.description ? 'border-red-500' : 'border-gray-400'
+                }`}
+              placeholder="Describe your place..."
+              rows={6}
+                maxLength={500}
+            />
+              <div className="absolute right-3 bottom-3 text-sm text-gray-500">
+                {formData.description.length}/500
               </div>
-              ) : (
-                <p className="text-gray-500 text-center">No photos uploaded</p>
-              )}
-              
-              {/* Summary of changes */}
-              {Object.keys(photoReplacements).length > 0 && (
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800 font-medium">
-                    {Object.keys(photoReplacements).length} photo(s) will be replaced
-                  </p>
-                  <p className="text-xs text-blue-600 mt-1">
-                    Only the selected photos will be updated. Others will remain unchanged.
-                  </p>
-                </div>
-              )}
-              
-              <p className="text-sm text-gray-600">
-                Hover over photos to replace them. Only selected photos will be updated.
-              </p>
             </div>
+            {renderError('description')}
           </div>
         );
 
       case 10:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Write a title</h2>
-            <input
-              type="text"
-              value={formData.title || ''}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg text-black"
-              placeholder="Cozy apartment near campus"
-              maxLength={120}
-            />
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Price per night</h2>
+            
+            {/* Main Price Display */}
+            <div className="mb-8">
+              <div className="flex items-center justify-center gap-4">
+                <div className="text-6xl font-bold text-black relative">
+                  {isEditing ? (
+              <input
+                      type="text"
+                      value={Number.isFinite(formData.price_per_night) ? formData.price_per_night : ""}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, '');
+                        handleInputChange('price_per_night', value === "" ? 0 : parseFloat(value) || 0);
+                      }}
+                      onBlur={() => setIsEditing(false)}
+                      className="text-6xl font-bold text-black bg-transparent border-none outline-none w-full text-center"
+                placeholder="0"
+                      autoFocus
+                    />
+                  ) : (
+                    <span>${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="w-8 h-8 bg-white border border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="space-y-4">
+              {/* Guest Price Breakdown */}
+              <div className="bg-white border border-gray-400 rounded-lg p-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Base price</span>
+                    <span className="font-medium text-gray-600">${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Stripe fee (2.9% + 30¢)</span>
+                    <span className="font-medium text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30).toFixed(2)}</span>
+                  </div>
+                  <div className="border-t border-gray-400 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Guest price</span>
+                      <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) + ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Host Earnings */}
+              <div className="bg-white border border-gray-400 rounded-lg p-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">You earn</span>
+                  <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) - ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 11:
         return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Write a description</h2>
-            <textarea
-              value={formData.description || ''}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg text-black"
-              placeholder="Describe your place..."
-              rows={6}
-            />
-          </div>
-        );
-
-      case 12:
-        return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Set your price per night</h2>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price_per_night || 0}
-                onChange={(e) => handleInputChange('price_per_night', parseFloat(e.target.value))}
-                className="w-full p-3 pl-8 border border-gray-300 rounded-lg text-center text-2xl text-black"
-                placeholder="0"
-              />
-            </div>
-          </div>
-        );
-
-      case 13:
-        return (
-          <div className="max-w-md mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-black">Set availability dates</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">Start date</label>
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
+            <div className="space-y-6">
+              <div className="relative">
                 <input
                   type="date"
-                  value={formData.start_date || ''}
+                  placeholder=" "
+                  value={formData.start_date}
                   onChange={(e) => handleInputChange('start_date', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                  className="w-full p-4 border border-gray-400 rounded-lg text-black appearance-none focus:outline-none focus:ring-2 focus:ring-black hide-date-placeholder"
+                  style={{ WebkitTextFillColor: formData.start_date ? undefined : 'transparent' }}
                 />
+                {!formData.start_date && (
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none select-none">Start date</span>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-black">End date</label>
+              <div className="relative">
                 <input
                   type="date"
-                  value={formData.end_date || ''}
+                  placeholder=" "
+                  value={formData.end_date}
                   onChange={(e) => handleInputChange('end_date', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-black"
+                  className="w-full p-4 border border-gray-400 rounded-lg text-black appearance-none focus:outline-none focus:ring-2 focus:ring-black hide-date-placeholder"
+                  style={{ WebkitTextFillColor: formData.end_date ? undefined : 'transparent' }}
                 />
+                {!formData.end_date && (
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none select-none">End date</span>
+                )}
               </div>
             </div>
           </div>
@@ -742,51 +1268,237 @@ export default function EditListing() {
   };
 
   return (
-    <div className="min-h-screen bg-white pt-16">
+    <div className="bg-white min-h-screen flex flex-col">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 mt-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-black mb-2">Edit Listing</h1>
-          <p className="text-gray-600">Step {currentStep} of 13</p>
+      <div className="flex-1 flex flex-col">
+        {/* Main Content */}
+        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-32">
+          <div className="w-full max-w-4xl">
+            {renderStep()}
+          </div>
         </div>
         
-        {renderStep()}
-        
-        <div className="flex justify-between mt-8">
+        {/* Error Message Centered Above Progress Bar */}
+        {errors.amenities && currentStep === 6 && (
+          <div className="w-full flex justify-center mb-2">
+            <div className="text-red-500 text-sm mt-1 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.amenities}
+            </div>
+          </div>
+        )}
+        {errors.title && currentStep === 8 && (
+          <div className="w-full flex justify-center mb-2">
+            <div className="text-red-500 text-sm mt-1 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.title}
+            </div>
+          </div>
+        )}
+        {errors.description && currentStep === 9 && (
+          <div className="w-full flex justify-center mb-2">
+            <div className="text-red-500 text-sm mt-1 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.description}
+            </div>
+          </div>
+        )}
+        {(errors.start_date || errors.end_date) && currentStep === 11 && (
+          <div className="w-full flex justify-center mb-2">
+            <div className="text-red-500 text-sm mt-1 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.start_date || errors.end_date}
+            </div>
+          </div>
+        )}
+
+        {/* Progress Bar and Navigation */}
+        <div className="bg-white">
+          <div className="max-w-4xl mx-auto px-6 py-6">
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-sm font-medium text-gray-600">Step {currentStep} of 11</span>
+                <span className="text-sm font-medium text-gray-600">{Math.round((currentStep / 11) * 100)}% complete</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-1">
+                <div 
+                  className="bg-black h-1 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${(currentStep / 11) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Navigation Arrows */}
+            <div className="flex justify-between items-center">
+              {currentStep > 1 ? (
           <button
             onClick={prevStep}
-            disabled={currentStep === 1}
-            className={`px-6 py-2 rounded-lg font-semibold ${
-              currentStep === 1
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-600 hover:bg-gray-700 text-white'
-            }`}
-          >
-            Back
+                  className="text-black hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
           </button>
-          
-          {currentStep === 13 ? (
+              ) : (
+                <div></div>
+              )}
+              
+              {currentStep < 11 ? (
+                <button
+                  onClick={nextStep}
+                  className="text-black hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
             <button
               onClick={handleSubmit}
+                  className="text-black hover:text-gray-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               disabled={submitting}
-              className={`px-6 py-2 rounded-lg font-semibold ${
-                submitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
-              }`}
-            >
-              {submitting ? 'Updating...' : 'Update Listing'}
-            </button>
-          ) : (
+                >
+                  <span className="font-medium">{submitting ? "Updating..." : "Update Listing"}</span>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Photo Modal */}
+      {showPhotoModal && formData.photos.length > 0 && (
+        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* Close button */}
             <button
-              onClick={nextStep}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
             >
-              Next
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
+
+            {/* Main photo */}
+            <div className="relative">
+              <img
+                src={typeof formData.photos[currentPhotoIndex] === 'string' ? formData.photos[currentPhotoIndex] : URL.createObjectURL(formData.photos[currentPhotoIndex])}
+                alt={`Photo ${currentPhotoIndex + 1}`}
+                className="w-full h-full object-contain max-h-[70vh] rounded-lg"
+              />
+              
+              {/* Photo counter */}
+              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
+                {currentPhotoIndex + 1} of {formData.photos.length}
+              </div>
+            </div>
+
+            {/* Navigation buttons */}
+            {formData.photos.length > 1 && (
+              <>
+                {currentPhotoIndex > 0 && (
+                  <button
+                    onClick={() => setCurrentPhotoIndex(prev => prev - 1)}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+                {currentPhotoIndex < formData.photos.length - 1 && (
+                  <button
+                    onClick={() => setCurrentPhotoIndex(prev => prev + 1)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Thumbnail strip */}
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+              {formData.photos.map((photo, index) => (
+                <div key={index} className="relative flex-shrink-0">
+                  <button
+                    onClick={() => setCurrentPhotoIndex(index)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                      index === currentPhotoIndex ? 'border-black' : 'border-gray-400'
+                    }`}
+                  >
+                    <img
+                      src={typeof photo === 'string' ? photo : URL.createObjectURL(photo)}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+            </button>
+            <button
+                    onClick={() => {
+                      const newPhotos = formData.photos.filter((_, i) => i !== index);
+                      setFormData(prev => ({
+                        ...prev,
+                        photos: newPhotos
+                      }));
+                      
+                      // If we're deleting the last photo, close the modal
+                      if (newPhotos.length === 0) {
+                        setShowPhotoModal(false);
+                        return;
+                      }
+                      
+                      // Adjust current photo index if needed
+                      if (currentPhotoIndex >= index && currentPhotoIndex > 0) {
+                        setCurrentPhotoIndex(prev => prev - 1);
+                      } else if (currentPhotoIndex >= newPhotos.length) {
+                        setCurrentPhotoIndex(newPhotos.length - 1);
+                      }
+                    }}
+                    className="absolute top-1 right-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-gray-800"
+                  >
+                    ×
+            </button>
+                </div>
+              ))}
+              {formData.photos.length < 7 && (
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center hover:border-gray-500 transition-colors relative">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        const newPhotos = [...formData.photos, ...files].slice(0, 7);
+                        setFormData(prev => ({ ...prev, photos: newPhotos }));
+                      }}
+                      className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  </div>
+                </div>
           )}
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 } 

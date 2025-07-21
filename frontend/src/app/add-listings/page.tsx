@@ -72,15 +72,15 @@ export default function BecomeHost() {
     { code: 'tv', name: 'TV', category: 'living' },
     { code: 'kitchen', name: 'Kitchen', category: 'living' },
     { code: 'washer', name: 'Washer', category: 'living' },
-    { code: 'aircon', name: 'Air conditioning', category: 'living' },
+    { code: 'air_conditioning', name: 'Air conditioning', category: 'living' },
     { code: 'free_parking', name: 'Free parking', category: 'living' },
     { code: 'paid_parking', name: 'Paid parking', category: 'living' },
     
     // College Essentials
-    { code: 'workspace', name: 'Dedicated workspace', category: 'college' },
+    { code: 'dedicated_workspace', name: 'Dedicated workspace', category: 'college' },
     { code: 'quiet_study', name: 'Quiet study area', category: 'college' },
-    { code: 'high_speed_wifi', name: 'High-speed Wi-Fi', category: 'college' },
-    { code: 'printer', name: 'Printer access', category: 'college' },
+    { code: 'high_speed_internet', name: 'High-speed Wi-Fi', category: 'college' },
+    { code: 'printer_access', name: 'Printer access', category: 'college' },
     { code: 'coffee_station', name: 'Coffee station', category: 'college' },
     { code: 'whiteboard', name: 'Whiteboard', category: 'college' },
     { code: 'group_study', name: 'Group study area', category: 'college' },
@@ -89,13 +89,13 @@ export default function BecomeHost() {
     { code: 'pool', name: 'Pool', category: 'extra' },
     { code: 'hot_tub', name: 'Hot tub', category: 'extra' },
     { code: 'patio', name: 'Patio', category: 'extra' },
-    { code: 'bbq', name: 'BBQ grill', category: 'extra' },
+    { code: 'bbq_grill', name: 'BBQ grill', category: 'extra' },
     { code: 'outdoor_dining', name: 'Outdoor dining area', category: 'extra' },
     { code: 'fire_pit', name: 'Fire pit', category: 'extra' },
     { code: 'pool_table', name: 'Pool table', category: 'extra' },
     { code: 'indoor_fireplace', name: 'Indoor fireplace', category: 'extra' },
     { code: 'piano', name: 'Piano', category: 'extra' },
-    { code: 'gym', name: 'Exercise equipment', category: 'extra' },
+    { code: 'gym_access', name: 'Exercise equipment', category: 'extra' },
     { code: 'lake_access', name: 'Lake access', category: 'extra' },
     { code: 'beach_access', name: 'Beach access', category: 'extra' },
     { code: 'outdoor_shower', name: 'Outdoor shower', category: 'extra' }
@@ -677,7 +677,9 @@ export default function BecomeHost() {
                     type="text"
                     value={formData.country}
                     onChange={(e) => handleInputChange('country', e.target.value)}
-                    className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
+                    className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                      errors.country ? 'border-red-500' : 'border-gray-400'
+                    }`}
                     placeholder="USA"
                   />
                   {renderError('country')}
@@ -850,22 +852,31 @@ export default function BecomeHost() {
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {/* Living Essentials */}
+                            {/* Living Essentials */}
               <div>
                 <h3 className="text-xl font-bold mb-4 text-black">Living Essentials</h3>
                 <div className="space-y-3">
                   {amenities.filter(amenity => amenity.category === 'living').map(amenity => (
-                    <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer p-3 border border-gray-400 rounded-lg hover:border-gray-500 transition-colors">
-            <input
-                        type="checkbox"
-                        checked={formData.amenities.includes(amenity.code)}
-                        onChange={() => handleAmenityToggle(amenity.code)}
-                        className="w-5 h-5 text-black"
-                      />
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       <span className="text-sm text-black">{amenity.name}</span>
-                    </label>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
                   ))}
-          </div>
+                </div>
               </div>
 
               {/* College Essentials */}
@@ -873,34 +884,52 @@ export default function BecomeHost() {
                 <h3 className="text-xl font-bold mb-4 text-black">College Essentials</h3>
                 <div className="space-y-3">
                   {amenities.filter(amenity => amenity.category === 'college').map(amenity => (
-                    <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer p-3 border border-gray-400 rounded-lg hover:border-gray-500 transition-colors">
-                  <input
-                    type="checkbox"
-                        checked={formData.amenities.includes(amenity.code)}
-                        onChange={() => handleAmenityToggle(amenity.code)}
-                        className="w-5 h-5 text-black"
-                      />
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       <span className="text-sm text-black">{amenity.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Extra - Column 1 */}
               <div>
                 <h3 className="text-xl font-bold mb-4 text-black">Extra</h3>
                 <div className="space-y-3">
                   {extraCol1.map(amenity => (
-                    <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer p-3 border border-gray-400 rounded-lg hover:border-gray-500 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.amenities.includes(amenity.code)}
-                    onChange={() => handleAmenityToggle(amenity.code)}
-                        className="w-5 h-5 text-black"
-                  />
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       <span className="text-sm text-black">{amenity.name}</span>
-                </label>
-              ))}
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -909,15 +938,24 @@ export default function BecomeHost() {
                 <h3 className="text-xl font-bold mb-4 text-black">&nbsp;</h3>
                 <div className="space-y-3">
                   {extraCol2.map(amenity => (
-                    <label key={amenity.code} className="flex items-center space-x-3 cursor-pointer p-3 border border-gray-400 rounded-lg hover:border-gray-500 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={formData.amenities.includes(amenity.code)}
-                        onChange={() => handleAmenityToggle(amenity.code)}
-                        className="w-5 h-5 text-black"
-                      />
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       <span className="text-sm text-black">{amenity.name}</span>
-                    </label>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
                   ))}
                 </div>
               </div>

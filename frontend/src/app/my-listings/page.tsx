@@ -7,6 +7,8 @@ import PrivacyMap from "../../components/PrivacyMap";
 import StripeConnect from "../../components/StripeConnect";
 import PaymentHistory from "../../components/PaymentHistory";
 import CancellationForm from "../../components/CancellationForm";
+import ReviewsSection from "../../components/ReviewsSection";
+import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface ListingImage {
@@ -60,7 +62,30 @@ export default function MyListingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages' | 'stripe'>('all');
+  const [bookingFilter, setBookingFilter] = useState<'pending' | 'approved' | 'completed'>('pending');
   const [deletingListing, setDeletingListing] = useState<string | null>(null);
+  
+  // Lazy loading states
+  const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(['all']));
+  const [loadingTabs, setLoadingTabs] = useState<Set<string>>(new Set());
+
+  // Function to fetch complete listing data
+  const fetchCompleteListing = async (listingId: string) => {
+    try {
+      console.log('Fetching complete listing for ID:', listingId);
+      const response = await fetch(`http://localhost:4000/api/listings/${listingId}`);
+      console.log('Response status:', response.status);
+      if (response.ok) {
+        const completeListing = await response.json();
+        console.log('Complete listing data:', completeListing);
+        setSelectedListing(completeListing);
+      } else {
+        console.error('Failed to fetch listing:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching complete listing:', error);
+    }
+  };
 
   // Messages tab state
   const [conversations, setConversations] = useState<any[]>([]);
@@ -70,6 +95,52 @@ export default function MyListingsPage() {
   const [loadingConvos, setLoadingConvos] = useState(false);
   const [bookingConversationId, setBookingConversationId] = useState<string | null>(null);
   const [bookingConversationLoading, setBookingConversationLoading] = useState(false);
+  
+  // Lazy loading function
+  const loadTabData = async (tabName: string) => {
+    if (loadedTabs.has(tabName) || loadingTabs.has(tabName)) return;
+    
+    setLoadingTabs(prev => new Set(prev).add(tabName));
+    
+    try {
+      switch (tabName) {
+        case 'bookings':
+          const bookingsRes = await fetch(`http://localhost:4000/api/bookings`);
+          const bookingsData = await bookingsRes.json();
+          if (Array.isArray(bookingsData)) {
+            setBookings(bookingsData.filter((b: Booking) => b.host_id === userId));
+          }
+          break;
+          
+        case 'messages':
+          const convosRes = await fetch(`http://localhost:4000/api/conversations/user/${userId}`);
+          const convosData = await convosRes.json();
+          const convosWithMessages = await Promise.all(
+            convosData.map(async (conversation: any) => {
+              const messagesRes = await fetch(`http://localhost:4000/api/messages/conversation/${conversation.id}`);
+              const messages = await messagesRes.json();
+              return { ...conversation, hasMessages: messages.length > 0 };
+            })
+          );
+          setConversations(convosWithMessages.filter(c => c.hasMessages));
+          break;
+          
+        case 'stripe':
+          // Stripe data is loaded by the StripeConnect component
+          break;
+      }
+      
+      setLoadedTabs(prev => new Set(prev).add(tabName));
+    } catch (error) {
+      console.error(`Error loading ${tabName} tab:`, error);
+    } finally {
+      setLoadingTabs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tabName);
+        return newSet;
+      });
+    }
+  };
   
   // Stripe connection status state
   const [stripeConnected, setStripeConnected] = useState(false);
@@ -94,12 +165,167 @@ export default function MyListingsPage() {
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [cancellationLoading, setCancellationLoading] = useState(false);
 
+  // Amenities modal state
+  const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
+
+  // Debug: Monitor selectedListing changes
+  useEffect(() => {
+    console.log('Selected listing changed:', selectedListing);
+  }, [selectedListing]);
+
   const renterReviewSteps = [
     { title: 'Punctuality', field: 'punctuality', description: 'Did the renter arrive and leave on time?' },
     { title: 'Communication', field: 'communication', description: 'How well did the renter communicate?' },
     { title: 'Property Care', field: 'property_care', description: 'How well did the renter care for your property?' },
     { title: 'Compliance', field: 'compliance', description: 'Did the renter follow house rules?' }
   ];
+
+  // Function to get icon for amenity
+  const getAmenityIcon = (amenityName: string) => {
+    const name = amenityName.toLowerCase();
+    
+    // WiFi/Internet
+    if (name.includes('wifi') || name.includes('internet')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+        </svg>
+      );
+    }
+    
+    // Parking
+    if (name.includes('parking')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        </svg>
+      );
+    }
+    
+    // Kitchen
+    if (name.includes('kitchen')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a3 3 0 106 0l-3-9zm9 0a3 3 0 11-6 0l3 9a3 3 0 006 0l3-9zm-3 1m0 0l3 9a3 3 0 11-6 0l3-9z" />
+        </svg>
+      );
+    }
+    
+    // Washer
+    if (name.includes('washer')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      );
+    }
+    
+    // Dryer
+    if (name.includes('dryer')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      );
+    }
+    
+    // Air Conditioning
+    if (name.includes('ac') || name.includes('air conditioning')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      );
+    }
+    
+    // Heating
+    if (name.includes('heating')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+        </svg>
+      );
+    }
+    
+    // TV
+    if (name.includes('tv') || name.includes('television')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    
+    // Gym
+    if (name.includes('gym')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
+        </svg>
+      );
+    }
+    
+    // Fitness
+    if (name.includes('fitness')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 6v6m0 0v6m0-6h6m-6 0H3" />
+        </svg>
+      );
+    }
+    
+    // Pool
+    if (name.includes('pool')) {
+        return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+      );
+    }
+    
+    // Swimming
+    if (name.includes('swimming')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      );
+    }
+    
+    // Balcony
+    if (name.includes('balcony')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      );
+    }
+    
+    // Terrace
+    if (name.includes('terrace')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      );
+    }
+    
+    // Patio
+    if (name.includes('patio')) {
+      return (
+        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg>
+      );
+    }
+    
+    // Default icon for other amenities
+    return (
+      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    );
+  };
 
   const handleRenterReviewStep = (rating: number) => {
     const currentField = renterReviewSteps[currentRenterReviewStep].field as keyof typeof renterReviewData;
@@ -249,45 +475,14 @@ export default function MyListingsPage() {
         setListings([]);
         setLoading(false);
       });
-    // Fetch bookings for listings owned by the user
-    fetch(`http://localhost:4000/api/bookings`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          // Only bookings for listings owned by this user
-          setBookings(data.filter((b: Booking) => b.host_id === userId));
-        } else {
-          setBookings([]);
-        }
-      })
-      .catch(() => setBookings([]));
   }, [userId]);
 
-  // Fetch conversations where user is host for messages tab
+  // Load tab data when tab changes
   useEffect(() => {
-    if (!userId || activeTab !== 'messages') return;
-    let isMounted = true;
-    async function fetchConversations() {
-      setLoadingConvos(true);
-      const res = await fetch(`http://localhost:4000/api/conversations/user/${userId}`);
-      const data = await res.json();
-      // Only conversations where user is host
-      const hostConvos = data.filter((c: any) => c.host_id === userId);
-      // Only include conversations that have messages
-      const convosWithMessages = await Promise.all(
-        hostConvos.map(async (conversation: any) => {
-          const messagesRes = await fetch(`http://localhost:4000/api/messages/conversation/${conversation.id}`);
-          const messages = await messagesRes.json();
-          return { ...conversation, hasMessages: messages.length > 0 };
-        })
-      );
-      if (isMounted) {
-        setConversations(convosWithMessages.filter(c => c.hasMessages));
-        setLoadingConvos(false);
-      }
+    if (activeTab && !loadedTabs.has(activeTab)) {
+      loadTabData(activeTab);
     }
-    fetchConversations();
-  }, [userId, activeTab]);
+  }, [activeTab, loadedTabs]);
 
   // Fetch guest profiles and listing titles for sidebar in messages tab
   useEffect(() => {
@@ -475,15 +670,55 @@ export default function MyListingsPage() {
     }
   }, [searchParams]);
 
+  // Add a state to track which listings to show
+  const [showActive, setShowActive] = useState(true);
+
+  // Add a handler to set a listing to inactive
+  const handleSetInactive = async (listingId: string) => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/listings/${listingId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'inactive' })
+      });
+      if (response.ok) {
+        setListings(prev => prev.map(l => l.id === listingId ? { ...l, status: 'inactive' } : l));
+      } else {
+        alert('Failed to set listing as inactive.');
+      }
+    } catch (error) {
+      alert('Failed to set listing as inactive.');
+    }
+  };
+
+  // Add a handler to toggle listing status
+  const handleToggleStatus = async (listingId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' || currentStatus === 'approved' || !currentStatus ? 'inactive' : 'active';
+    try {
+      const response = await fetch(`http://localhost:4000/api/listings/${listingId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (response.ok) {
+        setListings(prev => prev.map(l => l.id === listingId ? { ...l, status: newStatus } : l));
+      } else {
+        alert('Failed to update listing status.');
+      }
+    } catch (error) {
+      alert('Failed to update listing status.');
+    }
+  };
+
   return (
-    <div className="flex flex-col bg-white min-h-screen">
+    <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="flex flex-1 pt-20 relative">
+      <div className="flex flex-1 mt-25 overflow-hidden">
         {activeTab === 'stripe' ? (
           <>
             {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <h2 className="text-xl font-bold mb-4 text-black">Settings</h2>
+            <div className="w-80 border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
+              <h2 className="text-xl font-bold mb-4 text-black flex-shrink-0">Settings</h2>
               <div className="space-y-2">
                 <div
                   className="rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 bg-blue-50 border-blue-400"
@@ -494,32 +729,32 @@ export default function MyListingsPage() {
               </div>
             </div>
             {/* Center: Payment Setup and History */}
-            <div className="flex-1">
-                              <div className="p-6">
-                  <div className="max-w-4xl mx-auto">
-                    <div className="space-y-8">
-                      <div>
-                        <StripeConnect onStatusChange={(status) => setStripeConnected(!!status?.connected)} />
-                      </div>
-                      <div>
-                        <PaymentHistory userId={userId || ''} />
-                      </div>
+            <div className="flex-1 overflow-hidden">
+              <div className="p-6 overflow-y-auto scrollbar-hide h-full">
+                <div className="max-w-4xl mx-auto">
+                  <div className="space-y-8">
+                    <div>
+                      <StripeConnect onStatusChange={(status) => setStripeConnected(!!status?.connected)} />
+                    </div>
+                    <div>
+                      <PaymentHistory userId={userId || ''} />
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
           </>
         ) : activeTab === 'messages' ? (
           <>
             {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <h2 className="text-xl font-bold mb-4 text-black">Inbox</h2>
-              {loadingConvos ? (
-                <div className="text-gray-400">Loading...</div>
+            <div className="w-80 border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
+              <h2 className="text-xl font-bold mb-4 text-black flex-shrink-0">Inbox</h2>
+              {loadingTabs.has('messages') ? (
+                <div className="text-gray-400">Loading messages...</div>
               ) : conversations.length === 0 ? (
                 <div className="text-gray-400">No messages yet.</div>
               ) : (
-                <ul className="flex-1 overflow-y-auto">
+                <ul className="flex-1 overflow-y-auto scrollbar-hide">
                   {conversations.map((c) => (
                     <li
                       key={c.id}
@@ -536,16 +771,27 @@ export default function MyListingsPage() {
               )}
             </div>
             {/* Center: Chat area */}
-            <div className="flex-1 flex flex-col border-r border-gray-200">
+            <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden">
               {selectedConvo ? (
-                <div className="flex-1 flex flex-col">
-                  <div className="border-b border-gray-200 px-6 py-4 bg-white">
-                    <div className="font-bold text-lg text-black">
-                      {guestProfiles[selectedConvo.guest_id]?.name || "Guest"}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="border-b border-gray-200 px-6 py-3 bg-white flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      {guestProfiles[selectedConvo.guest_id]?.avatar_url ? (
+                        <img src={guestProfiles[selectedConvo.guest_id].avatar_url} alt={guestProfiles[selectedConvo.guest_id].name} className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-700">
+                          {guestProfiles[selectedConvo.guest_id]?.name ? guestProfiles[selectedConvo.guest_id].name[0] : 'G'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-lg text-black">
+                          {guestProfiles[selectedConvo.guest_id]?.name || "Guest"}
+                        </div>
+                        <div className="text-xs text-gray-500">Boston University student</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">Listing: {listingTitles[selectedConvo.listing_id] || "Listing"}</div>
                   </div>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-hidden p-2">
                     <ChatBox
                       listingId={selectedConvo.listing_id}
                       hostId={selectedConvo.host_id}
@@ -562,13 +808,15 @@ export default function MyListingsPage() {
               )}
             </div>
             {/* Right panel: Reservation/Request details */}
-            <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col">
+            <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
               {selectedConvo ? (
-                <MessagesReservationPanel 
-                  conversation={selectedConvo} 
-                  guest={guestProfiles[selectedConvo.guest_id]} 
-                  listingId={selectedConvo.listing_id}
-                />
+                <div className="overflow-y-auto scrollbar-hide">
+                  <MessagesReservationPanel 
+                    conversation={selectedConvo} 
+                    guest={guestProfiles[selectedConvo.guest_id]} 
+                    listingId={selectedConvo.listing_id}
+                  />
+                </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a conversation to view reservation details</div>
               )}
@@ -576,121 +824,125 @@ export default function MyListingsPage() {
           </>
         ) : activeTab === 'bookings' ? (
           <>
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <div className="flex-1 overflow-y-auto">
-                {/* Requests Section */}
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold mb-4 text-black">Pending</h2>
-                  {loading ? (
-                    <div className="text-gray-400">Loading...</div>
-                  ) : pendingBookings.length === 0 ? (
-                    <div className="text-gray-400">No pending requests.</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {pendingBookings.map((booking: Booking) => (
-                        <li
-                          key={booking.id}
-                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
-                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
-                        >
-                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                        {/* Sidebar */}
+            <div className="w-80 border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
+              {/* Filter Pills */}
+              <div className="flex gap-2 mb-6">
+                <button
+                  onClick={() => setBookingFilter('pending')}
+                  className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                    bookingFilter === 'pending'
+                      ? 'bg-black text-white'
+                      : 'bg-white border border-black text-black hover:bg-gray-50'
+                  }`}
+                >
+                  Pending
+                </button>
+                <button
+                  onClick={() => setBookingFilter('approved')}
+                  className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                    bookingFilter === 'approved'
+                      ? 'bg-black text-white'
+                      : 'bg-white border border-black text-black hover:bg-gray-50'
+                  }`}
+                >
+                  Approved
+                </button>
+                <button
+                  onClick={() => setBookingFilter('completed')}
+                  className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                    bookingFilter === 'completed'
+                      ? 'bg-black text-white'
+                      : 'bg-white border border-black text-black hover:bg-gray-50'
+                  }`}
+                >
+                  Completed
+                </button>
                 </div>
-
-                {/* Approved Section */}
-                <div className="mt-6">
-                  <h2 className="text-xl font-bold mb-4 text-black">Approved</h2>
-                  {loading ? (
-                    <div className="text-gray-400">Loading...</div>
-                  ) : approvedBookings.length === 0 ? (
-                    <div className="text-gray-400">No approved bookings.</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {approvedBookings.map((booking: Booking) => (
-                        <li
-                          key={booking.id}
-                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
-                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
-                        >
-                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
-                          {/* Cancel Booking button for host */}
-                          <button
-                            className="mt-2 px-4 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow"
-                            onClick={e => { e.stopPropagation(); handleCancelBooking(booking); }}
-                          >
-                            Cancel Booking
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                {/* Completed Section */}
-                <div className="mt-6">
-                  <h2 className="text-xl font-bold mb-4 text-black">Completed</h2>
-                  {loading ? (
-                    <div className="text-gray-400">Loading...</div>
-                  ) : completedBookings.length === 0 ? (
-                    <div className="text-gray-400">No completed bookings.</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {completedBookings.map((booking: Booking) => (
-                        <li
-                          key={booking.id}
-                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
-                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
-                        >
-                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
-                          {/* Write Review button for host-to-renter review */}
-                          <button
-                            className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow"
-                            onClick={e => { e.stopPropagation(); openRenterReviewPopup(booking); }}
-                          >
-                            {reviewedBookingIds.includes(booking.id) ? 'Edit Review' : 'Write Review'}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                {/* Cancelled Section */}
-                <div className="mt-6">
-                  <h2 className="text-xl font-bold mb-4 text-black">Cancelled</h2>
-                  {loading ? (
-                    <div className="text-gray-400">Loading...</div>
-                  ) : cancelledBookings.length === 0 ? (
-                    <div className="text-gray-400">No cancelled bookings.</div>
-                  ) : (
-                    <ul className="space-y-2">
-                      {cancelledBookings.map((booking: Booking) => (
-                        <li
-                          key={booking.id}
-                          className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
-                          onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
-                        >
-                          <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
+                  {loadingTabs.has('bookings') ? (
+                    <div className="text-gray-400">Loading bookings...</div>
+                ) : (() => {
+                  // Filter bookings based on selected filter
+                  let filteredBookings: Booking[] = [];
+                  let sectionTitle = '';
+                  
+                  switch (bookingFilter) {
+                    case 'pending':
+                      filteredBookings = pendingBookings;
+                      sectionTitle = 'Pending';
+                      break;
+                    case 'approved':
+                      filteredBookings = approvedBookings;
+                      sectionTitle = 'Approved';
+                      break;
+                    case 'completed':
+                      filteredBookings = completedBookings;
+                      sectionTitle = 'Completed';
+                      break;
+                  }
+                  
+                  return (
+                    <div>
+                      {filteredBookings.length === 0 ? (
+                        <div className="text-gray-400">No {sectionTitle.toLowerCase()} bookings.</div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {filteredBookings.map((booking: Booking) => (
+                            <li
+                              key={booking.id}
+                              className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                              onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
+                            >
+                              <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
+                              {/* Action buttons based on booking status */}
+                              {booking.status === 'confirmed' && (
+                                <button
+                                  className="mt-2 px-4 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded shadow"
+                                  onClick={e => { e.stopPropagation(); handleCancelBooking(booking); }}
+                                >
+                                  Cancel Booking
+                                </button>
+                              )}
+                              {booking.status === 'ended' && (
+                                <button
+                                  className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow"
+                                  onClick={e => { e.stopPropagation(); openRenterReviewPopup(booking); }}
+                                >
+                                  {reviewedBookingIds.includes(booking.id) ? 'Edit Review' : 'Write Review'}
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             {/* Center: Chat area */}
-            <div className="flex-1 flex flex-col border-r border-gray-200">
+            <div className="flex-1 flex flex-col border-r border-gray-200 overflow-hidden">
               {selectedBooking ? (
-                <div className="flex-1 flex flex-col">
-                  <div className="border-b border-gray-200 px-6 py-4 bg-white">
-                    <div className="font-bold text-lg text-black">
-                      {selectedBooking.guest_id && guestProfiles[selectedBooking.guest_id]?.name || "Guest"}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="border-b border-gray-200 px-6 py-3 bg-white flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      {guestProfiles[selectedBooking.guest_id]?.avatar_url ? (
+                        <img src={guestProfiles[selectedBooking.guest_id].avatar_url} alt={guestProfiles[selectedBooking.guest_id].name} className="w-12 h-12 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-700">
+                          {guestProfiles[selectedBooking.guest_id]?.name ? guestProfiles[selectedBooking.guest_id].name[0] : 'G'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-lg text-black">
+                          {selectedBooking.guest_id && guestProfiles[selectedBooking.guest_id]?.name || "Guest"}
+                        </div>
+                        <div className="text-xs text-gray-500">Boston University student</div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">Listing: {selectedBooking.listing_id}</div>
                   </div>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-hidden p-2">
                     {bookingConversationLoading ? (
                       <div className="flex items-center justify-center h-full text-gray-400 text-lg">Loading messages...</div>
                     ) : bookingConversationId ? (
@@ -713,14 +965,16 @@ export default function MyListingsPage() {
               )}
             </div>
             {/* Right panel: Reservation/Request details */}
-            <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col">
+            <div className="w-96 border-l border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
               {selectedBooking ? (
-                <BookingDetailsPanel 
-                  booking={selectedBooking} 
-                  guest={guestProfiles[selectedBooking.guest_id]} 
-                  listingId={selectedBooking.listing_id}
-                  showApproveButton={selectedBooking.status === 'pending'}
-                />
+                <div className="overflow-y-auto scrollbar-hide">
+                  <BookingDetailsPanel 
+                    booking={selectedBooking} 
+                    guest={guestProfiles[selectedBooking.guest_id]} 
+                    listingId={selectedBooking.listing_id}
+                    showApproveButton={selectedBooking.status === 'pending'}
+                  />
+                </div>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-gray-400 text-lg">Select a booking to view reservation details</div>
               )}
@@ -728,73 +982,131 @@ export default function MyListingsPage() {
           </>
         ) : (
           <>
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-white p-4 flex flex-col">
-              <h2 className="text-xl font-bold mb-4 text-black">Active Listings</h2>
-              {/* Add Listings button styled as a card */}
-              <div
-                className="mb-2 rounded-lg p-3 cursor-pointer transition border border-dashed border-blue-400 hover:bg-blue-50 flex flex-col items-start justify-center text-left bg-white"
-                onClick={() => router.push('/add-listings')}
-              >
-                <div className="font-semibold text-blue-600 text-base flex items-center gap-2">
-                  <span className="text-2xl leading-none">+</span> Add Listings
-                </div>
-                <div className="text-xs text-gray-500 mt-1">Create a new listing</div>
-              </div>
-              {loading ? (
-                <div className="text-gray-400">Loading...</div>
-              ) : activeListings.length === 0 ? (
-                <div className="text-gray-400">No active listings.</div>
-              ) : (
-                <ul className="space-y-2 mb-6">
-                  {activeListings.map((listing) => (
-                    <li
-                      key={listing.id}
-                      className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
-                      onClick={() => setSelectedListing(listing)}
-                    >
-                      <div className="font-semibold text-black text-base">{listing.title}</div>
-                      <div className="text-xs text-gray-500">{listing.city}, {listing.state}</div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Inactive Listings Section */}
-              <div className="mt-6">
-                <h2 className="text-xl font-bold mb-4 text-black">Inactive Listings</h2>
-                {loading ? (
-                  <div className="text-gray-400">Loading...</div>
-                ) : inactiveListings.length === 0 ? (
-                  <div className="text-gray-400">No inactive listings.</div>
-                ) : (
-                  <ul className="space-y-2">
-                    {inactiveListings.map((listing) => (
-                      <li
-                        key={listing.id}
-                        className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedListing?.id === listing.id ? "bg-blue-50 border-blue-400" : ""}`}
-                        onClick={() => setSelectedListing(listing)}
+            {/* Simple grid of listing cards */}
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto scrollbar-hide pt-8 pb-8 px-4">
+                <div className="max-w-7xl mx-auto">
+                  {/* Header with Add Listings button and toggle buttons */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex gap-4 items-center mb-8">
+                      <button
+                        onClick={() => setShowActive(true)}
+                        className={`border px-4 py-2 rounded-lg font-medium transition-colors ${showActive ? 'bg-black text-white border-black' : 'bg-white text-black border-black hover:bg-gray-50'}`}
                       >
-                        <div className="font-semibold text-black text-base">{listing.title}</div>
-                        <div className="text-xs text-gray-500">{listing.city}, {listing.state}</div>
-                      </li>
-                    ))}
-                  </ul>
+                        Active Listings
+                      </button>
+                      <button
+                        onClick={() => setShowActive(false)}
+                        className={`border px-4 py-2 rounded-lg font-medium transition-colors ${!showActive ? 'bg-black text-white border-black' : 'bg-white text-black border-black hover:bg-gray-50'}`}
+                      >
+                        Inactive Listings
+                      </button>
+                      <button
+                        onClick={() => router.push('/add-listings')}
+                        className="border px-4 py-2 rounded-lg font-medium transition-colors bg-white text-black border-black hover:bg-gray-50"
+                      >
+                        Add Listing
+                      </button>
+                    </div>
+                  </div>
+
+                {/* Loading state */}
+                {loading ? (
+                  <div className="text-center text-gray-500 py-8">Loading your listings...</div>
+                ) : listings.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <p className="text-lg mb-4">You don't have any listings yet.</p>
+                    <button
+                      onClick={() => router.push('/add-listings')}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Create Your First Listing
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Listings grid based on toggle */}
+                    {(showActive ? activeListings : inactiveListings).length > 0 ? (
+                      <div className="mb-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {(showActive ? activeListings : inactiveListings).map((listing) => (
+                            <div key={listing.id} className="relative">
+                              {/* Toggle switch top left */}
+                              <button
+                                onClick={() => handleToggleStatus(listing.id, listing.status || '')}
+                                className="absolute top-2 left-2 z-10 focus:outline-none"
+                                title={listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'Set as Inactive' : 'Set as Active'}
+                                style={{ width: 56, height: 32 }}
+                              >
+                                <span
+                                  className={`relative flex items-center w-14 h-8 rounded-full transition-colors duration-300 ${listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'bg-green-400' : 'bg-red-400'}`}
+                                >
+                                  {/* Sliding circle */}
+                                  <span
+                                    className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow transition-transform duration-300 ${listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'translate-x-0' : 'translate-x-6'}`}
+                                  >
+                                    {listing.status === 'active' || listing.status === 'approved' || !listing.status ? (
+                                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    )}
+                                  </span>
+                                </span>
+                              </button>
+                              <ListingCard 
+                                id={listing.id}
+                                title={listing.title}
+                                images={listing.images}
+                                bedrooms={listing.bedrooms}
+                                bathrooms={listing.bathrooms}
+                                price_per_night={listing.price_per_night}
+                                amenities={listing.amenities}
+                                hideWishlist={true}
+                                shortCard={true}
+                              />
+                              {/* Action buttons overlay */}
+                              <div className="absolute top-2 right-2 flex gap-2">
+                                <button
+                                  onClick={() => handleEditListing(listing.id)}
+                                  className="bg-white hover:bg-gray-100 text-black p-2 rounded-full shadow-lg transition-colors border border-gray-300"
+                                  title="Edit Listing"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteListing(listing.id)}
+                                  disabled={deletingListing === listing.id}
+                                  className={`p-2 rounded-full shadow-lg transition-colors border border-gray-300 bg-white hover:bg-gray-100 text-black ${
+                                    deletingListing === listing.id
+                                      ? 'opacity-50 cursor-not-allowed'
+                                      : ''
+                                  }`}
+                                  title="Delete Listing"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 py-8">
+                        <p className="text-lg mb-4">No {showActive ? 'active' : 'inactive'} listings found.</p>
+                      </div>
+                    )}
+                  </>
                 )}
+                </div>
               </div>
-            </div>
-            {/* Center: Listing details */}
-            <div className="flex-1">
-              {selectedListing ? (
-                <ListingDetailsView
-                  listing={selectedListing}
-                  onDelete={handleDeleteListing}
-                  isDeleting={deletingListing === selectedListing.id}
-                  onEdit={handleEditListing}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-lg">Select a listing to view details</div>
-              )}
             </div>
           </>
         )}
@@ -874,6 +1186,43 @@ export default function MyListingsPage() {
         onSubmit={handleCancellationSubmit}
         isLoading={cancellationLoading}
       />
+
+      {/* Amenities Modal */}
+      {showAmenitiesModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">All Amenities</h3>
+                <button
+                  onClick={() => setShowAmenitiesModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="space-y-6">
+                {/* All Amenities */}
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">All Amenities</h4>
+                  <div className="space-y-3">
+                    {selectedListing?.amenities && selectedListing.amenities.map((amenity: any, index: number) => (
+                      <div key={index} className="flex items-center">
+                        {getAmenityIcon(amenity.name)}
+                        <span className="text-gray-700">{amenity.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1162,7 +1511,8 @@ function formatDate(dateStr: string) {
 
 function MessagesReservationPanel({ conversation, guest, listingId }: { conversation: any, guest: any, listingId: string }) {
   const [listing, setListing] = React.useState<any | null>(null);
-  const [currentImg, setCurrentImg] = React.useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
+  const router = useRouter();
 
   React.useEffect(() => {
     async function fetchListing() {
@@ -1172,58 +1522,71 @@ function MessagesReservationPanel({ conversation, guest, listingId }: { conversa
     if (listingId) fetchListing();
   }, [listingId]);
 
+  // Reset image index when listing changes
+  React.useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [listing]);
+
   if (!listing) return <div className="text-gray-400">Loading listing...</div>;
   const images = listing.images && listing.images.length > 0 ? listing.images : [{ url: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80" }];
-  const showPrev = currentImg > 0;
-  const showNext = currentImg < images.length - 1;
+  const showPrev = currentImageIndex > 0;
+  const showNext = currentImageIndex < images.length - 1;
 
   return (
-    <div>
-      <div className="font-bold text-lg mb-2 text-black">{listing.title}</div>
+    <div className="overflow-y-auto scrollbar-hide">
+      <button 
+        className="bg-white border border-black text-black px-3 py-1 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm mb-4 w-fit"
+        onClick={() => router.push(`/listings/${listingId}`)}
+      >
+        Listing Page
+      </button>
+      <div className="font-bold text-lg text-black mb-4">{listing.title}</div>
       {/* Gallery */}
-      <div className="relative w-full h-48 mb-4">
+      <div className="relative w-full h-48 mb-6">
         <img
-          src={images[currentImg]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImg].url}` : images[currentImg].url}
+          src={images[currentImageIndex]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImageIndex].url}` : images[currentImageIndex].url}
           alt={listing.title}
           className="w-full h-48 object-cover rounded-xl"
         />
         {showPrev && (
           <button
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100"
-            onClick={() => setCurrentImg(currentImg - 1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100 transition-all"
+            onClick={() => setCurrentImageIndex(currentImageIndex - 1)}
           >
-            &#8592;
+            <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
         )}
         {showNext && (
           <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100"
-            onClick={() => setCurrentImg(currentImg + 1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100 transition-all"
+            onClick={() => setCurrentImageIndex(currentImageIndex + 1)}
           >
-            &#8594;
+            <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         )}
-      </div>
-      {/* Reserved by */}
-      <div className="flex items-center gap-3 mb-4">
-        {guest?.avatar_url ? (
-          <img src={guest.avatar_url} alt={guest.name} className="w-10 h-10 rounded-full object-cover" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
-            {guest?.name ? guest.name[0] : 'G'}
+        {/* Image counter */}
+        {images.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+            {currentImageIndex + 1} / {images.length}
           </div>
         )}
-        <div>
-          <div className="text-black font-semibold">Reserved by {guest?.name || 'Guest'}</div>
-          <div className="text-gray-500 text-sm">{guest?.email}</div>
-        </div>
       </div>
-      {/* Reservation details (if available) */}
-      <div className="mt-4">
-        <div className="font-semibold text-gray-800 mb-2">Reservation Details</div>
-        {/* You can expand this with more details if you have them */}
-        <div className="text-gray-700 text-sm">Listing ID: {listingId}</div>
-        {/* Add more reservation details here if available */}
+      <div className="font-semibold text-black mb-2">About this place</div>
+      <div className="text-gray-700 mb-4">{listing.description}</div>
+      <div className="font-semibold text-black mb-2">Location</div>
+      <div className="mb-4">
+        <PrivacyMap
+          latitude={listing.latitude}
+          longitude={listing.longitude}
+          city={listing.city}
+          state={listing.state}
+          neighborhood={listing.neighborhood}
+          height="200px"
+        />
       </div>
     </div>
   );
@@ -1231,7 +1594,8 @@ function MessagesReservationPanel({ conversation, guest, listingId }: { conversa
 
 function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: { booking: any, guest: any, listingId: string, showApproveButton?: boolean }) {
   const [listing, setListing] = React.useState<any | null>(null);
-  const [currentImg, setCurrentImg] = React.useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
+  const router = useRouter();
   // Use the status from the booking prop directly instead of local state
   const status = booking.status;
 
@@ -1242,6 +1606,11 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
     }
     if (listingId) fetchListing();
   }, [listingId]);
+
+  // Reset image index when listing changes
+  React.useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [listing]);
 
   const handleApprove = async () => {
     const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/accept`, {
@@ -1281,58 +1650,60 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
 
   if (!listing) return <div className="text-gray-400">Loading listing...</div>;
   const images = listing.images && listing.images.length > 0 ? listing.images : [{ url: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80" }];
-  const showPrev = currentImg > 0;
-  const showNext = currentImg < images.length - 1;
+  const showPrev = currentImageIndex > 0;
+  const showNext = currentImageIndex < images.length - 1;
 
   return (
-    <div>
-      <div className="font-bold text-lg mb-2 text-black">{listing.title}</div>
+    <div className="overflow-y-auto scrollbar-hide">
+      <button 
+        className="bg-white border border-black text-black px-3 py-1 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm mb-4 w-fit"
+        onClick={() => router.push(`/listings/${listingId}`)}
+      >
+        Listing Page
+      </button>
+      <div className="font-bold text-lg text-black mb-4">{listing.title}</div>
       {/* Gallery */}
-      <div className="relative w-full h-48 mb-4">
+      <div className="relative w-full h-48 mb-6">
         <img
-          src={images[currentImg]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImg].url}` : images[currentImg].url}
+          src={images[currentImageIndex]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImageIndex].url}` : images[currentImageIndex].url}
           alt={listing.title}
           className="w-full h-48 object-cover rounded-xl"
         />
         {showPrev && (
           <button
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100"
-            onClick={() => setCurrentImg(currentImg - 1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100 transition-all"
+            onClick={() => setCurrentImageIndex(currentImageIndex - 1)}
           >
-            &#8592;
+            <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
         )}
         {showNext && (
           <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100"
-            onClick={() => setCurrentImg(currentImg + 1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 shadow hover:bg-opacity-100 transition-all"
+            onClick={() => setCurrentImageIndex(currentImageIndex + 1)}
           >
-            &#8594;
+            <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         )}
-      </div>
-      {/* Reserved by */}
-      <div className="flex items-center gap-3 mb-4">
-        {guest?.avatar_url ? (
-          <img src={guest.avatar_url} alt={guest.name} className="w-10 h-10 rounded-full object-cover" />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
-            {guest?.name ? guest.name[0] : 'G'}
+        {/* Image counter */}
+        {images.length > 1 && (
+          <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+            {currentImageIndex + 1} / {images.length}
           </div>
         )}
-        <div>
-          <div className="text-black font-semibold">Reserved by {guest?.name || 'Guest'}</div>
-          <div className="text-gray-500 text-sm">{guest?.email}</div>
-        </div>
       </div>
       {/* Booking details */}
-      <div className="mt-4">
-        <div className="font-semibold text-gray-800 mb-2">Booking Details</div>
+      <div className="mb-4">
+        <div className="font-semibold text-black mb-2">Booking Details</div>
         <div className="text-gray-700 text-sm mb-1">Dates: {booking.start_date} to {booking.end_date}</div>
         <div className="text-gray-700 text-sm">Total price: ${booking.total_price != null ? Number(booking.total_price).toFixed(2) : "N/A"}</div>
         {showApproveButton && status === 'pending' && (
           <button
-            className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow"
+            className="mt-4 px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow"
             onClick={handleApprove}
           >
             Approve
@@ -1340,12 +1711,25 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
         )}
         {status === 'confirmed' && (
           <button
-            className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow"
+            className="mt-4 px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow"
             onClick={handleEndBooking}
           >
             End Booking
           </button>
         )}
+      </div>
+      <div className="font-semibold text-black mb-2">About this place</div>
+      <div className="text-gray-700 mb-4">{listing.description}</div>
+      <div className="font-semibold text-black mb-2">Location</div>
+      <div className="mb-4">
+        <PrivacyMap
+          latitude={listing.latitude}
+          longitude={listing.longitude}
+          city={listing.city}
+          state={listing.state}
+          neighborhood={listing.neighborhood}
+          height="200px"
+        />
       </div>
     </div>
   );

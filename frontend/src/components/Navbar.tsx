@@ -48,52 +48,11 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
         </div>
         
         {/* Center: SearchBar or my-listings tabs */}
-        <div className="flex-1 flex justify-center items-center">
+        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full flex justify-center">
           {pathname === '/my-listings' ? (
-            <div className="flex space-x-8">
-              <button
-                className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'all'
-                    ? 'text-black border-b-2 border-black'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab?.('all')}
-              >
-                Listings
-              </button>
-              <button
-                className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'bookings'
-                    ? 'text-black border-b-2 border-black'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab?.('bookings')}
-              >
-                Bookings
-              </button>
-              <button
-                className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'messages'
-                    ? 'text-black border-b-2 border-black'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab?.('messages')}
-              >
-                Messages
-              </button>
-              <button
-                className={`pb-1 font-semibold transition-colors ${
-                  activeTab === 'stripe'
-                    ? 'text-black border-b-2 border-black'
-                    : 'text-gray-500'
-                }`}
-                onClick={() => setActiveTab?.('stripe')}
-              >
-                Settings
-              </button>
-            </div>
+            <div />
           ) : (
-            children
+            <div className="pointer-events-auto w-full max-w-2xl flex justify-center">{children}</div>
           )}
         </div>
         
@@ -101,25 +60,16 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
         <div className="flex items-center gap-4">
           {/* Desktop: Sublettor button */}
           {!user ? (
-            <Link href="/login" className="hidden sm:block text-gray-700 text-base font-medium">Log in</Link>
+            <Link href="/login" className="hidden sm:block text-gray-700 text-base merriweather-medium">Log in</Link>
           ) : (
             <>
-              {pathname !== '/my-listings' && !loading && userListings && (
-                userListings.hasListings ? (
-                  <Link 
-                    href="/my-listings" 
-                    className="hidden sm:block text-gray-700 text-base font-medium"
-                  >
-                    Switch to Sublettor
-                  </Link>
-                ) : (
-                  <Link 
-                    href="/add-listings" 
-                    className="hidden sm:block text-gray-700 text-base font-medium"
-                  >
-                    Become a Sublettor
-                  </Link>
-                )
+              {pathname !== '/my-listings' && !loading && userListings && !userListings.hasListings && (
+                <Link 
+                  href="/add-listings" 
+                  className="hidden sm:block text-gray-700 text-base merriweather-medium"
+                >
+                  Become a Sublettor
+                </Link>
               )}
             </>
           )}
@@ -152,7 +102,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                 >
                   <button
-                    className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black"
+                    className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black merriweather-regular"
                     onClick={() => {
                       setProfileDropdownOpen(false);
                       setProfileModalOpen(true);
@@ -160,31 +110,27 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   >
                     Profile
                   </button>
-                  {pathname !== '/my-listings' && (
-                    <>
-                      <Link
-                        href="/bookings"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Bookings
-                      </Link>
-                      <Link
-                        href="/messages"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Messages
-                      </Link>
-                      <Link
-                        href="/wishlist"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Wishlist
-                      </Link>
-                    </>
-                  )}
+                  <Link
+                    href="/my-listings"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    My Listings
+                  </Link>
+                  <Link
+                    href="/messages"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    Messages
+                  </Link>
+                  <Link
+                    href="/wishlist"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    Wishlist
+                  </Link>
                 </div>
               )}
             </div>
@@ -193,32 +139,11 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
 
         {/* Mobile dropdown */}
         {menuOpen && (
-          <div className="sm:hidden fixed top-[100px] left-0 w-full bg-white shadow-md border-t py-4 flex flex-col gap-4 text-center text-black text-base font-medium z-50">
+          <div className="sm:hidden fixed top-[100px] left-0 w-full bg-white shadow-md border-t py-4 flex flex-col gap-4 text-center text-black text-base merriweather-medium z-50">
             {!user ? (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className=" text-black">Log in</Link>
+              <Link href="/login" onClick={() => setMenuOpen(false)} className="text-black merriweather-medium">Log in</Link>
             ) : (
               <>
-                {/* Conditional Sublettor Button - Don't show on my-listings page or while loading */}
-                {pathname !== '/my-listings' && !loading && userListings && (
-                  userListings.hasListings ? (
-                    <Link 
-                      href="/my-listings" 
-                      onClick={() => setMenuOpen(false)}
-                      className=" text-black text-base font-medium"
-                    >
-                      Switch to Sublettor
-                    </Link>
-                  ) : (
-                    <Link 
-                      href="/add-listings" 
-                      onClick={() => setMenuOpen(false)}
-                      className=" text-black text-base font-medium"
-                    >
-                      Become a Sublettor
-                    </Link>
-                  )
-                )}
-                
                 <div className="relative">
                   <button
                     ref={profileBtnRef}
@@ -238,7 +163,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                       className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
                     >
                       <button
-                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black"
+                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black merriweather-regular"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           setProfileModalOpen(true);
@@ -246,31 +171,27 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                       >
                         Profile
                       </button>
-                      {pathname !== '/my-listings' && (
-                        <>
-                          <Link
-                            href="/bookings"
-                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            Bookings
-                          </Link>
-                          <Link
-                            href="/messages"
-                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            Messages
-                          </Link>
-                          <Link
-                            href="/wishlist"
-                            className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            Wishlist
-                          </Link>
-                        </>
-                      )}
+                      <Link
+                        href="/my-listings"
+                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        My Listings
+                      </Link>
+                      <Link
+                        href="/messages"
+                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Messages
+                      </Link>
+                      <Link
+                        href="/wishlist"
+                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        Wishlist
+                      </Link>
                     </div>
                   )}
                 </div>
