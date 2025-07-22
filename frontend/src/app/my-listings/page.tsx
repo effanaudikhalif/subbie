@@ -987,7 +987,7 @@ export default function MyListingsPage() {
               <div className="h-full overflow-y-auto scrollbar-hide pt-8 pb-8 px-4">
                 <div className="max-w-7xl mx-auto">
                   {/* Header with Add Listings button and toggle buttons */}
-                  <div className="flex justify-between items-center mb-6">
+                  <div className="flex justify-between items-center mb-6 mt-6">
                     <div className="flex gap-4 items-center mb-8">
                       <button
                         onClick={() => setShowActive(true)}

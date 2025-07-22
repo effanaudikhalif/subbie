@@ -2,13 +2,27 @@
 import { useAuth } from "../hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import ListingCard from "./ListingCard";
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userId?: string | null;
 }
 
-export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
+function UniversityName({ universityId }: { universityId: string }) {
+  const [name, setName] = useState<string>("");
+  useEffect(() => {
+    if (!universityId) return;
+    fetch(`http://localhost:4000/api/universities/${universityId}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setName(data?.name || ""));
+  }, [universityId]);
+  if (!name) return null;
+  return <span className="text-gray-900">{name}</span>;
+}
+
+export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalProps) {
   const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
@@ -20,9 +34,26 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     about_me: ""
   });
   const [saving, setSaving] = useState(false);
+  const [externalProfile, setExternalProfile] = useState<any>(null);
+  const [externalLoading, setExternalLoading] = useState(false);
+  const [userListings, setUserListings] = useState<any[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+
+  // Fetch another user's profile if userId is provided and not current user
+  useEffect(() => {
+    if (userId && userId !== user?.id) {
+      setExternalLoading(true);
+      fetch(`http://localhost:4000/api/users/${userId}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => setExternalProfile(data))
+        .finally(() => setExternalLoading(false));
+    } else {
+      setExternalProfile(null);
+    }
+  }, [userId, user?.id]);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !userId) {
       setEditForm({
         major: profile.major || "",
         graduation_year: profile.graduation_year ? profile.graduation_year.toString() : "",
@@ -30,7 +61,17 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         about_me: profile.about_me || ""
       });
     }
-  }, [profile]);
+  }, [profile, userId]);
+
+  useEffect(() => {
+    if (userId) {
+      setListingsLoading(true);
+      fetch(`http://localhost:4000/api/listings?user_id=${userId}`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setUserListings(Array.isArray(data) ? data.filter(l => !l.status || l.status === 'active' || l.status === 'approved') : []))
+        .finally(() => setListingsLoading(false));
+    }
+  }, [userId]);
 
   const handleLogout = async () => {
     await signOut();
@@ -84,7 +125,6 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-
     setSaving(true);
     try {
       const response = await fetch(`http://localhost:4000/api/users/${user.id}`, {
@@ -103,11 +143,16 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
           stripe_account: profile?.stripe_account
         }),
       });
-
       if (response.ok) {
         const updatedProfile = await response.json();
-        // Refresh the page to show updated data
-        window.location.reload();
+        // Update local profile state and exit editing mode
+        if (profile) {
+          profile.major = updatedProfile.major;
+          profile.graduation_year = updatedProfile.graduation_year;
+          profile.education_level = updatedProfile.education_level;
+          profile.about_me = updatedProfile.about_me;
+        }
+        setIsEditing(false);
       } else {
         const errorData = await response.json();
         alert('Failed to update profile: ' + (errorData.error || 'Unknown error'));
@@ -153,223 +198,195 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
   if (!isOpen) return null;
 
+  const isOwnProfile = !userId || userId === user?.id;
+  const profileData = isOwnProfile ? profile : externalProfile;
+
+  if ((isOwnProfile && loading) || (!isOwnProfile && externalLoading)) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 backdrop-blur-md" onClick={onClose}></div>
+        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto flex flex-col items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+  if (!profileData) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 backdrop-blur-md" onClick={onClose}></div>
+        <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto flex flex-col items-center justify-center p-8">
+          <p className="text-gray-400">Profile not found.</p>
+          <button onClick={onClose} className="mt-4 px-4 py-2 rounded bg-gray-200 text-gray-700">Close</button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 backdrop-blur-md"
-        onClick={onClose}
-      ></div>
-      
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+      <div className="absolute inset-0 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto p-0">
+        {/* Top bar with Profile and close button */}
+        <div className="flex items-center justify-between px-8 pt-6 pb-4 border-b border-gray-200">
+          <div className="text-2xl font-bold text-gray-900">Profile</div>
           <div className="flex items-center gap-2">
-            {!isEditing && (
-              <button
-                onClick={handleEditToggle}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
-              >
-                Edit
-              </button>
+            {isOwnProfile && (
+              <>
+                {!isEditing && (
+                  <button
+                    onClick={handleEditToggle}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition"
+                  >
+                    Edit
+                  </button>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition"
+                >
+                  Logout
+                </button>
+              </>
             )}
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center px-3 py-1.5 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition"
-            >
-              Logout
-            </button>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading profile...</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              {/* Avatar */}
-              <div className="relative mb-4">
-                <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-3xl font-bold text-blue-700 overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <img 
-                      src={profile.avatar_url} 
-                      alt="Profile picture" 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Fallback to initials if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.classList.remove('bg-blue-100');
-                          parent.classList.add('bg-blue-100');
-                        }
-                      }}
-                    />
-                  ) : (
-                    <span className="text-3xl font-bold text-blue-700">
-                      {profile?.name ? profile.name[0] : (profile?.email ? profile.email[0] : 'U')}
-                    </span>
-                  )}
-                </div>
-                {/* Upload button */}
-                <label className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                    disabled={uploading}
+        <div className="flex flex-col items-center pt-8 pb-8 px-8">
+          {/* Avatar */}
+          <div className="relative mb-4">
+            {profileData.avatar_url ? (
+              <img src={profileData.avatar_url} alt={profileData.name} className="w-24 h-24 rounded-full object-cover bg-blue-100" />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-4xl font-bold text-blue-700">
+                {profileData.name ? profileData.name[0] : "U"}
+              </div>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold text-black mb-1">{profileData.name}</h1>
+          <div className="text-gray-500 mb-6">{profileData.email}</div>
+          <div className="w-full flex flex-col md:flex-row gap-8 mt-4">
+            {/* Personal Information */}
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-800 mb-4">Personal Information</div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">Full Name</div>
+                <div className="text-base text-gray-900">{profileData.name || "Not provided"}</div>
+              </div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">Email Address</div>
+                <div className="text-base text-gray-900">{profileData.email || "Not provided"}</div>
+              </div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">About Me</div>
+                {isOwnProfile && isEditing ? (
+                  <textarea
+                    value={editForm.about_me}
+                    onChange={e => setEditForm(f => ({ ...f, about_me: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-20 resize-none"
+                    placeholder="Tell us about yourself..."
                   />
-                  {uploading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  )}
-                </label>
+                ) : (
+                  <div className="text-base text-gray-900">{profileData.about_me || "Not provided"}</div>
+                )}
               </div>
-              
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{profile?.name || "Your Profile"}</h1>
-              <div className="text-gray-500 mb-6">{profile?.email}</div>
-              
-              <div className="w-full flex flex-col md:flex-row gap-8 mb-8">
-                {/* Personal Information */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
-                  <div className="space-y-3">
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">Full Name</span>
-                      <span className="block text-base text-gray-900 font-medium">{profile?.name || "Not provided"}</span>
-                    </div>
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">Email Address</span>
-                      <span className="block text-base text-gray-900 font-medium">{profile?.email}</span>
-                    </div>
-
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">About Me</span>
-                      {isEditing ? (
-                        <textarea
-                          value={editForm.about_me}
-                          onChange={(e) => setEditForm({...editForm, about_me: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-20 resize-none"
-                          placeholder="Tell us about yourself..."
-                          rows={3}
-                        />
-                      ) : (
-                        <span className="block text-base text-gray-900 font-medium">
-                          {profile?.about_me || "Not provided"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* University Information */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">University Information</h3>
-                  <div className="space-y-3">
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">University</span>
-                      <span className="block text-base text-gray-900 font-medium">{profile?.university_name || "Not selected"}</span>
-                    </div>
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">Education Level</span>
-                      {isEditing ? (
-                        <select
-                          value={editForm.education_level}
-                          onChange={(e) => setEditForm({...editForm, education_level: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
-                        >
-                          <option value="">Select your education level</option>
-                          <option value="undergraduate">Undergraduate</option>
-                          <option value="graduate">Graduate</option>
-                          <option value="phd">PhD</option>
-                          <option value="other">Other</option>
-                        </select>
-                      ) : (
-                        <span className="block text-base text-gray-900 font-medium">
-                          {profile?.education_level ? profile.education_level.charAt(0).toUpperCase() + profile.education_level.slice(1) : "Not provided"}
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">Major</span>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editForm.major}
-                          onChange={(e) => setEditForm({...editForm, major: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
-                          placeholder="Enter your major"
-                        />
-                      ) : (
-                        <span className="block text-base text-gray-900 font-medium">{profile?.major || "Not provided"}</span>
-                      )}
-                    </div>
-                    <div className="min-h-[3rem]">
-                      <span className="block text-xs text-gray-500">Graduation Year</span>
-                      {isEditing ? (
-                        <select
-                          value={editForm.graduation_year}
-                          onChange={(e) => setEditForm({...editForm, graduation_year: e.target.value})}
-                          className="block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
-                        >
-                          <option value="">Select your graduation year</option>
-                          <option value="2025">Class of 2025</option>
-                          <option value="2026">Class of 2026</option>
-                          <option value="2027">Class of 2027</option>
-                          <option value="2028">Class of 2028</option>
-                          <option value="2029">Class of 2029</option>
-                        </select>
-                      ) : (
-                        <span className="block text-base text-gray-900 font-medium">
-                          {profile?.graduation_year ? `Class of ${profile.graduation_year}` : "Not provided"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Save/Cancel Buttons */}
-              {isEditing && (
-                <div className="w-full flex gap-4 mb-6">
-                  <button
-                    onClick={handleSaveProfile}
-                    disabled={saving}
-                    className="flex-1 inline-flex justify-center items-center px-4 py-3 border border-transparent rounded-xl shadow-sm text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-50"
-                  >
-                    {saving ? "Saving..." : "Save Changes"}
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="flex-1 inline-flex justify-center items-center px-4 py-3 border border-gray-300 rounded-xl shadow-sm text-base font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
             </div>
-          )}
+            {/* University Information */}
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-800 mb-4">University Information</div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">University</div>
+                <div className="text-base text-gray-900"><UniversityName universityId={profileData.university_id} />{!profileData.university_id && "Not provided"}</div>
+              </div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">Education Level</div>
+                {isOwnProfile && isEditing ? (
+                  <select
+                    value={editForm.education_level}
+                    onChange={e => setEditForm(f => ({ ...f, education_level: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
+                  >
+                    <option value="">Select your education level</option>
+                    <option value="Undergraduate">Undergraduate</option>
+                    <option value="Graduate">Graduate</option>
+                    <option value="PhD">PhD</option>
+                    <option value="Other">Other</option>
+                  </select>
+                ) : (
+                  <div className="text-base text-gray-900">{profileData.education_level || "Not provided"}</div>
+                )}
+              </div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">Major</div>
+                {isOwnProfile && isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.major}
+                    onChange={e => setEditForm(f => ({ ...f, major: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
+                    placeholder="Enter your major"
+                  />
+                ) : (
+                  <div className="text-base text-gray-900">{profileData.major || "Not provided"}</div>
+                )}
+              </div>
+              <div className="mb-3">
+                <div className="text-xs text-gray-500 font-semibold uppercase mb-1">Graduation Year</div>
+                {isOwnProfile && isEditing ? (
+                  <input
+                    type="number"
+                    value={editForm.graduation_year}
+                    onChange={e => setEditForm(f => ({ ...f, graduation_year: e.target.value }))}
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm h-10"
+                    placeholder="Enter your graduation year"
+                  />
+                ) : (
+                  <div className="text-base text-gray-900">{profileData.graduation_year || "Not provided"}</div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+        {/* Save/Cancel Buttons */}
+        {isOwnProfile && isEditing && (
+          <div className="w-full flex gap-4 justify-end px-8 mb-4">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              className="inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 rounded-xl shadow-sm text-base font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        {/* Listings Section (only for other users) */}
+        {!isOwnProfile && (
+          <div className="px-8 pb-8">
+            <div className="text-lg font-semibold text-gray-800 mb-4">Listings</div>
+            {listingsLoading ? (
+              <div className="text-gray-500">Loading listings...</div>
+            ) : userListings.length === 0 ? (
+              <div className="text-gray-500">No active listings.</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {userListings.map(listing => (
+                  <ListingCard key={listing.id} {...listing} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ interface ListingCardProps {
   hideWishlist?: boolean;
   wishlistMode?: boolean;
   shortCard?: boolean;
+  onAvatarClick?: () => void;
 }
 
 const CARD_HEIGHT = 'h-[420px]';
@@ -43,7 +44,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
   amenities = [],
   hideWishlist = false,
   wishlistMode = false,
-  shortCard = false
+  shortCard = false,
+  onAvatarClick
 }) => {
   const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -422,7 +424,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
         {/* Content */}
         <div className="p-4 flex flex-col flex-1 justify-between min-h-[100px]">
           {/* Title */}
-          <div className="flex justify-between items-start mb-2">
+          <div className="flex justify-between items-start mb-3">
             <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 w-full">{title}</h3>
           </div>
           {/* Host Info - only if not shortCard */}
@@ -432,11 +434,15 @@ const ListingCard: React.FC<ListingCardProps> = ({
                 <img
                   src={avatar_url}
                   alt={name}
-                  className="w-10 h-10 rounded-full mr-3"
+                  className="w-10 h-10 rounded-full mr-2 cursor-pointer"
+                  onClick={e => { e.stopPropagation(); e.preventDefault(); onAvatarClick && onAvatarClick(); }}
                 />
               ) : (
-                <div className="w-10 h-10 bg-gray-300 rounded-full mr-3 flex items-center justify-center">
-                  <span className="text-lg text-gray-600 font-semibold">{name.charAt(0)}</span>
+                <div
+                  className="w-10 h-10 bg-gray-300 rounded-full mr-2 flex items-center justify-center cursor-pointer"
+                  onClick={e => { e.stopPropagation(); e.preventDefault(); onAvatarClick && onAvatarClick(); }}
+                >
+                  <span className="text-lg text-gray-600 font-semibold">{name?.charAt(0)}</span>
                 </div>
               )}
               <div className="flex flex-col">
@@ -472,16 +478,32 @@ const ListingCard: React.FC<ListingCardProps> = ({
           </div>
           {/* Price/total price section at the bottom */}
           {!shortCard && (
-            <div className="mb-2">
-              {wishlistMode ? (
-                <div className="text-sm font-medium text-gray-700">
-                  ${Number(price_per_night).toFixed(2)} per night
-                </div>
-              ) : totalPrice && nights ? (
-                <div className="text-sm font-medium text-gray-700">
-                  ${totalPrice} total for {nights} night{nights !== 1 ? 's' : ''}
-                </div>
-              ) : null}
+            <div className="flex items-center justify-between">
+              <div className="text-lg font-semibold text-black">
+                {(() => {
+                  if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+                    const checkIn = new Date(dateRange[0].startDate);
+                    const checkOut = new Date(dateRange[0].endDate);
+                    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                    const totalPrice = nights * price_per_night;
+                    return (
+                      <>
+                        <span className="text-lg font-semibold text-black">${Math.round(price_per_night)}</span>
+                        <span className="text-sm font-normal text-gray-500"> per night, </span>
+                        <span className="text-lg font-semibold text-black">${Number(totalPrice).toLocaleString()}</span>
+                        <span className="text-sm font-normal text-gray-500"> for {nights} night{nights !== 1 ? 's' : ''}</span>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        {price_per_night ? `$${Math.round(price_per_night)}` : 'N/A'}
+                        <span className="text-sm font-normal text-gray-500 ml-1">per night</span>
+                      </>
+                    );
+                  }
+                })()}
+              </div>
             </div>
           )}
         </div>

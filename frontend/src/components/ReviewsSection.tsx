@@ -469,21 +469,25 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
                 >
                   Show all {reviews.length} reviews
                 </button>
-                <button
-                  className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                  onClick={() => setShowReviewModal(true)}
-                >
-                  Write a review
-                </button>
+                {(!reviewer || !reviewee || reviewer.id !== reviewee.id) && (
+                  <button
+                    className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    Write a review
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex justify-start mt-6">
-                <button
-                  className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                  onClick={() => setShowReviewModal(true)}
-                >
-                  Write a review
-                </button>
+                {(!reviewer || !reviewee || reviewer.id !== reviewee.id) && (
+                  <button
+                    className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    onClick={() => setShowReviewModal(true)}
+                  >
+                    Write a review
+                  </button>
+                )}
               </div>
             )}
           </div>

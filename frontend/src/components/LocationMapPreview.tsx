@@ -221,7 +221,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               strokeWeight: 2,
             },
             label: {
-              text: priceText,
+              text: `$${Math.round(displayPrice)}`,
               className: 'rectangular-marker-label',
               color: '#000000',
               fontSize: '12px',
@@ -565,8 +565,30 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               </div>
               {/* Price at the bottom */}
               <div className="mb-2">
-                <div className="text-sm font-medium text-gray-700">
-                  ${Number(selectedListing.price_per_night).toFixed(2)} per night
+                <div className="text-lg font-semibold text-black">
+                  {(() => {
+                    if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+                      const checkIn = new Date(dateRange[0].startDate);
+                      const checkOut = new Date(dateRange[0].endDate);
+                      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+                      const totalPrice = nights * selectedListing.price_per_night;
+                      return (
+                        <>
+                          <span className="text-lg font-semibold text-black">${Math.round(selectedListing.price_per_night)}</span>
+                          <span className="text-sm font-normal text-gray-500"> per night, </span>
+                          <span className="text-lg font-semibold text-black">${Number(totalPrice).toLocaleString()}</span>
+                          <span className="text-sm font-normal text-gray-500"> for {nights} night{nights !== 1 ? 's' : ''}</span>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <>
+                          <span className="text-lg font-semibold text-black">${Math.round(selectedListing.price_per_night)}</span>
+                          <span className="text-sm font-normal text-gray-500 ml-1">per night</span>
+                        </>
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             </div>

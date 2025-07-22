@@ -7,6 +7,7 @@ import SearchBar from "../../../components/Searchbar";
 import PrivacyMap from "../../../components/PrivacyMap";
 import BookingForm from "../../../components/BookingForm";
 import ReviewsSection from "../../../components/ReviewsSection";
+import ProfileModal from "../../../components/ProfileModal";
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -68,6 +69,7 @@ export default function ListingDetails() {
   ]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [guests, setGuests] = useState("");
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const handleSearch = () => {
     // Implement navigation or search logic if needed
   };
@@ -134,104 +136,123 @@ export default function ListingDetails() {
     const start = rawStart < today ? today : rawStart;
     const end = new Date(endDate);
     const currentDate = new Date();
-    const [dragging, setDragging] = useState(false);
-    const [dragStart, setDragStart] = useState<Date | null>(null);
-    const [dragEnd, setDragEnd] = useState<Date | null>(null);
+    const [hoverDate, setHoverDate] = useState<Date | null>(null);
 
-    // Get the month and year of the start date
-    const month = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    // Generate all months between start and end
+    function getMonthsInRange(start: Date, end: Date) {
+      const months = [];
+      let current = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (current <= last) {
+        months.push(new Date(current));
+        current.setMonth(current.getMonth() + 1);
+      }
+      return months;
+    }
+    const months = getMonthsInRange(start, end);
+    const [currentMonthIdx, setCurrentMonthIdx] = useState(0);
+    const monthDate = months[currentMonthIdx];
 
-    // Get the first day of the month and the number of days in the month
-    const firstDayOfMonth = new Date(start.getFullYear(), start.getMonth(), 1);
-    const lastDayOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+    // Render the current month only
+    if (!monthDate) return null;
+    const month = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const firstDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const lastDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
     const daysInMonth = lastDayOfMonth.getDate();
     const firstDayWeekday = firstDayOfMonth.getDay();
-
-    // Generate calendar days
     const calendarDays = [];
     for (let i = 0; i < firstDayWeekday; i++) {
       calendarDays.push(null); // Empty cells for days before the month starts
     }
-
     for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(start.getFullYear(), start.getMonth(), day);
+      const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
       const isAvailable = date >= start && date <= end && date >= today;
       const isToday = date.toDateString() === currentDate.toDateString();
       let isSelected = false;
+      let isStartDate = false;
+      let isEndDate = false;
+      // Always mark isStartDate if the date matches selectedRange.start
+      if (selectedRange.start && date.getTime() === selectedRange.start.getTime()) {
+        isStartDate = true;
+      }
+      // Always mark isEndDate if the date matches selectedRange.end
+      if (selectedRange.end && date.getTime() === selectedRange.end.getTime()) {
+        isEndDate = true;
+      }
+      // Range selection logic
       if (selectedRange.start && selectedRange.end) {
         isSelected = date >= selectedRange.start && date <= selectedRange.end;
       }
-      if (dragStart && dragEnd) {
-        // Show drag selection preview
-        const dragMin = dragStart < dragEnd ? dragStart : dragEnd;
-        const dragMax = dragStart > dragEnd ? dragStart : dragEnd;
-        if (date >= dragMin && date <= dragMax) isSelected = true;
+      // Show hover range when we have a start date but no end date yet
+      if (selectedRange.start && !selectedRange.end && hoverDate && date > selectedRange.start && date <= hoverDate) {
+        isSelected = true;
       }
       calendarDays.push({
         day,
         isAvailable,
         isToday,
         isSelected,
-        date
+        isStartDate,
+        isEndDate,
+        date,
+        month: monthDate.getMonth(),
+        year: monthDate.getFullYear(),
       });
     }
 
-    // Mouse event handlers
-    function handleMouseDown(dayData: any) {
+    // CLICK/HOVER HANDLERS
+    function handleDateClick(dayData: any) {
       if (!dayData.isAvailable) return;
-      setDragging(true);
-      setDragStart(dayData.date);
-      setDragEnd(dayData.date);
-    }
-    function handleMouseEnter(dayData: any) {
-      if (!dragging || !dayData.isAvailable) return;
-      setDragEnd(dayData.date);
-    }
-    function handleMouseUp(dayData: any) {
-      if (!dragging || !dayData.isAvailable) return;
-      setDragging(false);
-      const min = dragStart && dragEnd && dragStart < dragEnd ? dragStart : dragEnd;
-      const max = dragStart && dragEnd && dragStart > dragEnd ? dragStart : dragEnd;
-      setSelectedRange({
-        start: min,
-        end: max
-      });
-      setDragStart(null);
-      setDragEnd(null);
-    }
-
-    // Touch event handlers for mobile
-    function handleTouchStart(dayData: any) {
-      if (!dayData.isAvailable) return;
-      setDragging(true);
-      setDragStart(dayData.date);
-      setDragEnd(dayData.date);
-    }
-    function handleTouchMove(e: React.TouchEvent) {
-      if (!dragging) return;
-      const target = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-      if (target && (target as HTMLElement).dataset && (target as HTMLElement).dataset.day) {
-        const day = parseInt((target as HTMLElement).dataset.day!);
-        const date = new Date(start.getFullYear(), start.getMonth(), day);
-        if (date >= start && date <= end) setDragEnd(date);
+      // If no start date is selected, set it as check-in
+      if (!selectedRange.start) {
+        setSelectedRange({ start: dayData.date, end: null });
+      }
+      // If start date is selected but no end date, set end date (check-out)
+      else if (selectedRange.start && !selectedRange.end) {
+        if (dayData.date > selectedRange.start) {
+          setSelectedRange({ start: selectedRange.start, end: dayData.date });
+        } else {
+          // If selected date is before start date, make it the new start date
+          setSelectedRange({ start: dayData.date, end: null });
+        }
+      }
+      // If both dates are selected, start a new selection
+      else {
+        setSelectedRange({ start: dayData.date, end: null });
       }
     }
-    function handleTouchEnd(dayData: any) {
-      if (!dragging || !dayData.isAvailable) return;
-      setDragging(false);
-      const min = dragStart && dragEnd && dragStart < dragEnd ? dragStart : dragEnd;
-      const max = dragStart && dragEnd && dragStart > dragEnd ? dragStart : dragEnd;
-      setSelectedRange({
-        start: min,
-        end: max
-      });
-      setDragStart(null);
-      setDragEnd(null);
+    function handleMouseEnter(dayData: any) {
+      if (!dayData.isAvailable) return;
+      // If we have a start date but no end date, show hover preview for future dates
+      if (selectedRange.start && !selectedRange.end && dayData.date > selectedRange.start) {
+        setHoverDate(dayData.date);
+      }
+    }
+    function handleMouseLeave() {
+      setHoverDate(null);
     }
 
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-3 select-none">
-        <div className="text-center text-sm font-medium text-gray-900 mb-2">{month}</div>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 select-none" onMouseLeave={handleMouseLeave}>
+        <div className="flex items-center justify-between mb-2">
+          <button
+            className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-40"
+            onClick={() => setCurrentMonthIdx(idx => Math.max(0, idx - 1))}
+            disabled={currentMonthIdx === 0}
+            aria-label="Previous month"
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <div className="text-center text-sm font-medium text-gray-900">{month}</div>
+          <button
+            className="p-2 rounded-full hover:bg-gray-100 disabled:opacity-40"
+            onClick={() => setCurrentMonthIdx(idx => Math.min(months.length - 1, idx + 1))}
+            disabled={currentMonthIdx === months.length - 1}
+            aria-label="Next month"
+          >
+            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
         <div className="grid grid-cols-7 gap-1 text-xs">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="text-center text-gray-500 py-1">{day}</div>
@@ -241,22 +262,24 @@ export default function ListingDetails() {
               key={index}
               className="text-center py-1"
               data-day={dayData?.day}
-              onMouseDown={dayData && dayData.isAvailable ? () => handleMouseDown(dayData) : undefined}
+              data-month={dayData?.month}
+              data-year={dayData?.year}
+              onClick={dayData && dayData.isAvailable ? () => handleDateClick(dayData) : undefined}
               onMouseEnter={dayData && dayData.isAvailable ? () => handleMouseEnter(dayData) : undefined}
-              onMouseUp={dayData && dayData.isAvailable ? () => handleMouseUp(dayData) : undefined}
-              onTouchStart={dayData && dayData.isAvailable ? () => handleTouchStart(dayData) : undefined}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={dayData && dayData.isAvailable ? () => handleTouchEnd(dayData) : undefined}
               style={{ cursor: dayData && dayData.isAvailable ? 'pointer' : 'default' }}
             >
               {dayData ? (
                 <div className={
                   `w-6 h-6 rounded-full flex items-center justify-center mx-auto
-                  ${dayData.isSelected
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : dayData.isAvailable
-                      ? 'bg-green-100 text-green-800 border border-green-300'
-                      : 'text-gray-400'}
+                  ${dayData.isStartDate
+                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    : dayData.isEndDate
+                      ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                      : dayData.isSelected
+                        ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                        : dayData.isAvailable
+                          ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
+                          : 'text-gray-400'}
                   ${dayData.isToday && !dayData.isSelected ? 'ring-2 ring-blue-400' : ''}`
                 }>
                   {dayData.day}
@@ -268,8 +291,6 @@ export default function ListingDetails() {
           ))}
         </div>
         <div className="mt-2 text-xs text-gray-600 text-center">
-          <span className="inline-block w-3 h-3 bg-green-100 border border-green-300 rounded-full mr-1"></span>
-          Available
           <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-4 mr-1"></span>
           Selected
         </div>
@@ -709,10 +730,14 @@ export default function ListingDetails() {
                     <img 
                       src={host.avatar_url} 
                       alt={host.name || 'Host'} 
-                      className="w-25 h-25 rounded-2xl object-cover"
+                      className="w-25 h-25 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setShowProfileModal(true)}
                     />
                   ) : (
-                    <div className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center">
+                    <div 
+                      className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setShowProfileModal(true)}
+                    >
                       <span className="text-gray-600 text-5xl font-medium">
                         {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
                       </span>
@@ -1105,6 +1130,14 @@ export default function ListingDetails() {
             </div>
           </div>
         </div>
+      )}
+      {/* Profile Modal */}
+      {showProfileModal && host && (
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userId={host.id}
+        />
       )}
     </div>
   );
