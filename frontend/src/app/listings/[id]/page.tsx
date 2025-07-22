@@ -576,6 +576,10 @@ export default function ListingDetails() {
     }
   }, [commuteCoords, listing?.latitude, listing?.longitude]);
 
+  // Add state for photo modal
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
   if (loading) {
         return (
       <div className="min-h-screen bg-white pt-16">
@@ -658,37 +662,40 @@ export default function ListingDetails() {
         <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
         <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px' }}>
           {/* First column: one big image spanning two rows */}
-          <div className="relative md:row-span-2 h-full w-full">
+          <div className="relative md:row-span-2 h-full w-full group">
             <img
               src={images[0]?.url}
               alt={listing.title}
-              className="w-full h-full object-cover rounded-2xl"
+              className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
               style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                  />
-                </div>
+              onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
+            />
+          </div>
           {/* Second column: two stacked images */}
           {images.slice(1, 3).map((img, i) => (
-            <div key={i} className="relative h-full w-full">
+            <div key={i} className="relative h-full w-full group">
               <img
                 src={img.url}
                 alt={listing.title}
-                className="w-full h-full object-cover rounded-2xl"
+                className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
                 style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 1); }}
               />
-                  </div>
+            </div>
           ))}
           {/* Third column: two stacked images */}
           {images.slice(3, 5).map((img, i) => (
-            <div key={i} className="relative h-full w-full">
+            <div key={i} className="relative h-full w-full group">
               <img
                 src={img.url}
                 alt={listing.title}
-                className="w-full h-full object-cover rounded-2xl"
+                className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
                 style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 3); }}
               />
-                  </div>
+            </div>
           ))}
-                </div>
+        </div>
         {/* Optionally, add more details below */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left: Listing details */}
@@ -1025,6 +1032,75 @@ export default function ListingDetails() {
                   {getAmenityIcon(a.name)}
                   <span className="text-gray-700">{a.name}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Photo Gallery Modal */}
+      {showPhotoModal && images.length > 0 && (
+        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
+          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={e => e.stopPropagation()}>
+            {/* Close button */}
+            <button
+              onClick={() => setShowPhotoModal(false)}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            {/* Main photo */}
+            <div className="relative">
+              <img
+                src={images[currentPhotoIndex]?.url}
+                alt={`Photo ${currentPhotoIndex + 1}`}
+                className="w-full h-full object-contain max-h-[70vh] rounded-lg transition-transform duration-300 hover:scale-105"
+              />
+              {/* Photo counter */}
+              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
+                {currentPhotoIndex + 1} of {images.length}
+              </div>
+            </div>
+            {/* Navigation buttons */}
+            {images.length > 1 && (
+              <>
+                {currentPhotoIndex > 0 && (
+                  <button
+                    onClick={() => setCurrentPhotoIndex(prev => prev - 1)}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+                {currentPhotoIndex < images.length - 1 && (
+                  <button
+                    onClick={() => setCurrentPhotoIndex(prev => prev + 1)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            )}
+            {/* Thumbnail strip */}
+            <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+              {images.map((img, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPhotoIndex(index)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${index === currentPhotoIndex ? 'border-black' : 'border-gray-400'}`}
+                >
+                  <img
+                    src={img.url}
+                    alt={`Thumbnail ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
               ))}
             </div>
           </div>
