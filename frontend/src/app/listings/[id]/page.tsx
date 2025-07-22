@@ -712,7 +712,7 @@ export default function ListingDetails() {
                       className="w-25 h-25 rounded-2xl object-cover"
                     />
                   ) : (
-                    <div className="w-36 h-36 rounded-2xl bg-gray-300 flex items-center justify-center">
+                    <div className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center">
                       <span className="text-gray-600 text-5xl font-medium">
                         {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
                       </span>

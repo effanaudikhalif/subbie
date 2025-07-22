@@ -76,7 +76,8 @@ export default function EditListing() {
         const response = await fetch(`http://localhost:4000/api/listings/${id}`);
         if (response.ok) {
           const listingData = await response.json();
-                      console.log('listingData.images:', listingData.images); // Debug: see what backend returns
+          console.log('listingData.images:', listingData.images); // Debug: see what backend returns
+          console.log('Fetched listingData:', listingData); // Debug log
           setListing(listingData);
           setFormData({
             property_type: listingData.property_type || 'apartment',
@@ -98,7 +99,7 @@ export default function EditListing() {
             photos: listingData.images?.map((img: any) => `http://localhost:4000${img.url}`) || [], // Map images to full URLs
             title: listingData.title || '',
             description: listingData.description || '',
-            price_per_night: listingData.price_per_night !== undefined && listingData.price_per_night !== null ? listingData.price_per_night : 100,
+            price_per_night: Number(listingData.price_per_night) || 100, // Always coerce to number
             start_date: listingData.start_date ? new Date(listingData.start_date).toISOString().split('T')[0] : '',
             end_date: listingData.end_date ? new Date(listingData.end_date).toISOString().split('T')[0] : ''
           });
@@ -432,7 +433,7 @@ export default function EditListing() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Which of these best describes your place?</h2>
             <div className="space-y-4">
               {[
@@ -471,7 +472,7 @@ export default function EditListing() {
 
       case 2:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">What type of place will guests have?</h2>
             <div className="space-y-4">
               {[
@@ -520,7 +521,7 @@ export default function EditListing() {
 
       case 3:
         return (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto mt-5">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Where's your place located?</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column - Address Form */}
@@ -647,7 +648,7 @@ export default function EditListing() {
 
       case 4:
         return (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto mt-5">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">How many people can stay here?</h2>
             <div className="space-y-6">
               {/* Guests */}
@@ -721,7 +722,7 @@ export default function EditListing() {
 
       case 5:
         return (
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Who else might be there?</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Column */}
@@ -781,7 +782,7 @@ export default function EditListing() {
         const extraCol1 = extraAmenities.slice(0, 7);
         const extraCol2 = extraAmenities.slice(7);
         return (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto mt-5">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* Living Essentials */}
@@ -897,7 +898,7 @@ export default function EditListing() {
 
       case 7:
         return (
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Upload photos</h2>
             {formData.photos.length === 0 ? (
               <div className="border-2 border-dashed border-gray-400 rounded-xl p-8 hover:border-gray-500 transition-colors relative">
@@ -1113,7 +1114,7 @@ export default function EditListing() {
 
       case 8:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a title</h2>
             <div className="relative">
             <input
@@ -1136,7 +1137,7 @@ export default function EditListing() {
 
       case 9:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
             <div className="relative">
             <textarea
@@ -1159,7 +1160,7 @@ export default function EditListing() {
 
       case 10:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Price per night</h2>
             
             {/* Main Price Display */}
@@ -1195,41 +1196,13 @@ export default function EditListing() {
             </div>
 
             {/* Price Breakdown */}
-            <div className="space-y-4">
-              {/* Guest Price Breakdown */}
-              <div className="bg-white border border-gray-400 rounded-lg p-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Base price</span>
-                    <span className="font-medium text-gray-600">${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Stripe fee (2.9% + 30¢)</span>
-                    <span className="font-medium text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30).toFixed(2)}</span>
-                  </div>
-                  <div className="border-t border-gray-400 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Guest price</span>
-                      <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) + ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Host Earnings */}
-              <div className="bg-white border border-gray-400 rounded-lg p-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">You earn</span>
-                  <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) - ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
+            
           </div>
         );
 
       case 11:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-5 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
             <div className="space-y-6">
               <div className="relative">

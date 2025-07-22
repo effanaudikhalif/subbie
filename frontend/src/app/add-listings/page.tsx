@@ -487,7 +487,7 @@ export default function BecomeHost() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Which of these best describes your place?</h2>
             <div className="space-y-4">
               {[
@@ -526,7 +526,7 @@ export default function BecomeHost() {
 
       case 2:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">What type of place will guests have?</h2>
             <div className="space-y-4">
               {[
@@ -575,7 +575,7 @@ export default function BecomeHost() {
 
       case 3:
         return (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Where's your place located?</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left Column - Address Form */}
@@ -701,7 +701,7 @@ export default function BecomeHost() {
 
       case 4:
         return (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-2xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">How many people can stay here?</h2>
             <div className="space-y-6">
               {/* Guests */}
@@ -775,7 +775,7 @@ export default function BecomeHost() {
 
       case 5:
         return (
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Who else might be there?</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Column */}
@@ -849,7 +849,7 @@ export default function BecomeHost() {
         const extraCol1 = extraAmenities.slice(0, 7);
         const extraCol2 = extraAmenities.slice(7);
         return (
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                             {/* Living Essentials */}
@@ -965,7 +965,7 @@ export default function BecomeHost() {
 
       case 7:
         return (
-          <div className="max-w-4xl mx-auto text-center">
+          <div className="max-w-4xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Upload photos</h2>
             {formData.photos.length === 0 ? (
               <div className="border-2 border-dashed border-gray-400 rounded-xl p-8 hover:border-gray-500 transition-colors relative">
@@ -1181,7 +1181,7 @@ export default function BecomeHost() {
 
       case 8:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a title</h2>
             <p className="text-lg text-gray-600 mb-8">Short titles work best. Have fun with it—you can always change it later.</p>
             <input
@@ -1200,7 +1200,7 @@ export default function BecomeHost() {
 
       case 9:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
             <p className="text-lg text-gray-600 mb-8">Tell guests what makes your place special.</p>
             <textarea
@@ -1218,77 +1218,49 @@ export default function BecomeHost() {
 
       case 10:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Price per night</h2>
-            
             {/* Main Price Display */}
             <div className="mb-8">
               <div className="flex items-center justify-center gap-4">
-                <div className="text-6xl font-bold text-black relative">
+                <div className="text-6xl font-bold text-black relative flex items-center justify-center gap-4">
                   {isEditing ? (
-              <input
+                    <input
                       type="text"
-                value={Number.isFinite(formData.price_per_night) ? formData.price_per_night : ""}
+                      value={Number.isFinite(formData.price_per_night) ? formData.price_per_night : ""}
                       onChange={(e) => {
                         const value = e.target.value.replace(/[^0-9.]/g, '');
                         handleInputChange('price_per_night', value === "" ? 0 : parseFloat(value) || 0);
                       }}
                       onBlur={() => setIsEditing(false)}
                       className="text-6xl font-bold text-black bg-transparent border-none outline-none w-full text-center"
-                placeholder="0"
+                      placeholder="0"
                       autoFocus
                     />
                   ) : (
-                    <span>${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                    <>
+                      <span>${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="w-8 h-8 bg-white border border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm ml-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    </>
                   )}
                 </div>
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="w-8 h-8 bg-white border border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
               </div>
+              <span className="text-gray-500 text-sm mt-4 block">This is the nightly price guests will see for your listing.</span>
             </div>
-
             {/* Price Breakdown */}
-            <div className="space-y-4">
-              {/* Guest Price Breakdown */}
-              <div className="bg-white border border-gray-400 rounded-lg p-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Base price</span>
-                    <span className="font-medium text-gray-600">${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Stripe fee (2.9% + 30¢)</span>
-                    <span className="font-medium text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30).toFixed(2)}</span>
-                  </div>
-                  <div className="border-t border-gray-400 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Guest price</span>
-                      <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) + ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Host Earnings */}
-              <div className="bg-white border border-gray-400 rounded-lg p-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">You earn</span>
-                  <span className="font-bold text-lg text-gray-600">${((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) - ((Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0) * 0.029 + 0.30)).toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
           </div>
         );
 
       case 11:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
             <div className="space-y-6">
               <div className="relative">
@@ -1349,17 +1321,6 @@ export default function BecomeHost() {
     <div className="bg-white min-h-screen flex flex-col">
       <Navbar />
       <div className="flex-1 flex flex-col">
-        {/* Save Progress Button - positioned under navbar */}
-        <div className="flex justify-end px-6 pt-32 pb-4">
-          <button
-            onClick={handleSaveProgress}
-            disabled={savingProgress}
-            className="text-black text-base font-medium disabled:opacity-60 disabled:cursor-not-allowed bg-white border border-gray-400 px-4 py-2 rounded"
-          >
-            {savingProgress ? "Saving..." : "Save progress"}
-          </button>
-        </div>
-        
         {/* Main Content */}
         <div className="flex-1 flex items-center justify-center px-6 py-8 pt-4">
           <div className="w-full max-w-4xl">
