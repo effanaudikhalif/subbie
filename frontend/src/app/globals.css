@@ -23,6 +23,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
 }
 
 /* Hide main vertical scrollbar for body and html */
@@ -30,6 +32,8 @@ html, body {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
   overscroll-behavior: contain; /* Prevent bounce/overscroll */
+  margin: 0;
+  padding: 0;
 }
 html::-webkit-scrollbar, body::-webkit-scrollbar {
   width: 0px;
@@ -81,4 +85,13 @@ html::-webkit-scrollbar, body::-webkit-scrollbar {
 /* Prevent overscroll on all elements */
 * {
   overscroll-behavior: contain;
+  box-sizing: border-box;
+}
+
+/* Ensure no margins or padding on root elements */
+html, body, #__next {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
 }

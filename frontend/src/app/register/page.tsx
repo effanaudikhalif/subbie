@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
 import { useRouter } from "next/navigation";
+import Background from "../../components/Background";
 
 interface University {
   id: string;
@@ -132,8 +133,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center pt-12 pb-12">
-      <div className="w-full max-w-md px-4">
+    <div className="relative min-h-screen bg-white flex flex-col justify-center items-center pt-12 pb-12">
+      <Background />
+      <div className="relative z-10 w-full max-w-md px-4">
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           Create your account
         </h2>

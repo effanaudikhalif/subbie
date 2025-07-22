@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.50.3",
     "@types/google.maps": "^3.58.1",
     "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.6",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-date-range": "^2.0.1",

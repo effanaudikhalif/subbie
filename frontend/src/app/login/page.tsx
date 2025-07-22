@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
+import Background from "../../components/Background";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -40,8 +41,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-center items-center">
-      <div className="w-full max-w-md px-4">
+    <div className="relative min-h-screen bg-white flex flex-col justify-center items-center">
+      <Background />
+      <div className="relative z-10 w-full max-w-md px-4">
         <h2 className="mt-12 text-center text-3xl font-extrabold text-gray-900">
           Sign in to your account
         </h2>
