@@ -34,6 +34,10 @@ export default function Results() {
   // Add a key to force map refresh
   const [mapRefreshKey, setMapRefreshKey] = useState(0);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const listingsPerPage = 4;
+
   // Applied values from URL/query params (used for filtering)
   const appliedWhere = searchParams?.get('where') || '';
   const appliedGuests = searchParams?.get('guests') || '';
@@ -168,11 +172,22 @@ export default function Results() {
     return true;
   });
 
+  // Reset to page 1 when filtered listings change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredListings.length]);
+
   const listingsWithRatings = filteredListings.map(listing => ({
     ...listing,
     averageRating: averageRatings[listing.id]?.average_rating,
     totalReviews: averageRatings[listing.id]?.total_reviews
   }));
+
+  // Pagination logic
+  const totalPages = Math.ceil(listingsWithRatings.length / listingsPerPage);
+  const startIndex = (currentPage - 1) * listingsPerPage;
+  const endIndex = startIndex + listingsPerPage;
+  const paginatedListings = listingsWithRatings.slice(startIndex, endIndex);
 
   console.log('Filtered listings:', listingsWithRatings);
   console.log('Filtered listings with coords:', listingsWithRatings.filter(l => l.latitude && l.longitude));
@@ -242,7 +257,7 @@ export default function Results() {
             </h2>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredListings.map(listing => {
+              {paginatedListings.map(listing => {
                 console.log(`Listing ${listing.id} amenities:`, listing.amenities);
                 return (
                   <ListingCard
@@ -257,13 +272,50 @@ export default function Results() {
                     bathrooms={listing.bathrooms}
                     price_per_night={listing.price_per_night}
                     dateRange={dateRange}
-                    averageRating={averageRatings[listing.id]?.average_rating}
-                    totalReviews={averageRatings[listing.id]?.total_reviews}
+                    averageRating={listing.averageRating}
+                    totalReviews={listing.totalReviews}
                     amenities={listing.amenities || []}
                   />
                 );
               })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex justify-center items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                
+                <div className="flex space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md ${
+                        currentPage === pageNum
+                          ? 'bg-teal-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Right side - Map Preview */}
