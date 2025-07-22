@@ -12,7 +12,23 @@ export default function Results() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Local state for search bar input fields
+  // Draft state for search bar (user input)
+  const [draftWhere, setDraftWhere] = useState(searchParams?.get('where') || '');
+  const [draftDateRange, setDraftDateRange] = useState([
+    {
+      startDate: searchParams?.get('checkin') ? new Date(searchParams.get('checkin')!) : new Date(),
+      endDate: searchParams?.get('checkout') ? new Date(searchParams.get('checkout')!) : (() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow;
+      })(),
+      key: 'selection',
+    },
+  ]);
+  const [draftGuests, setDraftGuests] = useState(searchParams?.get('guests') || '');
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  // Applied state for filtering and display
   const [where, setWhere] = useState(searchParams?.get('where') || '');
   const [dateRange, setDateRange] = useState([
     {
@@ -25,7 +41,6 @@ export default function Results() {
       key: 'selection',
     },
   ]);
-  const [showCalendar, setShowCalendar] = useState(false);
   const [guests, setGuests] = useState(searchParams?.get('guests') || '');
   const [listings, setListings] = useState<any[]>([]);
   const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
@@ -69,6 +84,23 @@ export default function Results() {
       .catch(() => setAverageRatings({}));
   }, []);
 
+  // Update draft state when search params change (e.g. on page load or navigation)
+  useEffect(() => {
+    setDraftWhere(searchParams?.get('where') || '');
+    setDraftDateRange([
+      {
+        startDate: searchParams?.get('checkin') ? new Date(searchParams.get('checkin')!) : new Date(),
+        endDate: searchParams?.get('checkout') ? new Date(searchParams.get('checkout')!) : (() => {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return tomorrow;
+        })(),
+        key: 'selection',
+      },
+    ]);
+    setDraftGuests(searchParams?.get('guests') || '');
+  }, [searchParams]);
+
   // Filter listings based on applied values from URL/query params and map bounds
   const filteredListings = listings.filter(listing => {
     // Map bounds filter
@@ -83,8 +115,8 @@ export default function Results() {
       }
     }
     // Location filter
-    if (appliedWhere && appliedWhere.trim() !== '') {
-      const searchTerm = appliedWhere.toLowerCase();
+    if (where && where.trim() !== '') {
+      const searchTerm = where.toLowerCase();
       let searchParts = [];
       if (searchTerm.includes(',')) {
         searchParts = searchTerm.split(',').map(part => part.trim().toLowerCase());
@@ -155,13 +187,13 @@ export default function Results() {
       if (!matches) return false;
     }
     // Guests filter
-    if (appliedGuests && Number(appliedGuests) > 0) {
-      if (listing.max_occupancy < Number(appliedGuests)) return false;
+    if (guests && Number(guests) > 0) {
+      if (listing.max_occupancy < Number(guests)) return false;
     }
     // Date range filter
-    if (appliedCheckin && appliedCheckout && listing.start_date && listing.end_date) {
-      const checkin = new Date(appliedCheckin);
-      const checkout = new Date(appliedCheckout);
+    if (dateRange[0]?.startDate && dateRange[0]?.endDate && listing.start_date && listing.end_date) {
+      const checkin = new Date(dateRange[0].startDate);
+      const checkout = new Date(dateRange[0].endDate);
       const availableStart = new Date(listing.start_date);
       const availableEnd = new Date(listing.end_date);
       // Only include listings where the entire requested range is within the available range
@@ -176,6 +208,11 @@ export default function Results() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filteredListings.length]);
+
+  // Reset visibleBounds whenever the search location changes
+  useEffect(() => {
+    setVisibleBounds(null);
+  }, [where]);
 
   const listingsWithRatings = filteredListings.map(listing => ({
     ...listing,
@@ -221,13 +258,17 @@ export default function Results() {
   };
 
   const handleSearch = () => {
+    setWhere(draftWhere);
+    setDateRange(draftDateRange);
+    setGuests(draftGuests);
     const params = new URLSearchParams();
-    if (where) params.set("where", where);
-    if (dateRange[0].startDate) params.set("checkin", dateRange[0].startDate.toISOString().split("T")[0]);
-    if (dateRange[0].endDate) params.set("checkout", dateRange[0].endDate.toISOString().split("T")[0]);
-    if (guests) params.set("guests", guests);
+    if (draftWhere) params.set("where", draftWhere);
+    if (draftDateRange[0].startDate) params.set("checkin", draftDateRange[0].startDate.toISOString().split("T")[0]);
+    if (draftDateRange[0].endDate) params.set("checkout", draftDateRange[0].endDate.toISOString().split("T")[0]);
+    if (draftGuests) params.set("guests", draftGuests);
     const url = `/listings?${params.toString()}`;
     router.push(url);
+    setVisibleBounds(null); // Reset map bounds to ensure consistent filtering
     setMapRefreshKey(prev => prev + 1); // Force map to refresh
   };
 
@@ -235,14 +276,14 @@ export default function Results() {
     <div className="bg-white min-h-screen pt-12">
       <Navbar>
         <SearchBar
-          where={where}
-          setWhere={setWhere}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
+          where={draftWhere}
+          setWhere={setDraftWhere}
+          dateRange={draftDateRange}
+          setDateRange={setDraftDateRange}
           showCalendar={showCalendar}
           setShowCalendar={setShowCalendar}
-          guests={guests}
-          setGuests={setGuests}
+          guests={draftGuests}
+          setGuests={setDraftGuests}
           onSearch={handleSearch}
         />
       </Navbar>
@@ -251,7 +292,7 @@ export default function Results() {
       <div className="h-[calc(100vh-4rem)] pt-13 pb-6">
         <div className="flex h-full">
           {/* Left side - Listings */}
-          <div className="w-1/2 overflow-y-auto px-6 h-full listings-container">
+          <div className="w-1/2 overflow-y-auto px-6 h-full listings-container pb-2">
             <h2 className="merriweather-medium text-black font-bold mb-0.5 text-sm mb-6">
               {filteredListings.length} places within map area
             </h2>
@@ -322,7 +363,7 @@ export default function Results() {
           <div className="w-1/2 h-full overflow-hidden flex-shrink-0 px-6 map-container">
             <LocationMapPreview 
               key={mapRefreshKey}
-              searchLocation={appliedWhere}
+              searchLocation={where}
               listings={filteredListings}
               className="h-full w-full"
               dateRange={dateRange}
