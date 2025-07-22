@@ -14,6 +14,7 @@ import 'react-date-range/dist/theme/default.css';
 import { useAuth } from "../../../hooks/useAuth";
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { getCommuteTimes, CommuteTimes } from '../../../utils/getCommuteTimes';
+import ListingCard from '../../../components/ListingCard';
 
 interface ListingImage {
   url: string;
@@ -560,6 +561,10 @@ export default function ListingDetails() {
   const [commuteLoading, setCommuteLoading] = useState(false);
   const [commuteError, setCommuteError] = useState<string | null>(null);
 
+  // State for other listings
+  const [otherListings, setOtherListings] = useState<any[]>([]);
+  const [otherListingsLoading, setOtherListingsLoading] = useState(false);
+
   // Handler for address selection from autocomplete
   const handleCommuteAddressSelect = (addressData: any) => {
     setCommuteAddress(
@@ -597,50 +602,67 @@ export default function ListingDetails() {
     }
   }, [commuteCoords, listing?.latitude, listing?.longitude]);
 
+  // Fetch other listings (excluding current user's listings)
+  useEffect(() => {
+    const fetchOtherListings = async () => {
+      if (!user?.id || !listing?.city) return;
+      setOtherListingsLoading(true);
+      try {
+        const response = await fetch(`http://localhost:4000/api/listings?exclude_user_id=${user.id}&city=${encodeURIComponent(listing.city)}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Filter out the current listing
+          const filteredListings = data.filter((l: any) => l.id !== listing?.id);
+          
+          // Fetch ratings for the other listings
+          const ratingsResponse = await fetch('http://localhost:4000/api/listings/average-ratings');
+          if (ratingsResponse.ok) {
+            const ratingsData = await ratingsResponse.json();
+            
+            // Add rating data to the listings
+            const listingsWithRatings = filteredListings.map((listing: any) => ({
+              ...listing,
+              averageRating: ratingsData[listing.id]?.average_rating,
+              totalReviews: ratingsData[listing.id]?.total_reviews
+            }));
+            
+            setOtherListings(listingsWithRatings.slice(0, 3));
+          } else {
+            setOtherListings(filteredListings.slice(0, 3));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching other listings:', error);
+      } finally {
+        setOtherListingsLoading(false);
+      }
+    };
+    
+    if (user?.id && listing?.id && listing?.city) {
+      fetchOtherListings();
+    }
+  }, [user?.id, listing?.id, listing?.city]);
+
   // Add state for photo modal
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   if (loading) {
-        return (
+    return (
       <div className="min-h-screen bg-white pt-16">
-        <Navbar>
-          <SearchBar
-            where={where}
-            setWhere={setWhere}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            showCalendar={showCalendar}
-            setShowCalendar={setShowCalendar}
-            guests={guests}
-            setGuests={setGuests}
-            onSearch={handleSearch}
-          />
-        </Navbar>
+        <Navbar />
         <div className="max-w-6xl mx-auto mt-16 text-center text-gray-500">Loading...</div>
-          </div>
-        );
+      </div>
+    );
   }
 
   if (!listing) {
-        return (
+    return (
       <div className="min-h-screen bg-white pt-16">
-        <Navbar fixed={false}>
-          <SearchBar
-            where={where}
-            setWhere={setWhere}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            showCalendar={showCalendar}
-            setShowCalendar={setShowCalendar}
-            guests={guests}
-            setGuests={setGuests}
-            onSearch={handleSearch}
-          />
-        </Navbar>
+        <Navbar fixed={false} />
         <div className="max-w-6xl mx-auto mt-16 text-center text-red-500">Listing not found.</div>
-          </div>
-        );
+      </div>
+    );
   }
 
   // Image grid logic
@@ -666,20 +688,8 @@ export default function ListingDetails() {
         return (
     <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
       <div className="fixed inset-0 bg-white -z-10"></div>
-      <Navbar fixed={false}>
-        <SearchBar
-          where={where}
-          setWhere={setWhere}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          showCalendar={showCalendar}
-          setShowCalendar={setShowCalendar}
-          guests={guests}
-          setGuests={setGuests}
-          onSearch={handleSearch}
-        />
-      </Navbar>
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 pt-8 pb-8">
+      <Navbar fixed={false} />
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 pt-8 pb-8 mb-8">
         <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
         <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px' }}>
           {/* First column: one big image spanning two rows */}
@@ -950,7 +960,19 @@ export default function ListingDetails() {
                   <div className="text-black text-2xl font-bold mb-2">
                     {formatPrice(Number(listing?.price_per_night ?? 0))} <span className="text-base font-normal text-gray-600">per night</span>
                   </div>
-                  <div className="text-center text-gray-500 py-8">
+                  <div className="mt-4 mb-4">
+                    {listing.start_date && listing.end_date ? (
+                      <CompactCalendar 
+                        startDate={listing.start_date} 
+                        endDate={listing.end_date} 
+                        selectedRange={selectedRange}
+                        setSelectedRange={setSelectedRange}
+                      />
+                    ) : (
+                      <div className="text-black text-base font-medium">Availability not specified</div>
+                    )}
+                  </div>
+                  <div className="text-center text-gray-500">
                     {user ? 'This is your own listing' : 'Please log in to book this listing'}
                   </div>
                 </div>
@@ -960,7 +982,7 @@ export default function ListingDetails() {
         </div>
 
         {/* Location Map */}
-        <h3 className="mt-12 text-black font-semibold mb-2 text-xl">Location</h3>
+        <h3 className="mt-8 text-black font-semibold mb-2 text-xl">Location</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {/* Left: Map and location info */}
           <div className="md:col-span-2 relative">
@@ -1029,10 +1051,50 @@ export default function ListingDetails() {
         </div>
 
         {/* Reviews Section */}
-        <div className="mt-12">
+        <div className="mt-8">
           <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
-          <ReviewsSection listingId={listing.id} reviewer={user as unknown as User | undefined} reviewee={host as unknown as User | undefined} />
+          <ReviewsSection
+            listingId={listing.id}
+            reviewer={user as any}
+            reviewee={host as any}
+          />
         </div>
+        
+        {/* Other Listings Section */}
+        <div className="mt-8">
+          <h3 className="text-black font-semibold text-xl mb-6">Other listings</h3>
+          {otherListingsLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          ) : otherListings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3">
+              {otherListings.map((otherListing) => (
+                <div key={otherListing.id} className="cursor-pointer" onClick={() => router.push(`/listings/${otherListing.id}`)}>
+                  <ListingCard 
+                    id={otherListing.id}
+                    title={otherListing.title}
+                    images={otherListing.images}
+                    name={otherListing.name}
+                    avatar_url={otherListing.avatar_url}
+                    university_name={otherListing.university_name}
+                    bedrooms={otherListing.bedrooms}
+                    bathrooms={otherListing.bathrooms}
+                    price_per_night={otherListing.price_per_night}
+                    averageRating={otherListing.averageRating}
+                    totalReviews={otherListing.totalReviews}
+                    amenities={otherListing.amenities}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No other listings available at the moment.
+            </div>
+          )}
+        </div>
+
       </div>
       {/* Amenities Modal */}
       {showAmenitiesModal && listing?.amenities && (

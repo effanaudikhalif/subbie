@@ -297,7 +297,7 @@ export default function Results() {
               {filteredListings.length} places within map area
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
               {paginatedListings.map(listing => {
                 console.log(`Listing ${listing.id} amenities:`, listing.amenities);
                 return (
@@ -364,7 +364,7 @@ export default function Results() {
             <LocationMapPreview 
               key={mapRefreshKey}
               searchLocation={where}
-              listings={filteredListings}
+              listings={listingsWithRatings}
               className="h-full w-full"
               dateRange={dateRange}
               onBoundsChange={setVisibleBounds}

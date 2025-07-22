@@ -22,11 +22,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 module.exports = (pool) => {
-  // Get all listings (optionally filter by user_id)
+  // Get all listings (optionally filter by user_id or exclude user_id)
   router.get('/', async (req, res) => {
     try {
-      const { user_id } = req.query;
+      const { user_id, exclude_user_id } = req.query;
       let rows;
+      
       if (user_id) {
         const result = await pool.query(`
           SELECT l.*, u.name, u.avatar_url, univ.name as university_name
@@ -35,6 +36,27 @@ module.exports = (pool) => {
           LEFT JOIN universities univ ON u.university_id = univ.id
           WHERE l.user_id = $1
         `, [user_id]);
+        rows = result.rows;
+      } else if (exclude_user_id) {
+        const { city } = req.query;
+        let query = `
+          SELECT l.*, u.name, u.avatar_url, univ.name as university_name
+          FROM listings l 
+          LEFT JOIN users u ON l.user_id = u.id
+          LEFT JOIN universities univ ON u.university_id = univ.id
+          WHERE (l.status IS NULL OR l.status IN ('active', 'approved'))
+          AND l.user_id != $1
+        `;
+        let params = [exclude_user_id];
+        
+        if (city) {
+          query += ` AND LOWER(l.city) = LOWER($2)`;
+          params.push(city);
+        }
+        
+        query += ` ORDER BY l.created_at DESC LIMIT 3`;
+        
+        const result = await pool.query(query, params);
         rows = result.rows;
       } else {
         const result = await pool.query(`
@@ -69,16 +91,14 @@ module.exports = (pool) => {
           AVG((hr.cleanliness_rating + hr.accuracy_rating + hr.communication_rating + hr.location_rating + hr.value_rating) / 5.0) as average_rating,
           COUNT(hr.id) as total_reviews
         FROM listings l
-        LEFT JOIN bookings b ON l.id = b.listing_id
-        LEFT JOIN host_reviews hr ON hr.booking_id = b.id
+        LEFT JOIN host_reviews hr ON l.id = hr.listing_id
         GROUP BY l.id
-        HAVING COUNT(hr.id) > 0
       `);
       
       const ratingsMap = {};
       rows.forEach(row => {
         ratingsMap[row.listing_id] = {
-          average_rating: parseFloat(row.average_rating),
+          average_rating: row.average_rating ? parseFloat(row.average_rating) : 0,
           total_reviews: parseInt(row.total_reviews)
         };
       });
