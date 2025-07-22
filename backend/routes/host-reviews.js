@@ -14,17 +14,22 @@ module.exports = (pool) => {
     }
   });
 
-  // Get reviews for a specific booking
-  router.get('/booking/:bookingId', async (req, res) => {
+  // Get reviews for a specific listing
+  router.get('/listing/:listingId', async (req, res) => {
     try {
-      const { bookingId } = req.params;
+      const { listingId } = req.params;
       const { rows } = await pool.query(
-        'SELECT * FROM host_reviews WHERE booking_id = $1 ORDER BY created_at DESC',
-        [bookingId]
+        `SELECT hr.*, u.name as reviewer_name, univ.name as university_name 
+         FROM host_reviews hr 
+         LEFT JOIN users u ON hr.reviewer_id = u.id 
+         LEFT JOIN universities univ ON u.university_id = univ.id 
+         WHERE hr.listing_id = $1 
+         ORDER BY hr.created_at DESC`,
+        [listingId]
       );
       res.json(rows);
     } catch (err) {
-      console.error('Error fetching booking reviews:', err);
+      console.error('Error fetching listing reviews:', err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -34,7 +39,12 @@ module.exports = (pool) => {
     try {
       const { userId } = req.params;
       const { rows } = await pool.query(
-        'SELECT * FROM host_reviews WHERE reviewee_id = $1 ORDER BY created_at DESC',
+        `SELECT hr.*, u.name as reviewer_name, univ.name as university_name 
+         FROM host_reviews hr 
+         LEFT JOIN users u ON hr.reviewer_id = u.id 
+         LEFT JOIN universities univ ON u.university_id = univ.id 
+         WHERE hr.reviewee_id = $1 
+         ORDER BY hr.created_at DESC`,
         [userId]
       );
       res.json(rows);
@@ -48,7 +58,7 @@ module.exports = (pool) => {
   router.post('/', async (req, res) => {
     try {
       const { 
-        booking_id, 
+        listing_id,
         reviewer_id, 
         reviewee_id, 
         cleanliness_rating,
@@ -60,7 +70,7 @@ module.exports = (pool) => {
       } = req.body;
 
       // Validate required fields
-      if (!booking_id || !reviewer_id || !reviewee_id || 
+      if (!listing_id || !reviewer_id || !reviewee_id || 
           !cleanliness_rating || !accuracy_rating || !communication_rating || 
           !location_rating || !value_rating) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -74,49 +84,15 @@ module.exports = (pool) => {
         }
       }
 
-      // Check if booking exists and is completed
-      const { rows: bookingRows } = await pool.query(
-        'SELECT * FROM bookings WHERE id = $1',
-        [booking_id]
-      );
-
-      if (bookingRows.length === 0) {
-        return res.status(404).json({ error: 'Booking not found' });
-      }
-
-      const booking = bookingRows[0];
-      if (booking.status !== 'ended') {
-        return res.status(400).json({ error: 'Reviews can only be written for completed bookings' });
-      }
-
-      // Check if reviewer is either the guest or host of this booking
-      if (reviewer_id !== booking.guest_id && reviewer_id !== booking.host_id) {
-        return res.status(403).json({ error: 'You can only review participants of this booking' });
-      }
-
-      // Check if reviewee is the other participant (not self-review)
+      // Check if reviewee is not self-review
       if (reviewer_id === reviewee_id) {
         return res.status(400).json({ error: 'You cannot review yourself' });
-      }
-
-      if (reviewee_id !== booking.guest_id && reviewee_id !== booking.host_id) {
-        return res.status(400).json({ error: 'You can only review the other participant of this booking' });
-      }
-
-      // Check if reviewer has already written a review for this booking and reviewee
-      const { rows: existingReview } = await pool.query(
-        'SELECT * FROM host_reviews WHERE booking_id = $1 AND reviewer_id = $2 AND reviewee_id = $3',
-        [booking_id, reviewer_id, reviewee_id]
-      );
-
-      if (existingReview.length > 0) {
-        return res.status(400).json({ error: 'You have already written a review for this person for this booking' });
       }
 
       // Create the review
       const { rows } = await pool.query(
         `INSERT INTO host_reviews (
-          booking_id, 
+          listing_id,
           reviewer_id, 
           reviewee_id, 
           cleanliness_rating,
@@ -126,7 +102,7 @@ module.exports = (pool) => {
           value_rating,
           comment
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-        [booking_id, reviewer_id, reviewee_id, cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating, comment]
+        [listing_id, reviewer_id, reviewee_id, cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating, comment]
       );
 
       console.log('Review created:', rows[0].id);

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import type { User } from '../../../types/User';
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import SearchBar from "../../../components/Searchbar";
@@ -37,16 +38,6 @@ interface Listing {
   longitude?: number;
   start_date?: string;
   end_date?: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  university_id: string;
-  avatar_url?: string;
-  major?: string;
-  graduation_year?: number;
-  about_me?: string;
 }
 
 interface University {
@@ -634,8 +625,8 @@ export default function ListingDetails() {
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left: Listing details */}
           <div className="md:col-span-2">
-            {/* Meet your host Section */}
-            <div className="mt-12">
+            {/* Meet your host Section (moved above About this place) */}
+            <div className="mb-8">
               <h3 className="text-black font-semibold text-xl mb-6">Meet your host</h3>
               <div className="flex items-center">
                 <div className="mr-6">
@@ -643,7 +634,7 @@ export default function ListingDetails() {
                     <img 
                       src={host.avatar_url} 
                       alt={host.name || 'Host'} 
-                      className="w-36 h-36 rounded-2xl object-cover"
+                      className="w-25 h-25 rounded-2xl object-cover"
                     />
                   ) : (
                     <div className="w-36 h-36 rounded-2xl bg-gray-300 flex items-center justify-center">
@@ -680,7 +671,11 @@ export default function ListingDetails() {
                 </div>
               </div>
             </div>
-            
+            {/* About this place Section */}
+            <div className="mb-8">
+              <h3 className="text-black font-semibold text-xl mb-2">About this place</h3>
+              <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
+            </div>
             {/* Property details */}
             <div className="mt-8">
               <h3 className="text-black font-semibold mb-2 text-xl">Property details</h3>
@@ -892,7 +887,7 @@ export default function ListingDetails() {
         {/* Reviews Section */}
         <div className="mt-12">
           <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
-          <ReviewsSection listingId={listing.id} />
+          <ReviewsSection listingId={listing.id} reviewer={user as unknown as User | undefined} reviewee={host as unknown as User | undefined} />
         </div>
       </div>
     </div>

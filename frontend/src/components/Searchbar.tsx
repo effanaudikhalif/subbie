@@ -102,10 +102,10 @@ export default function SearchBar({
   }, [showCalendar, setShowCalendar]);
 
   const checkIn = dateRange[0].startDate
-    ? new Date(dateRange[0].startDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    ? dateRange[0].startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Add dates';
   const checkOut = dateRange[0].endDate
-    ? new Date(dateRange[0].endDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    ? dateRange[0].endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     : 'Add dates';
 
   return (
@@ -177,16 +177,20 @@ export default function SearchBar({
               endDate: dateRange[0]?.endDate ? new Date(dateRange[0].endDate) : null
             }}
             onChange={({ startDate, endDate }) => {
-              // Ensure minimum 1 night stay
+              // Ensure minimum 1 night stay and fix timezone issues
               if (startDate && endDate) {
-                const diffTime = endDate.getTime() - startDate.getTime();
+                // Create local dates to avoid timezone issues
+                const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                const localEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+                
+                const diffTime = localEndDate.getTime() - localStartDate.getTime();
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 if (diffDays < 1) {
-                  const newEndDate = new Date(startDate);
+                  const newEndDate = new Date(localStartDate);
                   newEndDate.setDate(newEndDate.getDate() + 1);
-                  setDateRange([{ startDate, endDate: newEndDate, key: 'selection' }]);
+                  setDateRange([{ startDate: localStartDate, endDate: newEndDate, key: 'selection' }]);
                 } else {
-                  setDateRange([{ startDate, endDate, key: 'selection' }]);
+                  setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
                 }
               } else {
                 setDateRange([{ startDate, endDate, key: 'selection' }]);
