@@ -20,6 +20,8 @@ interface GoogleMapsAutocompleteProps {
   placeholder?: string;
 }
 
+export type { AddressData };
+
 const GoogleMapsAutocomplete: React.FC<GoogleMapsAutocompleteProps> = ({
   onAddressSelect,
   className = "",
@@ -46,9 +48,9 @@ const GoogleMapsAutocomplete: React.FC<GoogleMapsAutocompleteProps> = ({
         if (!inputRef.current) return;
 
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
-          types: ['address'],
+          types: ['establishment', 'geocode'], // Allow building names and addresses
           componentRestrictions: { country: ['us', 'ca'] }, // Restrict to US and Canada
-          fields: ['address_components', 'geometry', 'formatted_address']
+          fields: ['address_components', 'geometry', 'formatted_address', 'name', 'place_id'],
         });
 
         autocomplete.addListener('place_changed', () => {
@@ -135,9 +137,7 @@ const GoogleMapsAutocomplete: React.FC<GoogleMapsAutocompleteProps> = ({
         ref={inputRef}
         type="text"
         placeholder={placeholder}
-        className={`w-full p-2 border border-gray-300 rounded-lg text-black text-sm ${className} ${
-          error ? 'border-red-500' : ''
-        }`}
+        className={`w-full p-2 border border-gray-300 rounded-lg text-black text-sm ${className} ${error ? 'border-red-500' : ''} focus:outline-none focus:ring-1 focus:ring-black`}
         disabled={isLoading}
       />
       {isLoading && (
@@ -152,4 +152,4 @@ const GoogleMapsAutocomplete: React.FC<GoogleMapsAutocompleteProps> = ({
   );
 };
 
-export default GoogleMapsAutocomplete; 
+export default GoogleMapsAutocomplete;

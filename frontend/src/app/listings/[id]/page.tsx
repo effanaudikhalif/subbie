@@ -11,6 +11,8 @@ import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { useAuth } from "../../../hooks/useAuth";
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
+import { getCommuteTimes, CommuteTimes } from '../../../utils/getCommuteTimes';
 
 interface ListingImage {
   url: string;
@@ -530,6 +532,50 @@ export default function ListingDetails() {
     fetchHostReviews();
   }, [host?.id]);
 
+  // Commute time state
+  const [commuteAddress, setCommuteAddress] = useState<string>("");
+  const [commuteCoords, setCommuteCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [commuteTimes, setCommuteTimes] = useState<CommuteTimes | null>(null);
+  const [commuteLoading, setCommuteLoading] = useState(false);
+  const [commuteError, setCommuteError] = useState<string | null>(null);
+
+  // Handler for address selection from autocomplete
+  const handleCommuteAddressSelect = (addressData: any) => {
+    setCommuteAddress(
+      [addressData.street, addressData.neighborhood, addressData.city, addressData.state, addressData.zip]
+        .filter(Boolean).join(', ')
+    );
+    if (addressData.latitude && addressData.longitude) {
+      setCommuteCoords({ lat: addressData.latitude, lng: addressData.longitude });
+    } else {
+      setCommuteCoords(null);
+    }
+  };
+
+  // Fetch commute times when both coordinates are available
+  useEffect(() => {
+    const fetchCommute = async () => {
+      if (!listing?.latitude || !listing?.longitude || !commuteCoords) return;
+      setCommuteLoading(true);
+      setCommuteError(null);
+      setCommuteTimes(null);
+      try {
+        const times = await getCommuteTimes(
+          commuteCoords,
+          { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+        );
+        setCommuteTimes(times);
+      } catch (e: any) {
+        setCommuteError(e.message || 'Failed to fetch commute times');
+      } finally {
+        setCommuteLoading(false);
+      }
+    };
+    if (commuteCoords && listing?.latitude && listing?.longitude) {
+      fetchCommute();
+    }
+  }, [commuteCoords, listing?.latitude, listing?.longitude]);
+
   if (loading) {
         return (
       <div className="min-h-screen bg-white pt-16">
@@ -882,9 +928,10 @@ export default function ListingDetails() {
         </div>
 
         {/* Location Map */}
-        <div className="mt-12">
-          <h3 className="text-black font-semibold mb-2 text-xl">Location</h3>
-          {listing.latitude && listing.longitude ? (
+        <h3 className="mt-12 text-black font-semibold mb-2 text-xl">Location</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {/* Left: Map and location info */}
+          <div className="md:col-span-2 relative">
             <PrivacyMap
               latitude={listing.latitude}
               longitude={listing.longitude}
@@ -893,18 +940,60 @@ export default function ListingDetails() {
               neighborhood={listing.neighborhood}
               height="500px"
             />
-          ) : (
-            <div className="bg-gray-100 rounded-lg p-4 text-center">
-              <p className="text-gray-500">
-                {listing.city && listing.state 
-                  ? `Location in ${listing.city}, ${listing.state}` 
-                  : 'Location not available'}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Map coordinates not available for this listing
-              </p>
+          </div>
+          {/* Right: Commute Time, sticky */}
+          <div className="sticky top-28 self-start">
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
+              <h4 className="text-black text-lg font-semibold mb-2">
+                Estimate Commute Time
+              </h4>
+              <div className="mb-3">
+                <GoogleMapsAutocomplete
+                  onAddressSelect={handleCommuteAddressSelect}
+                  placeholder="Enter your address or destination"
+                />
+                {commuteAddress && (
+                  <div className="text-xs text-gray-600 mt-1 truncate"><span className="font-medium">Selected:</span> {commuteAddress}</div>
+                )}
+              </div>
+              {/* Commute results UI */}
+              <div className="space-y-2 min-h-[100px]">
+                {commuteLoading && (
+                  <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
+                )}
+                {commuteError && (
+                  <div className="text-sm text-red-600">{commuteError}</div>
+                )}
+                {commuteTimes && !commuteLoading && !commuteError && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      {/* Car icon */}
+                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
+                      <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      {/* Transit icon (train) */}
+                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
+                      <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      {/* Bike icon */}
+                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
+                      <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      {/* Walk icon */}
+                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
+                      <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
+                    </div>
+                  </>
+                )}
+                {!commuteLoading && !commuteError && !commuteTimes && (
+                  <div className="text-xs text-gray-400">Enter an address to see commute times.</div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Reviews Section */}

@@ -15,6 +15,7 @@ const wishlistRouter = require('./routes/wishlist');
 const stripeConnectRouter = require('./routes/stripe-connect');
 const hostReviewsRouter = require('./routes/host-reviews');
 const renterReviewsRouter = require('./routes/renter-reviews');
+const commuteTimesRouter = require('./routes/commute-times');
 
 const app = express();
 app.use(cors());
@@ -78,6 +79,9 @@ app.use('/api/host-reviews', hostReviewsRouterInstance);
 
 const renterReviewsRouterInstance = renterReviewsRouter(pool);
 app.use('/api/renter-reviews', renterReviewsRouterInstance);
+
+const commuteTimesRouterInstance = commuteTimesRouter();
+app.use('/api/commute-times', commuteTimesRouterInstance);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
