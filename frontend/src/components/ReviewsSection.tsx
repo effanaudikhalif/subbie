@@ -47,6 +47,8 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     value: number;
     overall: number;
   } | null>(null);
+  // Add editing state
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   // Helper to reload reviews
   const fetchReviews = async () => {
@@ -159,6 +161,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
         value_rating: 0,
         comment: '',
       });
+      setEditingReviewId(null); // Reset editing state
       setLoading(true);
       await fetchReviews();
     } catch (err) {
@@ -264,7 +267,18 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
             <button
               className="bg-white hover:bg-gray-100 text-black p-2 rounded-full border border-gray-300 ml-2 transition-colors"
               title="Edit review"
-              onClick={() => {/* TODO: open edit modal */}}
+              onClick={() => {
+                setReviewForm({
+                  cleanliness_rating: review.cleanliness_rating,
+                  accuracy_rating: review.accuracy_rating,
+                  communication_rating: review.communication_rating,
+                  location_rating: review.location_rating,
+                  value_rating: review.value_rating,
+                  comment: review.comment,
+                });
+                setEditingReviewId(review.id);
+                setShowReviewModal(true);
+              }}
             >
               <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

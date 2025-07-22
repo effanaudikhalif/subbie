@@ -908,7 +908,7 @@ export default function ListingDetails() {
                   </div>
                   <button
                     onClick={handleMessageHost}
-                    className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-2xl font-medium hover:bg-gray-50 transition-colors w-full"
+                    className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
                   >
                     Message Host
                   </button>
