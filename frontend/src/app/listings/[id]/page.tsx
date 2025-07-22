@@ -508,6 +508,28 @@ export default function ListingDetails() {
     if (id) fetchAll();
   }, [id]);
 
+  // Host reviews state
+  const [hostReviewStats, setHostReviewStats] = useState<{ avg: number; count: number } | null>(null);
+
+  // Fetch host reviews for Meet your host section
+  useEffect(() => {
+    async function fetchHostReviews() {
+      if (!host?.id) return;
+      try {
+        const res = await fetch(`http://localhost:4000/api/host-reviews/user/${host.id}`);
+        if (!res.ok) return;
+        const reviews = await res.json();
+        if (!Array.isArray(reviews) || reviews.length === 0) {
+          setHostReviewStats({ avg: 0, count: 0 });
+          return;
+        }
+        const avg = reviews.reduce((sum, r) => sum + ((r.cleanliness_rating + r.accuracy_rating + r.communication_rating + r.location_rating + r.value_rating) / 5), 0) / reviews.length;
+        setHostReviewStats({ avg, count: reviews.length });
+      } catch {}
+    }
+    fetchHostReviews();
+  }, [host?.id]);
+
   if (loading) {
         return (
       <div className="min-h-screen bg-white pt-16">
@@ -651,12 +673,13 @@ export default function ListingDetails() {
                         <p className="text-black font-semibold text-lg mr-3">
                           {host?.name || 'Host'}
                         </p>
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 text-black mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span className="text-sm text-gray-700">4.8 (12)</span>
-                        </div>
+                        {hostReviewStats && (
+                          <div className="flex items-center">
+                            <span className="text-black mr-1">★</span>
+                            <span className="text-black font-semibold text-base mr-1">{hostReviewStats.avg.toFixed(1)}</span>
+                            <span className="text-gray-700 text-sm">({hostReviewStats.count})</span>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="text-gray-700 mb-1">
@@ -839,7 +862,7 @@ export default function ListingDetails() {
                   </div>
                   <button
                     onClick={handleMessageHost}
-                    className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                    className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-2xl font-medium hover:bg-gray-50 transition-colors w-full"
                   >
                     Message Host
                   </button>
@@ -890,6 +913,34 @@ export default function ListingDetails() {
           <ReviewsSection listingId={listing.id} reviewer={user as unknown as User | undefined} reviewee={host as unknown as User | undefined} />
         </div>
       </div>
+      {/* Amenities Modal */}
+      {showAmenitiesModal && listing?.amenities && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 relative">
+            <div className="flex items-center justify-between pb-4">
+              <h3 className="text-xl font-semibold text-gray-900">All Amenities</h3>
+              <button
+                onClick={() => setShowAmenitiesModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close amenities modal"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="border-b border-gray-200 absolute left-0 top-[72px] w-full" style={{marginLeft: 0, marginRight: 0}} />
+            <div className="pt-8 p-4 grid grid-cols-1 gap-4">
+              {listing.amenities.map((a: any) => (
+                <div key={a.code || a.name} className="flex items-center">
+                  {getAmenityIcon(a.name)}
+                  <span className="text-gray-700">{a.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
