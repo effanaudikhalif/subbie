@@ -12,10 +12,10 @@ const bookingsRouter = require('./routes/bookings');
 const conversationsRouter = require('./routes/conversations');
 const messagesRouter = require('./routes/messages');
 const wishlistRouter = require('./routes/wishlist');
-const stripeConnectRouter = require('./routes/stripe-connect');
 const hostReviewsRouter = require('./routes/host-reviews');
 const renterReviewsRouter = require('./routes/renter-reviews');
 const commuteTimesRouter = require('./routes/commute-times');
+const openaiRouter = require('./routes/openai');
 
 const app = express();
 app.use(cors());
@@ -71,9 +71,6 @@ app.use('/api/messages', messagesRouterInstance);
 const wishlistRouterInstance = wishlistRouter(pool);
 app.use('/api/wishlist', wishlistRouterInstance);
 
-const stripeConnectRouterInstance = stripeConnectRouter(pool);
-app.use('/api/stripe-connect', stripeConnectRouterInstance);
-
 const hostReviewsRouterInstance = hostReviewsRouter(pool);
 app.use('/api/host-reviews', hostReviewsRouterInstance);
 
@@ -82,6 +79,8 @@ app.use('/api/renter-reviews', renterReviewsRouterInstance);
 
 const commuteTimesRouterInstance = commuteTimesRouter();
 app.use('/api/commute-times', commuteTimesRouterInstance);
+
+app.use('/api/openai', openaiRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

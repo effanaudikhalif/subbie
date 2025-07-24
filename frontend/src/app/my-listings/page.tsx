@@ -4,8 +4,6 @@ import Navbar from "../../components/Navbar";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
 import PrivacyMap from "../../components/PrivacyMap";
-import StripeConnect from "../../components/StripeConnect";
-import PaymentHistory from "../../components/PaymentHistory";
 import CancellationForm from "../../components/CancellationForm";
 import ReviewsSection from "../../components/ReviewsSection";
 import ListingCard from "../../components/ListingCard";
@@ -64,7 +62,7 @@ export default function MyListingsPage() {
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages' | 'stripe'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages'>('all');
   const [bookingFilter, setBookingFilter] = useState<'pending' | 'approved' | 'completed'>('pending');
   const [deletingListing, setDeletingListing] = useState<string | null>(null);
   
@@ -145,9 +143,6 @@ export default function MyListingsPage() {
     }
   };
   
-  // Stripe connection status state
-  const [stripeConnected, setStripeConnected] = useState(false);
-
   // Review popup state for host reviewing renter
   const [showRenterReviewPopup, setShowRenterReviewPopup] = useState(false);
   const [currentRenterReviewStep, setCurrentRenterReviewStep] = useState(0);
@@ -665,14 +660,6 @@ export default function MyListingsPage() {
     }
   }, [selectedBooking]);
 
-  // Handle URL parameter for Stripe onboarding return
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam === 'stripe') {
-      setActiveTab('stripe');
-    }
-  }, [searchParams]);
-
   // Add a state to track which listings to show
   const [showActive, setShowActive] = useState(true);
 
@@ -715,39 +702,9 @@ export default function MyListingsPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navbar />
       <div className="flex flex-1 mt-25 overflow-hidden">
-        {activeTab === 'stripe' ? (
-          <>
-            {/* Sidebar */}
-            <div className="w-80 border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
-              <h2 className="text-xl font-bold mb-4 text-black flex-shrink-0">Settings</h2>
-              <div className="space-y-2">
-                <div
-                  className="rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 bg-blue-50 border-blue-400"
-                >
-                  <div className="font-semibold text-black text-base">Payment Account</div>
-                  <div className="text-xs text-gray-500">Manage your payments</div>
-                </div>
-              </div>
-            </div>
-            {/* Center: Payment Setup and History */}
-            <div className="flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto scrollbar-hide h-full">
-                <div className="max-w-4xl mx-auto">
-                  <div className="space-y-8">
-                    <div>
-                      <StripeConnect onStatusChange={(status) => setStripeConnected(!!status?.connected)} />
-                    </div>
-                    <div>
-                      <PaymentHistory userId={userId || ''} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : activeTab === 'messages' ? (
+        {activeTab === 'messages' ? (
           <>
             {/* Sidebar */}
             <div className="w-80 border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden">
@@ -994,19 +951,19 @@ export default function MyListingsPage() {
                     <div className="flex gap-4 items-center mb-8">
                       <button
                         onClick={() => setShowActive(true)}
-                        className={`border px-4 py-2 rounded-lg font-medium transition-colors ${showActive ? 'bg-black text-white border-black' : 'bg-white text-black border-black hover:bg-gray-50'}`}
+                        className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
                       >
                         Active Listings
                       </button>
                       <button
                         onClick={() => setShowActive(false)}
-                        className={`border px-4 py-2 rounded-lg font-medium transition-colors ${!showActive ? 'bg-black text-white border-black' : 'bg-white text-black border-black hover:bg-gray-50'}`}
+                        className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${!showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
                       >
                         Inactive Listings
                       </button>
                       <button
                         onClick={() => router.push('/add-listings')}
-                        className="border px-4 py-2 rounded-lg font-medium transition-colors bg-white text-black border-black hover:bg-gray-50"
+                        className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
                       >
                         Add Listing
                       </button>

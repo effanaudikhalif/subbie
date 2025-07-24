@@ -176,7 +176,7 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
                 <div
                   className={`px-4 py-2 rounded-2xl max-w-xs break-words shadow text-sm ${
                     isUser
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-teal-600 text-white'
                       : 'bg-gray-200 text-black'
                   }`}
                 >
@@ -196,13 +196,13 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-gray-300"
           placeholder="Type your message..."
           disabled={sending}
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
+          className="bg-teal-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-teal-800 transition"
           disabled={sending || !input.trim()}
         >
           Send

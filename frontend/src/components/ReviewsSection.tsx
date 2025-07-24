@@ -228,7 +228,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     ) / 5;
 
     return (
-      <div className="border border-black rounded-lg p-4 relative">
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full relative">
         <div className="flex items-start space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
             {review.reviewer_avatar ? (
@@ -315,61 +315,37 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     <>
       <div className="space-y-8">
         {/* Overall Rating and Category Ratings */}
-        <div className="flex items-center">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           {/* Overall Rating */}
-          <div className="flex items-center mr-12">
-            <div className="flex items-center">
-              <span className="text-6xl font-bold text-black">{averageRatings?.overall.toFixed(1)}</span>
-              <div className="ml-4">
-                {renderStars(averageRatings?.overall || 0)}
-                <p className="text-base text-gray-600 mt-2">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
-              </div>
+          <div className="flex flex-col items-center mb-4 sm:mb-0 sm:mr-12">
+            <span className="text-6xl font-bold text-black">{averageRatings?.overall.toFixed(1)}</span>
+            <div className="mt-2">
+              {renderStars(averageRatings?.overall || 0)}
             </div>
           </div>
-          {/* Category Ratings */}
-          <div className="flex-1">
-            <div className="grid grid-cols-5 gap-0">
-              {[
-                { name: 'Cleanliness', rating: averageRatings?.cleanliness, icon: (
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                ) },
-                { name: 'Accuracy', rating: averageRatings?.accuracy, icon: (
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                ) },
-                { name: 'Communication', rating: averageRatings?.communication, icon: (
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                ) },
-                { name: 'Location', rating: averageRatings?.location, icon: (
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                ) },
-                { name: 'Value', rating: averageRatings?.value, icon: (
-                  <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                ) },
-              ].map((category) => (
-                <div key={category.name} className="flex flex-col items-center text-center">
-                  <div className="mb-2">
-                    {category.icon}
+          {/* Category Ratings as Mini Bar Chart */}
+          <div className="flex flex-col gap-2 w-full min-w-[220px] max-w-xl">
+            {[
+              { name: 'Cleanliness', rating: averageRatings?.cleanliness },
+              { name: 'Accuracy', rating: averageRatings?.accuracy },
+              { name: 'Communication', rating: averageRatings?.communication },
+              { name: 'Location', rating: averageRatings?.location },
+              { name: 'Value', rating: averageRatings?.value },
+            ].map((category) => {
+              const percent = Math.max(0, Math.min(1, (category.rating ?? 0) / 5));
+              return (
+                <div key={category.name} className="flex items-center gap-2 w-full">
+                  <span className="text-sm font-medium text-gray-700 w-32">{category.name}</span>
+                  <div className="flex-1 h-3 bg-gray-200 rounded-full relative mx-2 min-w-[60px] max-w-[180px]">
+                    <div
+                      className="h-3 rounded-full bg-teal-600 transition-all"
+                      style={{ width: `${percent * 100}%` }}
+                    ></div>
                   </div>
-                  <div className="text-sm text-gray-700 mb-4">
-                    {category.name}
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {(category.rating ?? 0).toFixed(1)}
-                  </div>
+                  <span className="text-sm font-bold text-gray-900 w-8 text-right">{(category.rating ?? 0).toFixed(1)}</span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
 
@@ -461,7 +437,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
               <div className="col-span-1 md:col-span-2 flex justify-start gap-4 mt-6">
                 <button
                   onClick={() => setShowAllReviews(true)}
-                  className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
                 >
                   Show all {reviews.length} reviews
                 </button>

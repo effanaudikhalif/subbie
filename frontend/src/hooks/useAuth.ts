@@ -109,9 +109,13 @@ export function useAuth() {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const response = await fetch(`http://localhost:4000/api/users/${userId}`);
+      console.log('Profile response status:', response.status);
+      
       if (response.ok) {
         const userData = await response.json();
+        console.log('Profile found:', userData);
         
         // Also fetch university name
         if (userData.university_id) {
@@ -128,6 +132,43 @@ export function useAuth() {
         } else {
           setProfile(userData);
         }
+      } else if (response.status === 404) {
+        // Profile not found, create a basic one
+        console.log('Profile not found, creating basic profile...');
+        const basicProfile = {
+          id: userId,
+          name: user?.email?.split('@')[0] || 'User',
+          email: user?.email || '',
+          university_id: null,
+          major: null,
+          graduation_year: null,
+          education_level: null,
+          about_me: null,
+          stripe_account: null
+        };
+        
+        console.log('Creating profile with data:', basicProfile);
+        
+        const createResponse = await fetch('http://localhost:4000/api/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(basicProfile),
+        });
+        
+        console.log('Create profile response status:', createResponse.status);
+        
+        if (createResponse.ok) {
+          const newProfile = await createResponse.json();
+          console.log('Profile created successfully:', newProfile);
+          setProfile(newProfile);
+        } else {
+          const errorData = await createResponse.json();
+          console.error('Failed to create profile:', errorData);
+        }
+      } else {
+        console.error('Unexpected response status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -136,9 +177,13 @@ export function useAuth() {
 
   const fetchUserListings = async (userId: string) => {
     try {
+      console.log('Fetching listings for user:', userId);
       const response = await fetch(`http://localhost:4000/api/listings?user_id=${userId}`);
+      console.log('Listings response status:', response.status);
+      
       if (response.ok) {
         const listings = await response.json();
+        console.log('Listings found:', listings);
         const hasListings = listings.length > 0;
         const listingsData = {
           hasListings,
@@ -151,6 +196,7 @@ export function useAuth() {
           timestamp: Date.now()
         }));
       } else {
+        console.log('No listings found or error');
         const defaultData = {
           hasListings: false,
           listingsCount: 0

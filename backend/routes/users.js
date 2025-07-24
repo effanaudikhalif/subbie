@@ -45,7 +45,9 @@ module.exports = (pool) => {
     try {
       const { id } = req.params;
       const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-      if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Not found' });
+      }
       res.json(rows[0]);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -56,6 +58,13 @@ module.exports = (pool) => {
   router.post('/', async (req, res) => {
     try {
       const { id, university_id, name, email, major, graduation_year, education_level, about_me, stripe_account } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      if (existingUser.rows.length > 0) {
+        return res.json(existingUser.rows[0]);
+      }
+      
       const { rows } = await pool.query(
         'INSERT INTO users (id, university_id, name, email, major, graduation_year, education_level, about_me, stripe_account) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
         [id, university_id, name, email, major, graduation_year, education_level, about_me, stripe_account]

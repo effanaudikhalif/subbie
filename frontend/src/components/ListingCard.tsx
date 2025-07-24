@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 interface ListingCardProps {
   id: string;
@@ -85,6 +86,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   cardMargin
 }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -390,8 +392,29 @@ const ListingCard: React.FC<ListingCardProps> = ({
     );
   };
 
+  // Handler for card click (for host controls)
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation if the click originated from a host control button
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') &&
+      (target.closest('[data-host-control]') ||
+        target.closest('[data-edit-listing]') ||
+        target.closest('[data-delete-listing]'))
+    ) {
+      return;
+    }
+    router.push(`/listings/${id}`);
+  };
+
   const cardContent = (
-    <div className={`w-[210px] bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}>
+    <div
+      className={`w-[210px] bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}
+      onClick={showHostControls ? handleCardClick : undefined}
+      tabIndex={showHostControls ? 0 : undefined}
+      role={showHostControls ? 'button' : undefined}
+      aria-label={showHostControls ? `View listing ${title}` : undefined}
+    >
         {/* Image Container */}
         <div className={`relative w-full bg-gray-200 overflow-hidden ${IMAGE_HEIGHT} group/image-area`}>
           <img
@@ -541,6 +564,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
                           {/* Status Toggle */}
             <button
+              data-host-control
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -559,6 +583,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
               {/* Action Buttons */}
               <div className="flex gap-1">
                 <button
+                  data-edit-listing
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -572,6 +597,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
                   </svg>
                 </button>
                 <button
+                  data-delete-listing
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

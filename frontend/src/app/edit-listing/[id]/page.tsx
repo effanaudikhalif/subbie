@@ -39,6 +39,76 @@ export default function EditListing() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [listing, setListing] = useState<any>(null);
+  const [aiAboutLoading, setAiAboutLoading] = useState(false);
+  const [aiAboutError, setAiAboutError] = useState('');
+  
+  const getAboutPromptData = () => {
+    const {
+      property_type,
+      guest_space,
+      address,
+      unit,
+      city,
+      state,
+      zip,
+      country,
+      neighborhood,
+      latitude,
+      longitude,
+      max_occupancy,
+      bedrooms,
+      bathrooms,
+      occupants,
+      amenities,
+      photos,
+      title
+    } = formData;
+    return {
+      property_type,
+      guest_space,
+      address,
+      unit,
+      city,
+      state,
+      zip,
+      country,
+      neighborhood,
+      latitude,
+      longitude,
+      max_occupancy,
+      bedrooms,
+      bathrooms,
+      occupants,
+      amenities,
+      photo_count: photos.length,
+      title
+    };
+  };
+  
+  const handleAiSuggestAbout = async () => {
+    setAiAboutLoading(true);
+    setAiAboutError('');
+    try {
+      const response = await fetch('http://localhost:4000/api/openai/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promptType: 'about',
+          formData: getAboutPromptData(),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to get AI suggestion');
+      const data = await response.json();
+      let suggestion = data.suggestion || '';
+      if (suggestion.length > 500) suggestion = suggestion.slice(0, 500);
+      setFormData((prev: FormData) => ({ ...prev, description: suggestion }));
+    } catch (err) {
+      setAiAboutError('AI suggestion failed. Try again.');
+    } finally {
+      setAiAboutLoading(false);
+    }
+  };
+
   const [formData, setFormData] = useState<FormData>({
     property_type: 'apartment',
     guest_space: 'entire_place',
@@ -279,7 +349,9 @@ export default function EditListing() {
         }
         break;
       case 7:
-        // No validation needed for photos in edit mode
+        if (formData.photos.length < 5) {
+          newErrors.photos = 'Please upload at least 5 photos';
+        }
         break;
       case 8:
         if (!formData.title.trim()) {
@@ -1114,22 +1186,21 @@ export default function EditListing() {
 
       case 8:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a title</h2>
-            <div className="relative">
+            <p className="text-lg text-gray-600 mb-8">Short titles work best. Have fun with it—you can always change it later.</p>
             <input
               type="text"
-                value={formData.title}
+              value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
-                className={`w-full p-4 border rounded-lg text-black text-lg focus:outline-none focus:ring-2 focus:ring-black ${
-                  errors.title ? 'border-red-500' : 'border-gray-400'
-                }`}
-              placeholder="Cozy apartment near campus"
-                maxLength={30}
+              className={`w-full p-6 border rounded-lg text-black text-lg text-center focus:outline-none focus:ring-1 focus:ring-black ${
+                errors.title ? 'border-red-500' : 'border-gray-600'
+              }`}
+              placeholder="Room near campus"
+              maxLength={30}
             />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                {formData.title.length}/30
-              </div>
+            <div className="text-sm text-gray-500 mt-2">
+              {formData.title.length}/30 characters
             </div>
             {renderError('title')}
           </div>
@@ -1137,38 +1208,71 @@ export default function EditListing() {
 
       case 9:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
-            <div className="relative">
-            <textarea
+            <p className="text-lg text-gray-600 mb-8">Tell guests what makes your place special.</p>
+            <div className="relative flex justify-center mb-2" style={{ maxWidth: 600, margin: '0 auto' }}>
+              <textarea
                 value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-                className={`w-full p-4 border rounded-lg text-black text-lg focus:outline-none focus:ring-2 focus:ring-black ${
-                  errors.description ? 'border-red-500' : 'border-gray-400'
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                className={`w-full p-6 pb-16 border rounded-lg h-80 resize-none focus:outline-none focus:ring-1 focus:ring-black focus:ring-offset-0 focus:border-black text-black text-lg ${
+                  errors.description ? 'border-red-500' : 'border-gray-600'
                 }`}
-              placeholder="Describe your place..."
-              rows={6}
+                placeholder="Describe your place..."
                 maxLength={500}
-            />
-              <div className="absolute right-3 bottom-3 text-sm text-gray-500">
-                {formData.description.length}/500
-              </div>
+                style={{ maxWidth: 600 }}
+              />
+              <button
+                type="button"
+                onClick={handleAiSuggestAbout}
+                disabled={aiAboutLoading}
+                className="absolute bottom-3 right-3 font-semibold rounded-full transition-colors disabled:opacity-50 border-0 focus:outline-none shadow-lg"
+                style={{
+                  background: 'linear-gradient(90deg, #19e3cf 0%, #7b5cff 100%)',
+                  padding: '1.5px',
+                  borderRadius: '9999px',
+                  zIndex: 10,
+                }}
+                title="Suggest about section with AI"
+              >
+                <span
+                  className="flex items-center justify-center px-3 py-1.5 rounded-full"
+                  style={{
+                    background: '#f7f7fa',
+                    color: '#444',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    borderRadius: '9999px',
+                  }}
+                >
+                  <img
+                    src="/icons/sparkler.png"
+                    alt="Sparkle"
+                    className="w-4 h-4 mr-1"
+                    style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                  />
+                  {aiAboutLoading ? '...' : 'Generate'}
+                </span>
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 mt-2">
+              {formData.description.length}/500 characters
             </div>
             {renderError('description')}
+            {aiAboutError && <div className="text-red-500 text-sm mt-2">{aiAboutError}</div>}
           </div>
         );
 
       case 10:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Price per night</h2>
-            
             {/* Main Price Display */}
             <div className="mb-8">
               <div className="flex items-center justify-center gap-4">
-                <div className="text-6xl font-bold text-black relative">
+                <div className="text-6xl font-bold text-black relative flex items-center justify-center gap-4">
                   {isEditing ? (
-              <input
+                    <input
                       type="text"
                       value={Number.isFinite(formData.price_per_night) ? formData.price_per_night : ""}
                       onChange={(e) => {
@@ -1177,26 +1281,27 @@ export default function EditListing() {
                       }}
                       onBlur={() => setIsEditing(false)}
                       className="text-6xl font-bold text-black bg-transparent border-none outline-none w-full text-center"
-                placeholder="0"
+                      placeholder="0"
                       autoFocus
                     />
                   ) : (
-                    <span>${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                    <>
+                      <span>${Number.isFinite(formData.price_per_night) ? formData.price_per_night : 0}</span>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="w-8 h-8 bg-white border border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm ml-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                    </>
                   )}
                 </div>
-                <button 
-                  onClick={() => setIsEditing(true)}
-                  className="w-8 h-8 bg-white border border-gray-600 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                </button>
               </div>
+              <span className="text-gray-500 text-sm mt-4 block">This is the nightly price guests will see for your listing.</span>
             </div>
-
             {/* Price Breakdown */}
-            
           </div>
         );
 
@@ -1252,6 +1357,16 @@ export default function EditListing() {
         </div>
         
         {/* Error Message Centered Above Progress Bar */}
+        {errors.photos && currentStep === 7 && (
+          <div className="w-full flex justify-center mb-2">
+            <div className="text-red-500 text-sm mt-1 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errors.photos}
+            </div>
+          </div>
+        )}
         {errors.amenities && currentStep === 6 && (
           <div className="w-full flex justify-center mb-2">
             <div className="text-red-500 text-sm mt-1 flex items-center">

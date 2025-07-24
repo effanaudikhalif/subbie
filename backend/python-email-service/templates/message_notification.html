@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Message on {{ app_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .logo {
+            height: 40px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .message-preview {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .message-preview p {
+            margin: 0;
+            font-style: italic;
+            color: #666;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        @media only screen and (max-width: 600px) {
+            .container {
+                margin: 10px;
+                border-radius: 4px;
+            }
+            .header, .content, .footer {
+                padding: 20px 15px;
+            }
+        }
+    </style>
+</head>
+<div style="max-width:600px;margin:0 auto;background:#f0fdf4;padding:0;">
+    <div style="padding:40px 0 0 0;text-align:center;">
+      <img src="https://i.imgur.com/2t5QSwQ.png" alt="Subly Logo" style="height:44px;margin-bottom:18px;">
+    </div>
+    <div style="background:#fff;border-radius:20px 20px 12px 12px;box-shadow:0 6px 24px rgba(5,150,105,0.13);margin:0 24px;padding:0 0 32px 0;position:relative;top:-20px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:32px 32px 0 32px;">
+        <div style="font-size:22px;font-weight:800;color:#222;">You have a new message!</div>
+      </div>
+      <div style="border-left:6px solid #036144;margin:32px 32px 0 32px;padding:18px 0 18px 18px;background:#f8fafc;border-radius:8px;">
+        <div style="font-size:16px;color:#111;margin-bottom:6px;">From <strong style=\"color:#111;\">{{ sender_name }}</strong>:</div>
+        <div style="font-style:italic;color:#111;font-size:17px;">“{{ message_preview }}”</div>
+      </div>
+      <div style="margin:32px 32px 0 32px;">
+        <a href="{{ conversation_url }}" style="display:inline-block;background:#fff;color:#111;text-decoration:none;padding:14px 38px;border-radius:999px;font-weight:700;font-size:17px;border:2px solid #111;box-shadow:0 2px 8px rgba(17,17,17,0.10);transition:background 0.2s;">Reply Now 🚀</a>
+      </div>
+      <div style="font-size:13px;color:#888;margin:28px 32px 0 32px;">
+        Or copy and paste this link:<br>
+        <a href="{{ conversation_url }}" style="color:#059669;word-break:break-all;">{{ conversation_url }}</a>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:12px;color:#aaa;margin:32px 0 0 0;padding:12px 0 24px 0;">
+      <span style="opacity:0.7;">Subly &mdash; Sublet made easy<br>
+      &copy; 2025 Subly.</span>
+    </div>
+  </div>
+  </body>
+</html> 

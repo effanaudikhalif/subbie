@@ -38,6 +38,78 @@ export default function BecomeHost() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [aiAboutLoading, setAiAboutLoading] = useState(false);
+  const [aiAboutError, setAiAboutError] = useState('');
+  
+  const getAboutPromptData = () => {
+    const {
+      property_type,
+      guest_space,
+      address,
+      unit,
+      city,
+      state,
+      zip,
+      country,
+      neighborhood,
+      latitude,
+      longitude,
+      max_occupancy,
+      bedrooms,
+      bathrooms,
+      occupants,
+      amenities,
+      photos,
+      title
+    } = formData;
+    return {
+      property_type,
+      guest_space,
+      address,
+      unit,
+      city,
+      state,
+      zip,
+      country,
+      neighborhood,
+      latitude,
+      longitude,
+      max_occupancy,
+      bedrooms,
+      bathrooms,
+      occupants,
+      amenities,
+      photo_count: photos.length,
+      title
+    };
+  };
+  
+  const handleAiSuggestAbout = async () => {
+    setAiAboutLoading(true);
+    setAiAboutError('');
+    try {
+      const response = await fetch('http://localhost:4000/api/openai/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          promptType: 'about',
+          formData: getAboutPromptData(),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to get AI suggestion');
+      const data = await response.json();
+      let suggestion = data.suggestion || '';
+      if (suggestion.length > 500) suggestion = suggestion.slice(0, 500);
+      setFormData(prev => ({ ...prev, description: suggestion }));
+    } catch (err) {
+      setAiAboutError('AI suggestion failed. Try again.');
+    } finally {
+      setAiAboutLoading(false);
+    }
+  };
+  
+
   const [formData, setFormData] = useState<FormData>({
     property_type: 'apartment',
     guest_space: 'entire_place',
@@ -1203,16 +1275,52 @@ export default function BecomeHost() {
           <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
             <p className="text-lg text-gray-600 mb-8">Tell guests what makes your place special.</p>
+            <div className="relative flex justify-center mb-2" style={{ maxWidth: 600, margin: '0 auto' }}>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-                                      className="w-full p-6 border border-gray-600 rounded-lg h-48 resize-none text-black text-lg"
+              className="w-full p-6 pb-16 border border-gray-600 rounded-lg h-80 resize-none focus:outline-none focus:ring-1 focus:ring-black focus:ring-offset-0 focus:border-black text-black text-lg"
               placeholder="Describe your place..."
-                maxLength={500}
+              maxLength={500}
+              style={{ maxWidth: 600 }}
             />
-              <div className="text-sm text-gray-500 mt-2">
-                {formData.description.length}/500 characters
-              </div>
+            <button
+              type="button"
+              onClick={handleAiSuggestAbout}
+              disabled={aiAboutLoading}
+              className="absolute bottom-3 right-3 font-semibold rounded-full transition-colors disabled:opacity-50 border-0 focus:outline-none shadow-lg"
+              style={{
+                background: 'linear-gradient(90deg, #19e3cf 0%, #7b5cff 100%)',
+                padding: '1.5px',
+                borderRadius: '9999px',
+                zIndex: 10,
+              }}
+              title="Suggest about section with AI"
+            >
+              <span
+                className="flex items-center justify-center px-3 py-1.5 rounded-full"
+                style={{
+                  background: '#f7f7fa',
+                  color: '#444',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  borderRadius: '9999px',
+                }}
+              >
+                <img
+                  src="/icons/sparkler.png"
+                  alt="Sparkle"
+                  className="w-4 h-4 mr-1"
+                  style={{ display: 'inline-block', verticalAlign: 'middle' }}
+                />
+                {aiAboutLoading ? '...' : 'Generate'}
+              </span>
+            </button>
+          </div>
+            <div className="text-sm text-gray-500 mt-2">
+              {formData.description.length}/500 characters
+            </div>
+            {aiAboutError && <div className="text-red-500 text-sm mt-2">{aiAboutError}</div>}
           </div>
         );
 

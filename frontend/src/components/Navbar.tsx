@@ -56,29 +56,29 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
           )}
         </div>
         
-        {/* Right: Sublettor button and hamburger */}
+        {/* Right: Login button and hamburger */}
         <div className="flex items-center gap-4">
-          {/* Desktop: Sublettor button */}
-          {!user ? (
+          {/* Desktop: Login button */}
+          {!user && (
             <Link href="/login" className="hidden sm:block text-gray-700 text-base merriweather-medium">Log in</Link>
-          ) : (
-            <>
-              {pathname !== '/my-listings' && !loading && userListings && !userListings.hasListings && (
-                <Link 
-                  href="/add-listings" 
-                  className="hidden sm:block text-gray-700 text-base merriweather-medium"
-                >
-                  Become a Sublettor
-                </Link>
-              )}
-            </>
           )}
           
-          {/* Mobile hamburger */}
-          <div className="sm:hidden p-2">
-            <svg className="w-6 h-6" fill="none" stroke="#000000" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+          {/* Mobile hamburger or login button */}
+          <div className="sm:hidden">
+            {!user ? (
+              <Link href="/login" className="text-gray-700 text-base merriweather-medium px-3 py-2">
+                Log In
+              </Link>
+            ) : (
+              <button 
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="#000000" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            )}
           </div>
           
           {/* Desktop: Profile dropdown */}
@@ -138,65 +138,59 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
         </div>
 
         {/* Mobile dropdown */}
-        {menuOpen && (
+        {menuOpen && user && (
           <div className="sm:hidden fixed top-[100px] left-0 w-full bg-white shadow-md border-t py-4 flex flex-col gap-4 text-center text-black text-base merriweather-medium z-50">
-            {!user ? (
-              <Link href="/login" onClick={() => setMenuOpen(false)} className="text-black merriweather-medium">Log in</Link>
-            ) : (
-              <>
-                <div className="relative">
+            <div className="relative">
+              <button
+                ref={profileBtnRef}
+                onClick={() => setProfileDropdownOpen((o) => !o)}
+                className="focus:outline-none w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
+                aria-haspopup="true"
+                aria-expanded={profileDropdownOpen}
+                aria-label="Profile menu"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              {profileDropdownOpen && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
+                >
                   <button
-                    ref={profileBtnRef}
-                    onClick={() => setProfileDropdownOpen((o) => !o)}
-                    className=" focus:outline-none w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
-                    aria-haspopup="true"
-                    aria-expanded={profileDropdownOpen}
-                    aria-label="Profile menu"
+                    className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      setProfileModalOpen(true);
+                    }}
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+                    Profile
                   </button>
-                  {profileDropdownOpen && (
-                    <div
-                      ref={dropdownRef}
-                      className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
-                    >
-                      <button
-                        className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black merriweather-regular"
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          setProfileModalOpen(true);
-                        }}
-                      >
-                        Profile
-                      </button>
-                      <Link
-                        href="/my-listings"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        My Listings
-                      </Link>
-                      <Link
-                        href="/messages"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Messages
-                      </Link>
-                      <Link
-                        href="/wishlist"
-                        className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      >
-                        Wishlist
-                      </Link>
-                    </div>
-                  )}
+                  <Link
+                    href="/my-listings"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    My Listings
+                  </Link>
+                  <Link
+                    href="/messages"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    Messages
+                  </Link>
+                  <Link
+                    href="/wishlist"
+                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    Wishlist
+                  </Link>
                 </div>
-              </>
-            )}
+              )}
+            </div>
           </div>
         )}
       </header>

@@ -37,7 +37,7 @@ interface Message {
 
 // Add formatPrice helper at the top level
 function formatPrice(price: number) {
-  const formatted = Number(price).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  const formatted = Number(price).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
   return formatted.startsWith('$') ? formatted : `$${formatted}`;
 }
 
@@ -277,7 +277,7 @@ export default function MessagesPage() {
           {selected && currentListing ? (
             <div className="overflow-y-auto scrollbar-hide">
               <button 
-                className="bg-white border border-black text-black px-3 py-1 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm mb-4 w-fit"
+                className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black mb-4 w-fit"
                 onClick={() => router.push(`/listings/${selected.listing_id}`)}
               >
                 {userId === currentListing.user_id ? 'Your Listing' : 'View Listing'}
@@ -328,12 +328,12 @@ export default function MessagesPage() {
                       nights = diff === 0 ? 1 : diff;
                     }
                     if (!selectedRange.start || !selectedRange.end) {
-                      return `${formatPrice(currentListing.price_per_night)} per night`;
+                      return `${formatPrice(Math.round(currentListing.price_per_night))} per night`;
                     }
                     if (nights === 1) {
-                      return `${formatPrice(currentListing.price_per_night)} per night`;
+                      return `${formatPrice(Math.round(currentListing.price_per_night))} per night`;
                     }
-                    return `${formatPrice(currentListing.price_per_night * nights)} for ${nights} nights`;
+                    return `${formatPrice(Math.round(currentListing.price_per_night * nights))} for ${nights} nights`;
                   })()}
                 </div>
               )}
