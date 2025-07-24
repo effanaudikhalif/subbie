@@ -21,11 +21,40 @@ interface ListingCardProps {
   wishlistMode?: boolean;
   shortCard?: boolean;
   onAvatarClick?: () => void;
+  // Host control props
+  showHostControls?: boolean;
+  listingStatus?: string;
+  onToggleStatus?: (listingId: string, currentStatus: string) => void;
+  onEditListing?: (listingId: string) => void;
+  onDeleteListing?: (listingId: string) => void;
+  isDeleting?: boolean;
+  // Custom height prop
+  cardHeight?: string;
+  // Custom margin prop for different pages
+  cardMargin?: string;
 }
 
-const CARD_HEIGHT = 'h-[420px]';
-const SHORT_CARD_HEIGHT = 'h-[220px]';
-const IMAGE_HEIGHT = 'h-56'; // About 224px
+const CARD_HEIGHT = 'h-[300px]';
+const SHORT_CARD_HEIGHT = 'h-[260px]';
+const IMAGE_HEIGHT = 'h-40'; // About 224px
+
+const getUniversityDisplay = (universityName: string | undefined) => {
+  if (!universityName) return '';
+  
+  // Create the full text to test
+  const fullText = `Hosted by ${universityName} student`;
+  
+  // If the full text is short (less than 25 characters), use full university name
+  if (fullText.length <= 25) {
+    return universityName;
+  }
+  
+  // For longer text, get initials from each word
+  const words = universityName.split(' ');
+  const initials = words.map(word => word.charAt(0).toUpperCase()).join('');
+  
+  return initials;
+};
 
 const ListingCard: React.FC<ListingCardProps> = ({
   id,
@@ -45,7 +74,15 @@ const ListingCard: React.FC<ListingCardProps> = ({
   hideWishlist = false,
   wishlistMode = false,
   shortCard = false,
-  onAvatarClick
+  onAvatarClick,
+  showHostControls = false,
+  listingStatus,
+  onToggleStatus,
+  onEditListing,
+  onDeleteListing,
+  isDeleting = false,
+  cardHeight,
+  cardMargin
 }) => {
   const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(false);
@@ -353,9 +390,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
     );
   };
 
-  return (
-    <Link href={href || `/listings/${id}`} className="no-underline">
-      <div className={`w-[320px] bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT}`}>
+  const cardContent = (
+    <div className={`w-[210px] bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}>
         {/* Image Container */}
         <div className={`relative w-full bg-gray-200 overflow-hidden ${IMAGE_HEIGHT} group/image-area`}>
           <img
@@ -367,22 +403,28 @@ const ListingCard: React.FC<ListingCardProps> = ({
           {/* Image Navigation - show only on hover */}
           {images.length > 1 && (
             <>
-              <button
-                onClick={handlePrevImage}
-                className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
-              >
-                <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
-                onClick={handleNextImage}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
-              >
-                <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+              {/* Left arrow - only show if not on first image */}
+              {currentImageIndex > 0 && (
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
+                >
+                  <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+              )}
+              {/* Right arrow - only show if not on last image */}
+              {currentImageIndex < images.length - 1 && (
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
+                >
+                  <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              )}
             </>
           )}
           
@@ -424,60 +466,51 @@ const ListingCard: React.FC<ListingCardProps> = ({
         {/* Content */}
         <div className="p-4 flex flex-col flex-1 justify-between min-h-[100px]">
           {/* Title */}
-          <div className="flex justify-between items-start mb-3">
-            <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 w-full">{title}</h3>
+          <div className="flex justify-between items-start">
+            <h3 className="text-sm font-semibold text-gray-700 truncate w-full">{title}</h3>
           </div>
           {/* Host Info - only if not shortCard */}
           {!shortCard && name && (
-            <div className="flex items-center mb-2">
-              {avatar_url ? (
-                <img
-                  src={avatar_url}
-                  alt={name}
-                  className="w-10 h-10 rounded-full mr-2 cursor-pointer"
-                  onClick={e => { e.stopPropagation(); e.preventDefault(); onAvatarClick && onAvatarClick(); }}
-                />
-              ) : (
-                <div
-                  className="w-10 h-10 bg-gray-300 rounded-full mr-2 flex items-center justify-center cursor-pointer"
-                  onClick={e => { e.stopPropagation(); e.preventDefault(); onAvatarClick && onAvatarClick(); }}
-                >
-                  <span className="text-lg text-gray-600 font-semibold">{name?.charAt(0)}</span>
-                </div>
-              )}
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-gray-700">{name}</span>
-                {university_name && (
-                  <span className="text-sm text-gray-500">{university_name}</span>
-                )}
-              </div>
+            <div className="flex items-center">
+              <span className="text-sm font-medium text-gray-700 truncate w-full">
+                Hosted by {getUniversityDisplay(university_name)} student
+              </span>
             </div>
           )}
           {/* Property Details */}
-          <div className="flex items-center text-sm text-gray-600 mb-2">
-            <span>{bedrooms} bed{bedrooms !== 1 ? 's' : ''}</span>
-            {totalReviews && totalReviews > 0 ? (
-              <>
-                <span className="mx-1">•</span>
-                <span className="flex items-center">
-                  <svg className="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  <span>{averageRating?.toFixed(1) || '0.0'}</span>
-                  <span className="text-gray-500 ml-1">({totalReviews} review{totalReviews !== 1 ? 's' : ''})</span>
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="mx-1">•</span>
-                <span className="text-gray-500">No reviews</span>
-              </>
-            )}
+          <div className="flex items-center text-sm text-gray-700">
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-gray-700">{bedrooms}</span>
+                <img src="/icons/bed.png" alt="bed" className="w-4 h-4 ml-1" />
+              </div>
+              <span>•</span>
+              <div className="flex items-center">
+                <span>{bathrooms}</span>
+                <img src="/icons/bath-tub.png" alt="bathroom" className="w-4 h-4 ml-1" />
+              </div>
+              {totalReviews && totalReviews > 0 ? (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center">
+                    <svg className="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <span>{averageRating?.toFixed(1) || '0.0'}</span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>•</span>
+                  <span className="text-gray-500">No reviews</span>
+                </>
+              )}
+            </div>
           </div>
           {/* Price/total price section at the bottom */}
           {!shortCard && (
             <div className="flex items-center justify-between">
-              <div className="text-lg font-semibold text-black">
+              <div className="text-sm font-semibold text-black">
                 {(() => {
                   if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
                     const checkIn = new Date(dateRange[0].startDate);
@@ -486,10 +519,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
                     const totalPrice = nights * price_per_night;
                     return (
                       <>
-                        <span className="text-lg font-semibold text-black">${Math.round(price_per_night)}</span>
-                        <span className="text-sm font-normal text-gray-500"> per night, </span>
-                        <span className="text-lg font-semibold text-black">${Number(totalPrice).toLocaleString()}</span>
-                        <span className="text-sm font-normal text-gray-500"> for {nights} night{nights !== 1 ? 's' : ''}</span>
+                        <span className="text-sm font-semibold text-black-600">${Number(totalPrice).toLocaleString()}</span>
+                        <span className="text-sm font-normal text-gray-600"> for {nights} night{nights !== 1 ? 's' : ''}</span>
                       </>
                     );
                   } else {
@@ -501,6 +532,61 @@ const ListingCard: React.FC<ListingCardProps> = ({
                     );
                   }
                 })()}
+              </div>
+            </div>
+          )}
+          
+          {/* Host Controls */}
+          {showHostControls && (
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                          {/* Status Toggle */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleStatus?.(id, listingStatus || '');
+              }}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                listingStatus === 'active' || listingStatus === 'approved' || !listingStatus
+                  ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-200'
+                  : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-green-100 hover:text-green-700 hover:border-green-200'
+              }`}
+              title={listingStatus === 'active' || listingStatus === 'approved' || !listingStatus ? 'Click to set as Inactive' : 'Click to set as Active'}
+            >
+              {listingStatus === 'active' || listingStatus === 'approved' || !listingStatus ? 'Active' : 'Inactive'}
+            </button>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-1">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEditListing?.(id);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+                  title="Edit Listing"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDeleteListing?.(id);
+                  }}
+                  disabled={isDeleting}
+                  className={`p-1.5 rounded-full hover:bg-gray-100 text-gray-600 transition-colors ${
+                    isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  title="Delete Listing"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
             </div>
           )}
@@ -529,8 +615,18 @@ const ListingCard: React.FC<ListingCardProps> = ({
           </div>
         )}
       </div>
-    </Link>
-  );
+    );
+
+  // Return the card wrapped in Link only if not showing host controls (i.e., for regular listings page)
+  if (showHostControls) {
+    return cardContent;
+  } else {
+    return (
+      <Link href={href || `/listings/${id}`} className="no-underline">
+        {cardContent}
+      </Link>
+    );
+  }
 };
 
 export default ListingCard; 

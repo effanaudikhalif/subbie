@@ -36,6 +36,9 @@ interface Listing {
   status?: string; // Added for filtering
   latitude?: number;
   longitude?: number;
+  name?: string;
+  avatar_url?: string;
+  university_name?: string;
 }
 
 interface Booking {
@@ -1028,73 +1031,30 @@ export default function MyListingsPage() {
                     {/* Listings grid based on toggle */}
                     {(showActive ? activeListings : inactiveListings).length > 0 ? (
                       <div className="mb-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="flex flex-wrap -mx-1">
                           {(showActive ? activeListings : inactiveListings).map((listing) => (
-                            <div key={listing.id} className="relative">
-                              {/* Toggle switch top left */}
-                              <button
-                                onClick={() => handleToggleStatus(listing.id, listing.status || '')}
-                                className="absolute top-2 left-2 z-10 focus:outline-none"
-                                title={listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'Set as Inactive' : 'Set as Active'}
-                                style={{ width: 56, height: 32 }}
-                              >
-                                <span
-                                  className={`relative flex items-center w-14 h-8 rounded-full transition-colors duration-300 ${listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'bg-green-400' : 'bg-red-400'}`}
-                                >
-                                  {/* Sliding circle */}
-                                  <span
-                                    className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow transition-transform duration-300 ${listing.status === 'active' || listing.status === 'approved' || !listing.status ? 'translate-x-0' : 'translate-x-6'}`}
-                                  >
-                                    {listing.status === 'active' || listing.status === 'approved' || !listing.status ? (
-                                      <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    ) : (
-                                      <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    )}
-                                  </span>
-                                </span>
-                              </button>
-                              <ListingCard 
-                                id={listing.id}
-                                title={listing.title}
-                                images={listing.images}
-                                bedrooms={listing.bedrooms}
-                                bathrooms={listing.bathrooms}
-                                price_per_night={listing.price_per_night}
-                                amenities={listing.amenities}
-                                hideWishlist={true}
-                                shortCard={true}
-                              />
-                              {/* Action buttons overlay */}
-                              <div className="absolute top-2 right-2 flex gap-2">
-                                <button
-                                  onClick={() => handleEditListing(listing.id)}
-                                  className="bg-white hover:bg-gray-100 text-black p-2 rounded-full shadow-lg transition-colors border border-gray-300"
-                                  title="Edit Listing"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteListing(listing.id)}
-                                  disabled={deletingListing === listing.id}
-                                  className={`p-2 rounded-full shadow-lg transition-colors border border-gray-300 bg-white hover:bg-gray-100 text-black ${
-                                    deletingListing === listing.id
-                                      ? 'opacity-50 cursor-not-allowed'
-                                      : ''
-                                  }`}
-                                  title="Delete Listing"
-                                >
-                                  <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
+                            <ListingCard 
+                              key={listing.id}
+                              id={listing.id}
+                              title={listing.title}
+                              images={listing.images}
+                              name={listing.name}
+                              avatar_url={listing.avatar_url}
+                              university_name={listing.university_name}
+                              bedrooms={listing.bedrooms}
+                              bathrooms={listing.bathrooms}
+                              price_per_night={listing.price_per_night}
+                              amenities={listing.amenities}
+                              hideWishlist={true}
+                              showHostControls={true}
+                              listingStatus={listing.status}
+                              onToggleStatus={handleToggleStatus}
+                              onEditListing={handleEditListing}
+                              onDeleteListing={handleDeleteListing}
+                              isDeleting={deletingListing === listing.id}
+                              cardHeight="h-[350px]"
+                              cardMargin="mx-4"
+                            />
                           ))}
                         </div>
                       </div>

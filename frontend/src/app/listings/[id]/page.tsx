@@ -1068,7 +1068,7 @@ export default function ListingDetails() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
             </div>
           ) : otherListings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3">
+            <div className="flex flex-wrap justify-start gap-10">
               {otherListings.map((otherListing) => (
                 <div key={otherListing.id} className="cursor-pointer" onClick={() => router.push(`/listings/${otherListing.id}`)}>
                   <ListingCard 
@@ -1084,6 +1084,7 @@ export default function ListingDetails() {
                     averageRating={otherListing.averageRating}
                     totalReviews={otherListing.totalReviews}
                     amenities={otherListing.amenities}
+                    cardMargin="mx-0"
                   />
                 </div>
               ))}

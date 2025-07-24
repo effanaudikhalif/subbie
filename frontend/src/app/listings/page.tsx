@@ -51,7 +51,7 @@ export default function Results() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const listingsPerPage = 4;
+  const listingsPerPage = 15;
 
   // Applied values from URL/query params (used for filtering)
   const appliedWhere = searchParams?.get('where') || '';
@@ -289,15 +289,15 @@ export default function Results() {
       </Navbar>
       
       {/* Split Layout: Listings on left, Map preview on right */}
-      <div className="h-[calc(100vh-4rem)] pt-13 pb-6">
+      <div className="h-[calc(100vh-4rem)] pt-20 pb-6">
         <div className="flex h-full">
           {/* Left side - Listings */}
-          <div className="w-1/2 overflow-y-auto px-6 h-full listings-container pb-2">
+          <div className="w-1/2 overflow-y-auto px-8 h-[80vh] listings-container pb-2">
             <h2 className="merriweather-medium text-black font-bold mb-0.5 text-sm mb-6">
               {filteredListings.length} places within map area
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-5">
               {paginatedListings.map(listing => {
                 console.log(`Listing ${listing.id} amenities:`, listing.amenities);
                 return (
@@ -316,6 +316,7 @@ export default function Results() {
                     averageRating={listing.averageRating}
                     totalReviews={listing.totalReviews}
                     amenities={listing.amenities || []}
+                    cardHeight="h-[300px]"
                   />
                 );
               })}
@@ -360,7 +361,7 @@ export default function Results() {
           </div>
           
           {/* Right side - Map Preview */}
-          <div className="w-1/2 h-full overflow-hidden flex-shrink-0 px-6 map-container">
+          <div className="w-1/2 h-[80vh] overflow-hidden flex-shrink-0 px-8 map-container">
             <LocationMapPreview 
               key={mapRefreshKey}
               searchLocation={where}
