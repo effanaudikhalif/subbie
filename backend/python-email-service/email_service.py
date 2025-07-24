@@ -99,4 +99,87 @@ class EmailService:
             return self.send_email(recipient_email, subject, html_content)
         return False
 
+    def send_listing_added_notification(self, recipient_email: str, host_name: str, listing_title: str, listing_address: str, listing_price: str, start_date: str, end_date: str, listing_url: str) -> bool:
+        """Send a listing added notification email"""
+        subject = f"Your listing '{listing_title}' has been added to Subly"
+        
+        context = {
+            'host_name': host_name,
+            'listing_title': listing_title,
+            'listing_address': listing_address,
+            'listing_price': listing_price,
+            'start_date': start_date,
+            'end_date': end_date,
+            'listing_url': listing_url,
+            'app_name': 'Subly'
+        }
+        
+        html_content = self.render_template('listing_added.html', context)
+        
+        if html_content:
+            return self.send_email(recipient_email, subject, html_content)
+        return False
+
+    def send_listing_edited_notification(self, recipient_email: str, host_name: str, listing_title: str, listing_address: str, listing_price: str, start_date: str, end_date: str, listing_url: str) -> bool:
+        """Send a listing edited notification email"""
+        subject = f"Your listing '{listing_title}' has been updated on Subly"
+        
+        context = {
+            'host_name': host_name,
+            'listing_title': listing_title,
+            'listing_address': listing_address,
+            'listing_price': listing_price,
+            'start_date': start_date,
+            'end_date': end_date,
+            'listing_url': listing_url,
+            'app_name': 'Subly'
+        }
+        
+        html_content = self.render_template('listing_edited.html', context)
+        
+        if html_content:
+            return self.send_email(recipient_email, subject, html_content)
+        return False
+
+    def send_listing_deleted_notification(self, recipient_email: str, host_name: str, listing_title: str, listing_address: str, listing_price: str, removal_date: str, dashboard_url: str) -> bool:
+        """Send a listing deleted notification email"""
+        subject = f"Your listing '{listing_title}' has been removed from Subly"
+        
+        context = {
+            'host_name': host_name,
+            'listing_title': listing_title,
+            'listing_address': listing_address,
+            'listing_price': listing_price,
+            'removal_date': removal_date,
+            'dashboard_url': dashboard_url,
+            'app_name': 'Subly'
+        }
+        
+        html_content = self.render_template('listing_deleted.html', context)
+        
+        if html_content:
+            return self.send_email(recipient_email, subject, html_content)
+        return False
+
+    def send_listing_expired_notification(self, recipient_email: str, host_name: str, listing_title: str, listing_address: str, listing_price: str, end_date: str, expiration_date: str, dashboard_url: str) -> bool:
+        """Send a listing expired notification email"""
+        subject = f"Your listing '{listing_title}' has expired on Subly"
+        
+        context = {
+            'host_name': host_name,
+            'listing_title': listing_title,
+            'listing_address': listing_address,
+            'listing_price': listing_price,
+            'end_date': end_date,
+            'expiration_date': expiration_date,
+            'dashboard_url': dashboard_url,
+            'app_name': 'Subly'
+        }
+        
+        html_content = self.render_template('listing_expired.html', context)
+        
+        if html_content:
+            return self.send_email(recipient_email, subject, html_content)
+        return False
+
 email_service = EmailService() 

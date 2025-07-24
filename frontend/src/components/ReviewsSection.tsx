@@ -117,6 +117,24 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
 
+  // Listen for custom events
+  useEffect(() => {
+    const handleOpenReviewModal = () => {
+      setShowReviewModal(true);
+    };
+
+    const handleShowAllReviews = () => {
+      setShowAllReviews(true);
+    };
+
+    window.addEventListener('openReviewModal', handleOpenReviewModal);
+    window.addEventListener('showAllReviews', handleShowAllReviews);
+    return () => {
+      window.removeEventListener('openReviewModal', handleOpenReviewModal);
+      window.removeEventListener('showAllReviews', handleShowAllReviews);
+    };
+  }, []);
+
   // Handle review form submission
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,41 +332,6 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
   return (
     <>
       <div className="space-y-8">
-        {/* Overall Rating and Category Ratings */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          {/* Overall Rating */}
-          <div className="flex flex-col items-center mb-4 sm:mb-0 sm:mr-12">
-            <span className="text-6xl font-bold text-black">{averageRatings?.overall.toFixed(1)}</span>
-            <div className="mt-2">
-              {renderStars(averageRatings?.overall || 0)}
-            </div>
-          </div>
-          {/* Category Ratings as Mini Bar Chart */}
-          <div className="flex flex-col gap-2 w-full min-w-[220px] max-w-xl">
-            {[
-              { name: 'Cleanliness', rating: averageRatings?.cleanliness },
-              { name: 'Accuracy', rating: averageRatings?.accuracy },
-              { name: 'Communication', rating: averageRatings?.communication },
-              { name: 'Location', rating: averageRatings?.location },
-              { name: 'Value', rating: averageRatings?.value },
-            ].map((category) => {
-              const percent = Math.max(0, Math.min(1, (category.rating ?? 0) / 5));
-              return (
-                <div key={category.name} className="flex items-center gap-2 w-full">
-                  <span className="text-sm font-medium text-gray-700 w-32">{category.name}</span>
-                  <div className="flex-1 h-3 bg-gray-200 rounded-full relative mx-2 min-w-[60px] max-w-[180px]">
-                    <div
-                      className="h-3 rounded-full bg-teal-600 transition-all"
-                      style={{ width: `${percent * 100}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900 w-8 text-right">{(category.rating ?? 0).toFixed(1)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
         {/* If no reviews, show the message */}
         {reviews.length === 0 && (
           <div className="flex justify-start mt-6">
@@ -427,39 +410,20 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
         {/* Individual Reviews */}
         {reviews.length > 0 && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {reviews.slice(0, 4).map((review) => (
+            <div className="flex flex-col space-y-6 max-w-2xl">
+              {reviews.slice(0, 3).map((review) => (
                 <ReviewCard key={review.id} review={review} truncate reviewerId={reviewerId} />
               ))}
             </div>
-            {/* Show all reviews and Write a review buttons */}
-            {reviews.length > 4 ? (
-              <div className="col-span-1 md:col-span-2 flex justify-start gap-4 mt-6">
+            {/* Show all reviews button */}
+            {reviews.length > 3 && (
+              <div className="flex justify-start mt-6">
                 <button
                   onClick={() => setShowAllReviews(true)}
                   className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
                 >
                   Show all {reviews.length} reviews
                 </button>
-                {(!reviewer || !reviewee || reviewer.id !== reviewee.id) && (
-                  <button
-                    className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                    onClick={() => setShowReviewModal(true)}
-                  >
-                    Write a review
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex justify-start mt-6">
-                {(!reviewer || !reviewee || reviewer.id !== reviewee.id) && (
-                  <button
-                    className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                    onClick={() => setShowReviewModal(true)}
-                  >
-                    Write a review
-                  </button>
-                )}
               </div>
             )}
           </div>

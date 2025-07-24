@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const MockEmailService = require('../mockEmailService');
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -22,9 +23,12 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 module.exports = (pool) => {
+  const emailNotifications = new MockEmailService();
+
   // Get all listings (optionally filter by user_id or exclude user_id)
   router.get('/', async (req, res) => {
     try {
+      
       const { user_id, exclude_user_id } = req.query;
       let rows;
       
@@ -46,6 +50,7 @@ module.exports = (pool) => {
           LEFT JOIN universities univ ON u.university_id = univ.id
           WHERE (l.status IS NULL OR l.status IN ('active', 'approved'))
           AND l.user_id != $1
+          AND l.end_date >= CURRENT_TIMESTAMP
         `;
         let params = [exclude_user_id];
         
@@ -64,7 +69,8 @@ module.exports = (pool) => {
           FROM listings l 
           LEFT JOIN users u ON l.user_id = u.id
           LEFT JOIN universities univ ON u.university_id = univ.id
-          WHERE l.status IS NULL OR l.status IN ('active', 'approved')
+          WHERE (l.status IS NULL OR l.status IN ('active', 'approved'))
+          AND l.end_date >= CURRENT_TIMESTAMP
         `);
         rows = result.rows;
       }
@@ -92,6 +98,8 @@ module.exports = (pool) => {
           COUNT(hr.id) as total_reviews
         FROM listings l
         LEFT JOIN host_reviews hr ON l.id = hr.listing_id
+        WHERE (l.status IS NULL OR l.status IN ('active', 'approved'))
+        AND l.end_date >= CURRENT_TIMESTAMP
         GROUP BY l.id
       `);
       
@@ -218,6 +226,23 @@ module.exports = (pool) => {
         }
       }
 
+      // Send email notification for listing added
+      try {
+        // Get host information
+        const hostResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [user_id]);
+        if (hostResult.rows.length > 0) {
+          const host = hostResult.rows[0];
+          await emailNotifications.sendListingAddedNotification(
+            host.email,
+            host.name,
+            listing
+          );
+        }
+      } catch (emailError) {
+        console.error('Failed to send listing added email notification:', emailError);
+        // Don't fail the request if email fails
+      }
+
       res.status(201).json(listing);
     } catch (err) {
       console.error('Error creating listing:', err);
@@ -340,6 +365,23 @@ module.exports = (pool) => {
         }
       }
 
+      // Send email notification for listing edited
+      try {
+        // Get host information
+        const hostResult = await pool.query('SELECT u.name, u.email FROM users u JOIN listings l ON u.id = l.user_id WHERE l.id = $1', [id]);
+        if (hostResult.rows.length > 0) {
+          const host = hostResult.rows[0];
+          await emailNotifications.sendListingEditedNotification(
+            host.email,
+            host.name,
+            rows[0]
+          );
+        }
+      } catch (emailError) {
+        console.error('Failed to send listing edited email notification:', emailError);
+        // Don't fail the request if email fails
+      }
+
       res.json(rows[0]);
     } catch (err) {
       console.error('Error updating listing:', err);
@@ -367,8 +409,30 @@ module.exports = (pool) => {
   router.delete('/:id', async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Get listing and host information before deletion
+      const listingResult = await pool.query('SELECT l.*, u.name, u.email FROM listings l JOIN users u ON l.user_id = u.id WHERE l.id = $1', [id]);
+      if (listingResult.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+      
+      const listing = listingResult.rows[0];
+      const host = { name: listing.name, email: listing.email };
+      
+      // Delete the listing
       const { rowCount } = await pool.query('DELETE FROM listings WHERE id = $1', [id]);
       if (rowCount === 0) return res.status(404).json({ error: 'Not found' });
+      
+      // Send email notification for listing deleted
+      try {
+        await emailNotifications.sendListingDeletedNotification(
+          host.email,
+          host.name,
+          listing
+        );
+      } catch (emailError) {
+        console.error('Failed to send listing deleted email notification:', emailError);
+        // Don't fail the request if email fails
+      }
+      
       res.status(204).send();
     } catch (err) {
       res.status(500).json({ error: err.message });

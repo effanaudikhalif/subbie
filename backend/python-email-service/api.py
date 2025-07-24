@@ -19,6 +19,35 @@ class MessageNotificationRequest(BaseModel):
     message_preview: str
     conversation_url: str
 
+class ListingNotificationRequest(BaseModel):
+    recipient_email: str
+    host_name: str
+    listing_title: str
+    listing_address: str
+    listing_price: str
+    start_date: str
+    end_date: str
+    listing_url: str
+
+class ListingDeletedRequest(BaseModel):
+    recipient_email: str
+    host_name: str
+    listing_title: str
+    listing_address: str
+    listing_price: str
+    removal_date: str
+    dashboard_url: str
+
+class ListingExpiredRequest(BaseModel):
+    recipient_email: str
+    host_name: str
+    listing_title: str
+    listing_address: str
+    listing_price: str
+    end_date: str
+    expiration_date: str
+    dashboard_url: str
+
 class HealthResponse(BaseModel):
     status: str
     message: str
@@ -57,6 +86,101 @@ async def send_message_notification(request: MessageNotificationRequest):
 
     except Exception as e:
         logger.error(f"Error sending message notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/send-listing-added-notification")
+async def send_listing_added_notification(request: ListingNotificationRequest):
+    """Send a listing added notification email"""
+    try:
+        success = email_service.send_listing_added_notification(
+            recipient_email=request.recipient_email,
+            host_name=request.host_name,
+            listing_title=request.listing_title,
+            listing_address=request.listing_address,
+            listing_price=request.listing_price,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            listing_url=request.listing_url
+        )
+
+        if success:
+            return {"status": "success", "message": "Listing added notification sent successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+
+    except Exception as e:
+        logger.error(f"Error sending listing added notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/send-listing-edited-notification")
+async def send_listing_edited_notification(request: ListingNotificationRequest):
+    """Send a listing edited notification email"""
+    try:
+        success = email_service.send_listing_edited_notification(
+            recipient_email=request.recipient_email,
+            host_name=request.host_name,
+            listing_title=request.listing_title,
+            listing_address=request.listing_address,
+            listing_price=request.listing_price,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            listing_url=request.listing_url
+        )
+
+        if success:
+            return {"status": "success", "message": "Listing edited notification sent successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+
+    except Exception as e:
+        logger.error(f"Error sending listing edited notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/send-listing-deleted-notification")
+async def send_listing_deleted_notification(request: ListingDeletedRequest):
+    """Send a listing deleted notification email"""
+    try:
+        success = email_service.send_listing_deleted_notification(
+            recipient_email=request.recipient_email,
+            host_name=request.host_name,
+            listing_title=request.listing_title,
+            listing_address=request.listing_address,
+            listing_price=request.listing_price,
+            removal_date=request.removal_date,
+            dashboard_url=request.dashboard_url
+        )
+
+        if success:
+            return {"status": "success", "message": "Listing deleted notification sent successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+
+    except Exception as e:
+        logger.error(f"Error sending listing deleted notification: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/send-listing-expired-notification")
+async def send_listing_expired_notification(request: ListingExpiredRequest):
+    """Send a listing expired notification email"""
+    try:
+        success = email_service.send_listing_expired_notification(
+            recipient_email=request.recipient_email,
+            host_name=request.host_name,
+            listing_title=request.listing_title,
+            listing_address=request.listing_address,
+            listing_price=request.listing_price,
+            end_date=request.end_date,
+            expiration_date=request.expiration_date,
+            dashboard_url=request.dashboard_url
+        )
+
+        if success:
+            return {"status": "success", "message": "Listing expired notification sent successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to send email")
+
+    except Exception as e:
+        logger.error(f"Error sending listing expired notification: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/send-test-email")

@@ -33,6 +33,8 @@ interface ListingCardProps {
   cardHeight?: string;
   // Custom margin prop for different pages
   cardMargin?: string;
+  // Date props for expiration check
+  end_date?: string;
 }
 
 const CARD_HEIGHT = 'h-[300px]';
@@ -83,7 +85,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
   onDeleteListing,
   isDeleting = false,
   cardHeight,
-  cardMargin
+  cardMargin,
+  end_date
 }) => {
   const { user } = useAuth();
   const router = useRouter();
@@ -91,6 +94,9 @@ const ListingCard: React.FC<ListingCardProps> = ({
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
+
+  // Check if listing is expired
+  const isExpired = end_date ? new Date(end_date) < new Date() : false;
   const handleNextImage = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -420,8 +426,17 @@ const ListingCard: React.FC<ListingCardProps> = ({
           <img
             src={imageUrl}
             alt={title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isExpired ? 'opacity-50' : ''}`}
           />
+          
+          {/* Expiration Overlay */}
+          {isExpired && (
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+              <div className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+                EXPIRED
+              </div>
+            </div>
+          )}
           
           {/* Image Navigation - show only on hover */}
           {images.length > 1 && (
@@ -556,6 +571,12 @@ const ListingCard: React.FC<ListingCardProps> = ({
                   }
                 })()}
               </div>
+              {/* Expiration indicator */}
+              {isExpired && (
+                <div className="text-xs text-red-600 font-medium">
+                  Expired
+                </div>
+              )}
             </div>
           )}
           

@@ -565,6 +565,121 @@ export default function ListingDetails() {
   const [otherListings, setOtherListings] = useState<any[]>([]);
   const [otherListingsLoading, setOtherListingsLoading] = useState(false);
 
+  // State for listing ratings
+  const [listingRatings, setListingRatings] = useState<{
+    averageRating: number;
+    totalReviews: number;
+    categoryRatings: {
+      cleanliness: number;
+      accuracy: number;
+      communication: number;
+      location: number;
+      value: number;
+    };
+  } | null>(null);
+
+  // State for review modal
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    cleanliness_rating: 0,
+    accuracy_rating: 0,
+    communication_rating: 0,
+    location_rating: 0,
+    value_rating: 0,
+    comment: '',
+  });
+
+  // Handle review form submission
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !host || !user.id || !host.id) {
+      alert('You must be logged in and viewing a valid listing to submit a review.');
+      return;
+    }
+    // Prevent submission if any rating is 0
+    const { cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating } = reviewForm;
+    if ([cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating].some(r => r === 0)) {
+      alert('Please provide a rating for all categories.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:4000/api/host-reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listing_id: listing?.id,
+          reviewer_id: user.id,
+          reviewee_id: host.id,
+          cleanliness_rating: reviewForm.cleanliness_rating,
+          accuracy_rating: reviewForm.accuracy_rating,
+          communication_rating: reviewForm.communication_rating,
+          location_rating: reviewForm.location_rating,
+          value_rating: reviewForm.value_rating,
+          comment: reviewForm.comment,
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Failed to submit review.');
+        return;
+      }
+      // Success: close modal, reset form, refresh ratings
+      setShowReviewModal(false);
+      setReviewForm({
+        cleanliness_rating: 0,
+        accuracy_rating: 0,
+        communication_rating: 0,
+        location_rating: 0,
+        value_rating: 0,
+        comment: '',
+      });
+      // Refresh the ratings to show the new review
+      if (listing?.id) {
+        const fetchListingRatings = async () => {
+          try {
+            const response = await fetch(`http://localhost:4000/api/host-reviews`);
+            if (response.ok) {
+              const allReviews = await response.json();
+              const listingReviews = allReviews.filter((review: any) => review.listing_id === listing.id);
+              
+              if (listingReviews.length > 0) {
+                const totals = listingReviews.reduce((acc: any, review: any) => ({
+                  cleanliness: acc.cleanliness + review.cleanliness_rating,
+                  accuracy: acc.accuracy + review.accuracy_rating,
+                  communication: acc.communication + review.communication_rating,
+                  location: acc.location + review.location_rating,
+                  value: acc.value + review.value_rating,
+                }), { cleanliness: 0, accuracy: 0, communication: 0, location: 0, value: 0 });
+                
+                const count = listingReviews.length;
+                const categoryRatings = {
+                  cleanliness: totals.cleanliness / count,
+                  accuracy: totals.accuracy / count,
+                  communication: totals.communication / count,
+                  location: totals.location / count,
+                  value: totals.value / count,
+                };
+                
+                const averageRating = (totals.cleanliness + totals.accuracy + totals.communication + totals.location + totals.value) / (count * 5);
+                
+                setListingRatings({
+                  averageRating,
+                  totalReviews: count,
+                  categoryRatings
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error refreshing ratings:', error);
+          }
+        };
+        fetchListingRatings();
+      }
+    } catch (err) {
+      alert('Failed to submit review.');
+    }
+  };
+
   // Handler for address selection from autocomplete
   const handleCommuteAddressSelect = (addressData: any) => {
     setCommuteAddress(
@@ -601,6 +716,67 @@ export default function ListingDetails() {
       fetchCommute();
     }
   }, [commuteCoords, listing?.latitude, listing?.longitude]);
+
+  // Fetch listing ratings
+  useEffect(() => {
+    const fetchListingRatings = async () => {
+      if (!listing?.id) return;
+      try {
+        const response = await fetch(`http://localhost:4000/api/host-reviews`);
+        if (response.ok) {
+          const allReviews = await response.json();
+          // Filter reviews for this listing
+          const listingReviews = allReviews.filter((review: any) => review.listing_id === listing.id);
+          
+          if (listingReviews.length > 0) {
+            // Calculate average ratings
+            const totals = listingReviews.reduce((acc: any, review: any) => ({
+              cleanliness: acc.cleanliness + review.cleanliness_rating,
+              accuracy: acc.accuracy + review.accuracy_rating,
+              communication: acc.communication + review.communication_rating,
+              location: acc.location + review.location_rating,
+              value: acc.value + review.value_rating,
+            }), { cleanliness: 0, accuracy: 0, communication: 0, location: 0, value: 0 });
+            
+            const count = listingReviews.length;
+            const categoryRatings = {
+              cleanliness: totals.cleanliness / count,
+              accuracy: totals.accuracy / count,
+              communication: totals.communication / count,
+              location: totals.location / count,
+              value: totals.value / count,
+            };
+            
+            const averageRating = (totals.cleanliness + totals.accuracy + totals.communication + totals.location + totals.value) / (count * 5);
+            
+            setListingRatings({
+              averageRating,
+              totalReviews: count,
+              categoryRatings
+            });
+          } else {
+            setListingRatings({
+              averageRating: 0,
+              totalReviews: 0,
+              categoryRatings: {
+                cleanliness: 0,
+                accuracy: 0,
+                communication: 0,
+                location: 0,
+                value: 0,
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching listing ratings:', error);
+      }
+    };
+    
+    if (listing?.id) {
+      fetchListingRatings();
+    }
+  }, [listing?.id]);
 
   // Fetch other listings (excluding current user's listings)
   useEffect(() => {
@@ -923,6 +1099,7 @@ export default function ListingDetails() {
           {/* Right: Booking form or host info */}
           <div className="md:col-span-1">
             <div className="sticky top-28">
+              {/* Price and Booking Container */}
               {user && user.id !== listing.user_id ? (
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
                   <div className="text-black text-2xl font-bold mb-2">
@@ -1050,51 +1227,157 @@ export default function ListingDetails() {
           </div>
         </div>
 
-        {/* Reviews Section */}
+                {/* Reviews Section with Rating Card */}
         <div className="mt-8">
           <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
-          <ReviewsSection
-            listingId={listing.id}
-            reviewer={user as any}
-            reviewee={host as any}
-          />
-        </div>
-        
-        {/* Other Listings Section */}
-        <div className="mt-8">
-          <h3 className="text-black font-semibold text-xl mb-6">Other listings</h3>
-          {otherListingsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            </div>
-          ) : otherListings.length > 0 ? (
-            <div className="flex flex-wrap justify-start gap-10">
-              {otherListings.map((otherListing) => (
-                <div key={otherListing.id} className="cursor-pointer" onClick={() => router.push(`/listings/${otherListing.id}`)}>
-                  <ListingCard 
-                    id={otherListing.id}
-                    title={otherListing.title}
-                    images={otherListing.images}
-                    name={otherListing.name}
-                    avatar_url={otherListing.avatar_url}
-                    university_name={otherListing.university_name}
-                    bedrooms={otherListing.bedrooms}
-                    bathrooms={otherListing.bathrooms}
-                    price_per_night={otherListing.price_per_night}
-                    averageRating={otherListing.averageRating}
-                    totalReviews={otherListing.totalReviews}
-                    amenities={otherListing.amenities}
-                    cardMargin="mx-0"
-                  />
+          {listingRatings && listingRatings.totalReviews === 0 ? (
+            /* No Reviews Layout - Rating Card on Left */
+            <div className="flex gap-6 items-start">
+              {/* Rating Card - Left Side */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-96">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <span className="text-2xl font-bold text-black mr-2">★</span>
+                    <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
+                  </div>
                 </div>
-              ))}
+                <div className="space-y-2">
+                  {[
+                    { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
+                    { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
+                    { name: 'Communication', rating: listingRatings.categoryRatings.communication },
+                    { name: 'Location', rating: listingRatings.categoryRatings.location },
+                    { name: 'Value', rating: listingRatings.categoryRatings.value },
+                  ].map((category) => {
+                    const percent = Math.max(0, Math.min(1, category.rating / 5));
+                    return (
+                      <div key={category.name} className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
+                        <div className="flex-1 mx-4">
+                          <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                            <div
+                              className="h-2 rounded-full bg-black transition-all"
+                              style={{ width: `${percent * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowReviewModal(true)}
+                    className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full"
+                  >
+                    Write a review
+                  </button>
+                </div>
+              </div>
+              
+              {/* Empty Right Side */}
+              <div className="flex-1"></div>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              No other listings available at the moment.
+            /* Has Reviews Layout - Rating Card on Left, Reviews on Right */
+            <div className="flex gap-6 items-start">
+              {/* Rating Card - Left Side */}
+              {listingRatings && (
+                <div className="sticky top-28">
+                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-96">
+                                      <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <span className="text-2xl font-bold text-black mr-2">★</span>
+                      <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
+                      { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
+                      { name: 'Communication', rating: listingRatings.categoryRatings.communication },
+                      { name: 'Location', rating: listingRatings.categoryRatings.location },
+                      { name: 'Value', rating: listingRatings.categoryRatings.value },
+                    ].map((category) => {
+                      const percent = Math.max(0, Math.min(1, category.rating / 5));
+                      return (
+                        <div key={category.name} className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
+                          <div className="flex-1 mx-4">
+                            <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                              <div
+                                className="h-2 rounded-full bg-black transition-all"
+                                style={{ width: `${percent * 100}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        // This will trigger the review modal in ReviewsSection
+                        const event = new CustomEvent('openReviewModal');
+                        window.dispatchEvent(event);
+                      }}
+                      className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full"
+                    >
+                      Write a review
+                    </button>
+                  </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Reviews Section - Right Side */}
+              <div className="flex-1">
+                <ReviewsSection
+                  listingId={listing.id}
+                  reviewer={user as any}
+                  reviewee={host as any}
+                />
+              </div>
             </div>
           )}
         </div>
+        
+        {/* Other Listings Section */}
+        {otherListings.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-black font-semibold text-xl mb-6">Other listings</h3>
+            {otherListingsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap justify-start gap-10">
+                {otherListings.map((otherListing) => (
+                  <div key={otherListing.id} className="cursor-pointer" onClick={() => router.push(`/listings/${otherListing.id}`)}>
+                    <ListingCard 
+                      id={otherListing.id}
+                      title={otherListing.title}
+                      images={otherListing.images}
+                      name={otherListing.name}
+                      avatar_url={otherListing.avatar_url}
+                      university_name={otherListing.university_name}
+                      bedrooms={otherListing.bedrooms}
+                      bathrooms={otherListing.bathrooms}
+                      price_per_night={otherListing.price_per_night}
+                      averageRating={otherListing.averageRating}
+                      totalReviews={otherListing.totalReviews}
+                      amenities={otherListing.amenities}
+                      cardMargin="mx-0"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
       {/* Amenities Modal */}
@@ -1201,6 +1484,69 @@ export default function ListingDetails() {
           onClose={() => setShowProfileModal(false)}
           userId={host.id}
         />
+      )}
+
+      {/* Review Modal for listings without reviews */}
+      {showReviewModal && (
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-gray-900">Write a Review</h3>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form className="p-6 space-y-4" onSubmit={handleReviewSubmit}>
+              {/* Star Rating Components */}
+              {[
+                { label: 'Cleanliness', field: 'cleanliness_rating' },
+                { label: 'Accuracy', field: 'accuracy_rating' },
+                { label: 'Communication', field: 'communication_rating' },
+                { label: 'Location', field: 'location_rating' },
+                { label: 'Value', field: 'value_rating' },
+              ].map(({ label, field }) => (
+                <div key={field} className="mb-2">
+                  <label className="block text-gray-700 font-medium mb-1">{label}</label>
+                  <div className="flex items-center">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        className="focus:outline-none"
+                        onClick={() => setReviewForm(f => ({ ...f, [field]: star }))}
+                        aria-label={`Set ${label} to ${star} star${star > 1 ? 's' : ''}`}
+                      >
+                        <span className={star <= (reviewForm as any)[field] ? 'text-black text-2xl' : 'text-gray-300 text-2xl'}>★</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Comment</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
+                  className="w-full border border-gray-300 border-[1px] rounded-lg px-3 py-2 focus:border-black focus:outline-none text-black"
+                  rows={3}
+                />
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="ml-2 bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Submit Review
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

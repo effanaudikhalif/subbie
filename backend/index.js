@@ -16,6 +16,7 @@ const hostReviewsRouter = require('./routes/host-reviews');
 const renterReviewsRouter = require('./routes/renter-reviews');
 const commuteTimesRouter = require('./routes/commute-times');
 const openaiRouter = require('./routes/openai');
+const ExpirationService = require('./expirationService');
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,10 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Initialize and start the expiration service
+const expirationService = new ExpirationService(pool);
+expirationService.startScheduledExpiration();
+
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   if (req.body && Object.keys(req.body).length) {
@@ -43,6 +48,73 @@ app.use((req, res, next) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// Manual trigger for testing expiration (remove in production)
+app.post('/api/expire-listings', async (req, res) => {
+  try {
+    await expirationService.manualExpire();
+    res.json({ message: 'Expiration check completed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// View mock email notifications (for testing)
+app.get('/api/mock-email-notifications', (req, res) => {
+  try {
+    const notifications = expirationService.emailNotifications.getNotifications();
+    res.json({ notifications });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Clear mock email notifications (for testing)
+app.delete('/api/mock-email-notifications', (req, res) => {
+  try {
+    expirationService.emailNotifications.clearNotifications();
+    res.json({ message: 'Notifications cleared' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test email notification (for testing)
+app.post('/api/test-email-notification', async (req, res) => {
+  try {
+    const { type, recipientEmail, hostName, listingData } = req.body;
+    
+    let success = false;
+    switch (type) {
+      case 'listing_added':
+        success = await expirationService.emailNotifications.sendListingAddedNotification(
+          recipientEmail, hostName, listingData
+        );
+        break;
+      case 'listing_edited':
+        success = await expirationService.emailNotifications.sendListingEditedNotification(
+          recipientEmail, hostName, listingData
+        );
+        break;
+      case 'listing_deleted':
+        success = await expirationService.emailNotifications.sendListingDeletedNotification(
+          recipientEmail, hostName, listingData
+        );
+        break;
+      case 'listing_expired':
+        success = await expirationService.emailNotifications.sendListingExpiredNotification(
+          recipientEmail, hostName, listingData
+        );
+        break;
+      default:
+        return res.status(400).json({ error: 'Invalid notification type' });
+    }
+    
+    res.json({ success, message: `Test ${type} notification sent` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ... API routes will be added here ...
