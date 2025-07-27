@@ -291,15 +291,20 @@ export default function Results() {
       </Navbar>
       
       {/* Split Layout: Listings on left, Map preview on right */}
-      <div className="h-[calc(100vh-4rem)] pt-20 pb-6">
+      <div className="h-[calc(100vh-5rem)] pt-20 pb-20">
         <div className="flex h-full">
           {/* Left side - Listings */}
-          <div className="w-1/2 overflow-y-auto px-8 h-[80vh] listings-container pb-2">
+          <div className="w-1/2 overflow-y-auto px-8 h-[calc(100vh-10rem)] listings-container pb-2">
             <h2 className="merriweather-medium text-black font-bold mb-0.5 text-sm mb-6">
               {filteredListings.length} places within map area
             </h2>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-5">
+            <div className="grid grid-cols-3 gap-x-2 gap-y-2" style={{
+              // Force 3 columns with explicit grid
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '0.5rem 0.5rem',
+            }}>
               {paginatedListings.map(listing => {
                 console.log(`Listing ${listing.id} amenities:`, listing.amenities);
                 return (
@@ -319,6 +324,7 @@ export default function Results() {
                     totalReviews={listing.totalReviews}
                     amenities={listing.amenities || []}
                     cardHeight="h-[300px]"
+                    cardMargin="mx-2 my-2"
                     isOwnListing={user?.id === listing.user_id}
                   />
                 );
@@ -364,7 +370,7 @@ export default function Results() {
           </div>
           
           {/* Right side - Map Preview */}
-          <div className="w-1/2 h-[80vh] overflow-hidden flex-shrink-0 px-8 map-container">
+          <div className="w-1/2 h-[calc(100vh-10rem)] overflow-hidden flex-shrink-0 px-8 map-container">
             <LocationMapPreview 
               key={mapRefreshKey}
               searchLocation={where}

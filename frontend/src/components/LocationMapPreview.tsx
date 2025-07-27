@@ -339,11 +339,23 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={{
+      WebkitBorderRadius: '0.5rem',
+      borderRadius: '0.5rem',
+      overflow: 'hidden',
+      WebkitTransform: 'translate3d(0, 0, 0)',
+      transform: 'translate3d(0, 0, 0)'
+    }}>
       <div 
         ref={mapRef} 
         className="w-full h-full rounded-lg"
-        style={{ minHeight: '400px' }}
+        style={{ 
+          minHeight: '400px',
+          WebkitBorderRadius: '0.5rem',
+          borderRadius: '0.5rem',
+          WebkitTransform: 'translate3d(0, 0, 0)',
+          transform: 'translate3d(0, 0, 0)'
+        }}
       />
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-lg">
