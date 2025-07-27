@@ -976,12 +976,6 @@ export default function MyListingsPage() {
                 ) : listings.length === 0 ? (
                   <div className="text-center text-gray-500 py-8">
                     <p className="text-lg mb-4">You don't have any listings yet.</p>
-                    <button
-                      onClick={() => router.push('/add-listings')}
-                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
-                    >
-                      Create Your First Listing
-                    </button>
                   </div>
                 ) : (
                   <>

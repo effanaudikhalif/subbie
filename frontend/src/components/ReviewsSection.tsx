@@ -23,9 +23,10 @@ interface ReviewsSectionProps {
   listingId: string;
   reviewer?: User | null | undefined;
   reviewee?: User | null | undefined;
+  onReviewSubmitted?: () => void;
 }
 
-const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, reviewee }) => {
+const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, reviewee, onReviewSubmitted }) => {
   const reviewerId = reviewer?.id;
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,6 +183,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
       setEditingReviewId(null); // Reset editing state
       setLoading(true);
       await fetchReviews();
+      // Notify parent component to refresh ratings
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
     } catch (err) {
       alert('Failed to submit review.');
     }

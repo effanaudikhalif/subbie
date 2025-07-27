@@ -31,7 +31,7 @@ router.post('/suggest', async (req, res) => {
         { role: 'user', content: prompt },
       ],
       max_tokens: promptType === 'title' ? 20 : 200,
-      temperature: 0.7,
+      temperature: 0.7, // controls creativity of the AI
     });
     const aiText = completion.choices[0].message.content.trim();
     res.json({ suggestion: aiText });

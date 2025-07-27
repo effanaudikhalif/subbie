@@ -92,7 +92,7 @@ export default function Page() {
             Sublet made easy
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 italic" style={{ fontFamily: 'Libre Baskerville, serif' }}>
-            <TypewriterText text="No randoms, Just students" speed={150} />
+            <TypewriterText text="for students, by students" speed={150} />
           </p>
         </div>
       </div>

@@ -21,6 +21,7 @@ interface Listing {
   bathrooms?: number;
   averageRating?: number;
   totalReviews?: number;
+  user_id?: string;
 }
 
 interface LocationMapPreviewProps {
@@ -373,7 +374,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               zIndex: 1000
             }}
           >
-            <div className="relative group/image-area">
+            <div className="relative overflow-hidden">
               <img 
                 src={(() => {
                   const currentIndex = currentImageIndices[selectedListing.id] || 0;
@@ -383,7 +384,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                   return imageUrl;
                 })()}
                 alt={selectedListing.title} 
-                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" 
+                className="w-full h-40 object-cover hover:scale-105 transition-transform duration-300" 
               />
               
               {selectedListing.images && selectedListing.images.length > 1 && (
@@ -392,25 +393,31 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                 </div>
               )}
               
-              <button 
-                onClick={toggleWishlist}
-                disabled={wishlistLoading}
-                className={`absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 disabled:opacity-50`}
-                title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-              >
-                {wishlistLoading ? (
-                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <svg 
-                    className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
-                    fill={isInWishlist ? 'currentColor' : 'none'} 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                )}
-              </button>
+              {user && selectedListing.user_id && user.id === selectedListing.user_id ? (
+                <div className="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+                  Your Listing
+                </div>
+              ) : (
+                <button 
+                  onClick={toggleWishlist}
+                  disabled={wishlistLoading}
+                  className={`absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 disabled:opacity-50`}
+                  title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  {wishlistLoading ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <svg 
+                      className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
+                      fill={isInWishlist ? 'currentColor' : 'none'} 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  )}
+                </button>
+              )}
               
               <button 
                 className="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200"
@@ -436,7 +443,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                         e.stopPropagation();
                         handlePrevImage(selectedListing.id);
                       }}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
                     >
                       <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -451,7 +458,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                         e.stopPropagation();
                         handleNextImage(selectedListing.id);
                       }}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 group-hover/image-area:opacity-100"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
                     >
                       <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

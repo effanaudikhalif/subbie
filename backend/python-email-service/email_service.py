@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     def __init__(self):
+        # Email configuration
         self.from_email = config.EMAIL_FROM_ADDRESS
         self.from_name = config.EMAIL_FROM_NAME
         self.provider = config.EMAIL_PROVIDER
         
-        # Setup Jinja2 template environment
+        # Setup Jinja2 template environment, for rendering HTML emails
         self.template_env = Environment(
             loader=FileSystemLoader('templates')
         )
@@ -27,6 +28,7 @@ class EmailService:
         else:
             self.sendgrid_client = None
     
+    # Send email using SMTP
     def send_smtp_email(self, to_email: str, subject: str, html_content: str) -> bool:
         """Send email using SMTP"""
         try:
@@ -82,6 +84,7 @@ class EmailService:
             logger.error(f"Template rendering failed for {template_name}: {e}")
             return ""
     
+    # Connects to the message_notification.html template with the context
     def send_message_notification(self, recipient_email: str, sender_name: str, message_preview: str, conversation_url: str) -> bool:
         """Send a new message notification email"""
         subject = f"New message from {sender_name} on Subly"
@@ -151,7 +154,7 @@ class EmailService:
             'listing_address': listing_address,
             'listing_price': listing_price,
             'removal_date': removal_date,
-            'dashboard_url': dashboard_url,
+            'dashboard_url': dashboard_url, # TODO: Add dashboard url --> my listings page
             'app_name': 'Subly'
         }
         

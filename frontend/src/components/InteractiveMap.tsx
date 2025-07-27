@@ -81,6 +81,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
           });
         }
 
+        // Create map instance
         const mapInstance = new google.maps.Map(mapRef.current, {
           center,
           zoom,
@@ -114,6 +115,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
               let priceText = `$${Math.round(displayPrice)}`;
               let priceLabel = `$${Math.round(displayPrice)}`;
               
+              // Calculate price based on date range if available
               if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
                 const checkIn = new Date(dateRange[0].startDate);
                 const checkOut = new Date(dateRange[0].endDate);

@@ -370,23 +370,7 @@ export default function ProfileModal({ isOpen, onClose, userId }: ProfileModalPr
             </button>
           </div>
         )}
-        {/* Listings Section (only for other users) */}
-        {!isOwnProfile && (
-          <div className="px-8 pb-8">
-            <div className="text-lg font-semibold text-gray-800 mb-4">Listings</div>
-            {listingsLoading ? (
-              <div className="text-gray-500">Loading listings...</div>
-            ) : userListings.length === 0 ? (
-              <div className="text-gray-500">No active listings.</div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {userListings.map(listing => (
-                  <ListingCard key={listing.id} {...listing} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+
       </div>
     </div>
   );

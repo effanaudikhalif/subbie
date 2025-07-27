@@ -2,10 +2,10 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const MockEmailService = require('../mockEmailService');
+const EmailNotifications = require('../emailNotifications');
 const router = express.Router();
 
-// Configure multer for file uploads
+// Configure multer for file uploads, saves files to the disk and not memory
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const uploadDir = path.join(__dirname, '../uploads');
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 module.exports = (pool) => {
-  const emailNotifications = new MockEmailService();
+  const emailNotifications = new EmailNotifications();
 
   // Get all listings (optionally filter by user_id or exclude user_id)
   router.get('/', async (req, res) => {

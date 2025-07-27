@@ -634,47 +634,7 @@ export default function ListingDetails() {
         comment: '',
       });
       // Refresh the ratings to show the new review
-      if (listing?.id) {
-        const fetchListingRatings = async () => {
-          try {
-            const response = await fetch(`http://localhost:4000/api/host-reviews`);
-            if (response.ok) {
-              const allReviews = await response.json();
-              const listingReviews = allReviews.filter((review: any) => review.listing_id === listing.id);
-              
-              if (listingReviews.length > 0) {
-                const totals = listingReviews.reduce((acc: any, review: any) => ({
-                  cleanliness: acc.cleanliness + review.cleanliness_rating,
-                  accuracy: acc.accuracy + review.accuracy_rating,
-                  communication: acc.communication + review.communication_rating,
-                  location: acc.location + review.location_rating,
-                  value: acc.value + review.value_rating,
-                }), { cleanliness: 0, accuracy: 0, communication: 0, location: 0, value: 0 });
-                
-                const count = listingReviews.length;
-                const categoryRatings = {
-                  cleanliness: totals.cleanliness / count,
-                  accuracy: totals.accuracy / count,
-                  communication: totals.communication / count,
-                  location: totals.location / count,
-                  value: totals.value / count,
-                };
-                
-                const averageRating = (totals.cleanliness + totals.accuracy + totals.communication + totals.location + totals.value) / (count * 5);
-                
-                setListingRatings({
-                  averageRating,
-                  totalReviews: count,
-                  categoryRatings
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Error refreshing ratings:', error);
-          }
-        };
-        fetchListingRatings();
-      }
+      await fetchListingRatings();
     } catch (err) {
       alert('Failed to submit review.');
     }
@@ -717,62 +677,63 @@ export default function ListingDetails() {
     }
   }, [commuteCoords, listing?.latitude, listing?.longitude]);
 
-  // Fetch listing ratings
-  useEffect(() => {
-    const fetchListingRatings = async () => {
-      if (!listing?.id) return;
-      try {
-        const response = await fetch(`http://localhost:4000/api/host-reviews`);
-        if (response.ok) {
-          const allReviews = await response.json();
-          // Filter reviews for this listing
-          const listingReviews = allReviews.filter((review: any) => review.listing_id === listing.id);
+  // Function to fetch and update listing ratings
+  const fetchListingRatings = async () => {
+    if (!listing?.id) return;
+    try {
+      const response = await fetch(`http://localhost:4000/api/host-reviews`);
+      if (response.ok) {
+        const allReviews = await response.json();
+        // Filter reviews for this listing
+        const listingReviews = allReviews.filter((review: any) => review.listing_id === listing.id);
+        
+        if (listingReviews.length > 0) {
+          // Calculate average ratings
+          const totals = listingReviews.reduce((acc: any, review: any) => ({
+            cleanliness: acc.cleanliness + review.cleanliness_rating,
+            accuracy: acc.accuracy + review.accuracy_rating,
+            communication: acc.communication + review.communication_rating,
+            location: acc.location + review.location_rating,
+            value: acc.value + review.value_rating,
+          }), { cleanliness: 0, accuracy: 0, communication: 0, location: 0, value: 0 });
           
-          if (listingReviews.length > 0) {
-            // Calculate average ratings
-            const totals = listingReviews.reduce((acc: any, review: any) => ({
-              cleanliness: acc.cleanliness + review.cleanliness_rating,
-              accuracy: acc.accuracy + review.accuracy_rating,
-              communication: acc.communication + review.communication_rating,
-              location: acc.location + review.location_rating,
-              value: acc.value + review.value_rating,
-            }), { cleanliness: 0, accuracy: 0, communication: 0, location: 0, value: 0 });
-            
-            const count = listingReviews.length;
-            const categoryRatings = {
-              cleanliness: totals.cleanliness / count,
-              accuracy: totals.accuracy / count,
-              communication: totals.communication / count,
-              location: totals.location / count,
-              value: totals.value / count,
-            };
-            
-            const averageRating = (totals.cleanliness + totals.accuracy + totals.communication + totals.location + totals.value) / (count * 5);
-            
-            setListingRatings({
-              averageRating,
-              totalReviews: count,
-              categoryRatings
-            });
-          } else {
-            setListingRatings({
-              averageRating: 0,
-              totalReviews: 0,
-              categoryRatings: {
-                cleanliness: 0,
-                accuracy: 0,
-                communication: 0,
-                location: 0,
-                value: 0,
-              }
-            });
-          }
+          const count = listingReviews.length;
+          const categoryRatings = {
+            cleanliness: totals.cleanliness / count,
+            accuracy: totals.accuracy / count,
+            communication: totals.communication / count,
+            location: totals.location / count,
+            value: totals.value / count,
+          };
+          
+          const averageRating = (totals.cleanliness + totals.accuracy + totals.communication + totals.location + totals.value) / (count * 5);
+          
+          setListingRatings({
+            averageRating,
+            totalReviews: count,
+            categoryRatings
+          });
+        } else {
+          setListingRatings({
+            averageRating: 0,
+            totalReviews: 0,
+            categoryRatings: {
+              cleanliness: 0,
+              accuracy: 0,
+              communication: 0,
+              location: 0,
+              value: 0,
+            }
+          });
         }
-      } catch (error) {
-        console.error('Error fetching listing ratings:', error);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching listing ratings:', error);
+    }
+  };
+
+  // Fetch listing ratings on component mount
+  useEffect(() => {
     if (listing?.id) {
       fetchListingRatings();
     }
@@ -1266,14 +1227,14 @@ export default function ListingDetails() {
                     );
                   })}
                 </div>
-                <div className="mt-4">
+                {user && host && user.id !== host.id && (
                   <button
                     onClick={() => setShowReviewModal(true)}
-                    className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full"
+                    className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full mt-8"
                   >
                     Write a review
                   </button>
-                </div>
+                )}
               </div>
               
               {/* Empty Right Side */}
@@ -1317,18 +1278,17 @@ export default function ListingDetails() {
                       );
                     })}
                   </div>
-                  <div className="mt-4">
+                  {user && host && user.id !== host.id && (
                     <button
                       onClick={() => {
-                        // This will trigger the review modal in ReviewsSection
                         const event = new CustomEvent('openReviewModal');
                         window.dispatchEvent(event);
                       }}
-                      className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full"
+                      className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full mt-8"
                     >
                       Write a review
                     </button>
-                  </div>
+                  )}
                   </div>
                 </div>
               )}
@@ -1381,7 +1341,7 @@ export default function ListingDetails() {
 
       </div>
       {/* Amenities Modal */}
-      {showAmenitiesModal && listing?.amenities && (
+      {showAmenitiesModal && listing && listing.amenities && (
         <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 relative">
             <div className="flex items-center justify-between pb-4">

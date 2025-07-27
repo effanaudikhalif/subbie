@@ -21,7 +21,7 @@ def start_worker():
         # The worker runs continuously in the background
         while True:
             import time
-            time.sleep(60)
+            time.sleep(60) # Check every minute
     except KeyboardInterrupt:
         logger.info("Stopping notification worker...")
 
@@ -29,7 +29,7 @@ def start_api():
     """Start the FastAPI server"""
     try:
         logger.info(f"Starting API server on {config.HOST}:{config.PORT}")
-        uvicorn.run(
+        uvicorn.run( # Server for the API
             "api:app",
             host=config.HOST,
             port=config.PORT,

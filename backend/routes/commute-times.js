@@ -1,8 +1,7 @@
 function commuteTimesRouter() {
   const express = require('express');
   const router = express.Router();
-  // Replace node-fetch require with dynamic import for ESM compatibility
-  const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
+  // Using built-in fetch (available in Node.js 18+)
   const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
   router.post('/', async (req, res) => {

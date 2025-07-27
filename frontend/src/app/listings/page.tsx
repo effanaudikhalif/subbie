@@ -7,10 +7,12 @@ import SearchBar from '../../components/Searchbar';
 import LocationMapPreview from '../../components/LocationMapPreview';
 import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function Results() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
 
   // Draft state for search bar (user input)
   const [draftWhere, setDraftWhere] = useState(searchParams?.get('where') || '');
@@ -317,6 +319,7 @@ export default function Results() {
                     totalReviews={listing.totalReviews}
                     amenities={listing.amenities || []}
                     cardHeight="h-[300px]"
+                    isOwnListing={user?.id === listing.user_id}
                   />
                 );
               })}

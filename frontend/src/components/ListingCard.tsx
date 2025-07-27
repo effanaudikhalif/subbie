@@ -33,8 +33,12 @@ interface ListingCardProps {
   cardHeight?: string;
   // Custom margin prop for different pages
   cardMargin?: string;
+  // Custom width prop
+  cardWidth?: string;
   // Date props for expiration check
   end_date?: string;
+  // User ownership prop
+  isOwnListing?: boolean;
 }
 
 const CARD_HEIGHT = 'h-[300px]';
@@ -86,7 +90,9 @@ const ListingCard: React.FC<ListingCardProps> = ({
   isDeleting = false,
   cardHeight,
   cardMargin,
-  end_date
+  cardWidth,
+  end_date,
+  isOwnListing = false
 }) => {
   const { user } = useAuth();
   const router = useRouter();
@@ -415,7 +421,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
   const cardContent = (
     <div
-      className={`w-[210px] bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}
+      className={`${cardWidth || 'w-[210px]'} bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}
       onClick={showHostControls ? handleCardClick : undefined}
       tabIndex={showHostControls ? 0 : undefined}
       role={showHostControls ? 'button' : undefined}
@@ -473,31 +479,37 @@ const ListingCard: React.FC<ListingCardProps> = ({
             </div>
           )}
           
-          {/* Wishlist Button */}
+          {/* Wishlist Button or Own Listing Badge */}
           {!hideWishlist && (
-            <button
-              onClick={toggleWishlist}
-              disabled={wishlistLoading}
-              className="absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 disabled:opacity-50"
-            >
-              {wishlistLoading ? (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <svg
-                  className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
-                  fill={isInWishlist ? 'currentColor' : 'none'}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-              )}
-            </button>
+            isOwnListing ? (
+              <div className="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+                Your Listing
+              </div>
+            ) : (
+              <button
+                onClick={toggleWishlist}
+                disabled={wishlistLoading}
+                className="absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 disabled:opacity-50"
+              >
+                {wishlistLoading ? (
+                  <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <svg
+                    className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                    fill={isInWishlist ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                    />
+                  </svg>
+                )}
+              </button>
+            )
           )}
         </div>
 

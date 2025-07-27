@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+// Using built-in fetch (available in Node.js 18+)
 
 class EmailNotifications {
   constructor() {
@@ -36,7 +36,7 @@ class EmailNotifications {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       start_date: new Date(listingData.start_date).toLocaleDateString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
       listing_url: `http://localhost:3000/listings/${listingData.id}`
@@ -51,7 +51,7 @@ class EmailNotifications {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       start_date: new Date(listingData.start_date).toLocaleDateString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
       listing_url: `http://localhost:3000/listings/${listingData.id}`
@@ -66,7 +66,7 @@ class EmailNotifications {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       removal_date: new Date().toLocaleDateString(),
       dashboard_url: 'http://localhost:3000/my-listings'
     };
@@ -80,7 +80,7 @@ class EmailNotifications {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
       expiration_date: new Date().toLocaleDateString(),
       dashboard_url: 'http://localhost:3000/my-listings'
