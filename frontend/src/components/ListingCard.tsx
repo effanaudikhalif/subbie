@@ -121,7 +121,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
   const imageUrl = images.length > 0 
     ? `http://localhost:4000${images[currentImageIndex]?.url || images[0].url}` 
-    : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
+    : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80"; // Default image if no images are available
 
   const totalPrice = dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate ? (() => {
     const checkIn = new Date(dateRange[0].startDate);
@@ -428,7 +428,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
       aria-label={showHostControls ? `View listing ${title}` : undefined}
     >
         {/* Image Container */}
-        <div className={`relative w-full bg-gray-200 overflow-hidden ${IMAGE_HEIGHT} group/image-area`}>
+        <div className={`relative w-full bg-gray-200 overflow-hidden ${IMAGE_HEIGHT} group/image-area rounded-t-lg`}>
           <img
             src={imageUrl}
             alt={title}

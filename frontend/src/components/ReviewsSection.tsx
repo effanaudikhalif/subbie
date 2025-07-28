@@ -339,9 +339,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
       <div className="space-y-8">
         {/* If no reviews, show the message */}
         {reviews.length === 0 && (
-          <div className="flex justify-start mt-6">
+          <div className="mt-4">
             <button
-              className="bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               onClick={() => setShowReviewModal(true)}
             >
               Write a review

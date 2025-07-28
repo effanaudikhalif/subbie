@@ -806,6 +806,10 @@ export default function ListingDetails() {
   let images = listing.images && listing.images.length > 0 ? listing.images : [
     { url: "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80" }
   ];
+  
+  console.log('Original images from listing:', listing.images);
+  console.log('Processed images:', images);
+  
   // Sort by order_index if present
   images = images.slice().sort((a, b) => {
     if (a.order_index !== undefined && b.order_index !== undefined) {
@@ -820,7 +824,21 @@ export default function ListingDetails() {
     url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
   }));
 
+  // Ensure we have at least 5 images for the grid layout
+  const placeholderImages = [
+    "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1560448204-603b3fc33ddc?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1560448204-5c9c0b0b0b0b?auto=format&fit=crop&w=800&q=80",
+    "https://images.unsplash.com/photo-1560448204-6c9c0b0b0b0b?auto=format&fit=crop&w=800&q=80"
+  ];
 
+  // Fill up to 5 images with placeholders if needed
+  while (images.length < 5) {
+    images.push({ url: placeholderImages[images.length] });
+  }
+
+  console.log('Final images array:', images);
 
         return (
     <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
@@ -828,46 +846,80 @@ export default function ListingDetails() {
       <Navbar fixed={false} />
       <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 pt-8 pb-8 mb-8">
         <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
-        <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px' }}>
+        <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] gap-4 rounded-3xl overflow-hidden" style={{ 
+          height: '500px', 
+          minHeight: '300px',
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gridTemplateRows: 'repeat(2, 1fr)'
+        } as React.CSSProperties & {
+          WebkitDisplay?: string;
+          WebkitGridTemplateColumns?: string;
+          WebkitGridTemplateRows?: string;
+        }}>
           {/* First column: one big image spanning two rows */}
-          <div className="relative md:row-span-2 h-full w-full group">
+          <div className="relative col-span-1 row-span-2 h-full w-full group" style={{
+            gridRow: 'span 2'
+          } as React.CSSProperties & {
+            WebkitGridRow?: string;
+          }}>
             <img
               src={images[0]?.url}
               alt={listing.title}
               className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-              style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+              style={{ 
+                height: '100%', 
+                width: '100%', 
+                objectFit: 'cover',
+                transform: 'translateZ(0)'
+              }}
               onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
             />
           </div>
           {/* Second column: two stacked images */}
           {images.slice(1, 3).map((img, i) => (
-            <div key={i} className="relative h-full w-full group">
+            <div key={i} className="relative col-span-1 h-full w-full group">
               <img
                 src={img.url}
                 alt={listing.title}
                 className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                style={{ 
+                  height: '100%', 
+                  width: '100%', 
+                  objectFit: 'cover',
+                  transform: 'translateZ(0)'
+                }}
                 onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 1); }}
               />
             </div>
           ))}
           {/* Third column: two stacked images */}
           {images.slice(3, 5).map((img, i) => (
-            <div key={i} className="relative h-full w-full group">
+            <div key={i} className="relative col-span-1 h-full w-full group">
               <img
                 src={img.url}
                 alt={listing.title}
                 className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                style={{ 
+                  height: '100%', 
+                  width: '100%', 
+                  objectFit: 'cover',
+                  transform: 'translateZ(0)'
+                }}
                 onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 3); }}
               />
             </div>
           ))}
         </div>
         {/* Optionally, add more details below */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Left: Listing details */}
-          <div className="md:col-span-2">
+        <div className="mt-12 relative">
+          <div className="lg:grid lg:grid-cols-3 lg:gap-8" style={{
+            display: 'grid',
+            gridTemplateColumns: '2fr 1fr',
+            gap: '2rem'
+          }}>
+            {/* Left: Listing details */}
+            <div className="lg:col-span-1">
             {/* Meet your host Section (moved above About this place) */}
             <div className="mb-8">
               <h3 className="text-black font-semibold text-xl mb-6">Meet your host</h3>
@@ -927,129 +979,93 @@ export default function ListingDetails() {
             {/* Property details */}
             <div className="mt-8">
               <h3 className="text-black font-semibold mb-2 text-xl">Property details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-3">
-                  {listing.property_type && (
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="text-gray-700">{formatPropertyText(listing.property_type)}</span>
-                    </div>
-                  )}
-                  {listing.bedrooms && (
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                      </svg>
-                      <span className="text-gray-700">{listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {listing.bathrooms && (
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                      </svg>
-                      <span className="text-gray-700">{listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                </div>
-  
-                {/* Right Column */}
-                <div className="space-y-3">
-                  {listing.max_occupancy && (
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                      </svg>
-                      <span className="text-gray-700">{listing.max_occupancy} guest{listing.max_occupancy !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  {listing.guest_space && (
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="text-gray-700">{formatPropertyText(listing.guest_space)}</span>
-                    </div>
-                  )}
-                </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                {listing.property_type && (
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-gray-700">{formatPropertyText(listing.property_type)}</span>
+                  </div>
+                )}
+                {listing.bedrooms && (
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    </svg>
+                    <span className="text-gray-700">{listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {listing.bathrooms && (
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                    </svg>
+                    <span className="text-gray-700">{listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {listing.max_occupancy && (
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                    <span className="text-gray-700">{listing.max_occupancy} guest{listing.max_occupancy !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {listing.guest_space && (
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span className="text-gray-700">{formatPropertyText(listing.guest_space)}</span>
+                  </div>
+                )}
               </div>
             </div>
             
             {/* Amenities */}
             <div className="mt-8">
               <h3 className="text-black font-semibold mb-2 text-xl">Amenities</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-3">
-                  {listing.amenities && listing.amenities.length > 0 ? (
-                    (() => {
-                      // Sort amenities in order: Living Essentials, College Essentials, Extra
-                      const livingEssentials = listing.amenities.filter((a: any) => 
-                        ['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking']
-                        .includes(a.name)
-                      );
-                      const collegeEssentials = listing.amenities.filter((a: any) => 
-                        ['Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                        .includes(a.name)
-                      );
-                      const extra = listing.amenities.filter((a: any) => 
-                        !['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking', 'Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                        .includes(a.name)
-                      );
-                      
-                      const sortedAmenities = [...livingEssentials, ...collegeEssentials, ...extra];
-                      
-                      return sortedAmenities.slice(0, 5).map((a: any) => (
-                        <div key={a.code} className="flex items-center">
-                          {getAmenityIcon(a.name)}
-                          <span className="text-gray-700">{a.name}</span>
-                        </div>
-                      ));
-                    })()
-                  ) : (
-                    <span className="text-gray-400">No amenities listed</span>
-                  )}
+              {listing.amenities && listing.amenities.length > 0 ? (
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                  {(() => {
+                    // Sort amenities in order: Living Essentials, College Essentials, Extra
+                    const livingEssentials = listing.amenities.filter((a: any) => 
+                      ['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking']
+                      .includes(a.name)
+                    );
+                    const collegeEssentials = listing.amenities.filter((a: any) => 
+                      ['Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
+                      .includes(a.name)
+                    );
+                    const extra = listing.amenities.filter((a: any) => 
+                      !['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking', 'Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
+                      .includes(a.name)
+                    );
+                    
+                    const sortedAmenities = [...livingEssentials, ...collegeEssentials, ...extra];
+                    
+                    // Show only first 10 amenities
+                    const displayedAmenities = sortedAmenities.slice(0, 10);
+                    
+                    return displayedAmenities.map((a: any) => (
+                      <div key={a.code || a.name} className="flex items-center">
+                        {getAmenityIcon(a.name)}
+                        <span className="text-gray-700">{a.name}</span>
+                      </div>
+                    ));
+                  })()}
                 </div>
-
-                {/* Right Column */}
-                <div className="space-y-3">
-                  {listing.amenities && listing.amenities.length > 5 ? (
-                    (() => {
-                      // Sort amenities in order: Living Essentials, College Essentials, Extra
-                      const livingEssentials = listing.amenities.filter((a: any) => 
-                        ['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking']
-                        .includes(a.name)
-                      );
-                      const collegeEssentials = listing.amenities.filter((a: any) => 
-                        ['Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                        .includes(a.name)
-                      );
-                      const extra = listing.amenities.filter((a: any) => 
-                        !['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking', 'Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                        .includes(a.name)
-                      );
-                      
-                      const sortedAmenities = [...livingEssentials, ...collegeEssentials, ...extra];
-                      
-                      return sortedAmenities.slice(5, 10).map((a: any) => (
-                        <div key={a.code} className="flex items-center">
-                          {getAmenityIcon(a.name)}
-                          <span className="text-gray-700">{a.name}</span>
-                        </div>
-                      ));
-                    })()
-                  ) : null}
-                </div>
-              </div>
+              ) : (
+                <span className="text-gray-400">No amenities listed</span>
+              )}
               
               {/* Show all amenities button */}
               {listing.amenities && listing.amenities.length > 0 && (
                 <button 
                   onClick={() => setShowAmenitiesModal(true)}
-                  className="mt-4 bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
+                  className="mt-8 bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
+                  style={{ marginTop: '22px' }}
                 >
                   Show all {listing.amenities.length} amenities
                 </button>
@@ -1057,9 +1073,13 @@ export default function ListingDetails() {
             </div>
           </div>
           
-          {/* Right: Booking form or host info */}
-          <div className="md:col-span-1">
-            <div className="sticky top-28">
+          {/* Right: Price and Booking Container - Now positioned to scroll from Meet your host to Show all amenities */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28" style={{ 
+              position: 'sticky',
+              top: '7rem',
+              transform: 'translateZ(0)'
+            }}>
               {/* Price and Booking Container */}
               {user && user.id !== listing.user_id ? (
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
@@ -1090,7 +1110,7 @@ export default function ListingDetails() {
                     onClick={handleMessageHost}
                     className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
                   >
-                    Message Host
+                    Message host
                   </button>
                 </div>
               ) : (
@@ -1117,13 +1137,18 @@ export default function ListingDetails() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Location Map */}
         <h3 className="mt-8 text-black font-semibold mb-2 text-xl">Location</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <div className="lg:grid lg:grid-cols-3 lg:gap-6" style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 1fr',
+          gap: '1.5rem'
+        }}>
           {/* Left: Map and location info */}
-          <div className="md:col-span-2 relative">
+          <div className="lg:col-span-1 relative">
             <PrivacyMap
               latitude={listing.latitude}
               longitude={listing.longitude}
@@ -1134,55 +1159,62 @@ export default function ListingDetails() {
             />
           </div>
           {/* Right: Commute Time, sticky */}
-          <div className="sticky top-28 self-start">
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
-              <h4 className="text-black text-lg font-semibold mb-2">
-                Estimate Commute Time
-              </h4>
-              <div className="mb-3">
-                <GoogleMapsAutocomplete
-                  onAddressSelect={handleCommuteAddressSelect}
-                  placeholder="Enter your address or destination"
-                />
-                {commuteAddress && (
-                  <div className="text-xs text-gray-600 mt-1 truncate"><span className="font-medium">Selected:</span> {commuteAddress}</div>
-                )}
-              </div>
-              {/* Commute results UI */}
-              <div className="space-y-2 min-h-[100px]">
-                {commuteLoading && (
-                  <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
-                )}
-                {commuteError && (
-                  <div className="text-sm text-red-600">{commuteError}</div>
-                )}
-                {commuteTimes && !commuteLoading && !commuteError && (
-                  <>
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      {/* Car icon */}
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
-                      <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      {/* Transit icon (train) */}
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
-                      <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      {/* Bike icon */}
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
-                      <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      {/* Walk icon */}
-                      <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
-                      <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
-                    </div>
-                  </>
-                )}
-                {!commuteLoading && !commuteError && !commuteTimes && (
-                  <div className="text-xs text-gray-400">Enter an address to see commute times.</div>
-                )}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28" style={{ 
+              position: 'sticky',
+              top: '7rem',
+              transform: 'translateZ(0)'
+            }}>
+              {/* Commute Time Container */}
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full" style={{ width: '384px', minWidth: '384px', maxWidth: '384px' }}>
+                <div className="text-black text-lg font-semibold mb-2">
+                  Estimate Commute Time
+                </div>
+                <div className="mb-3">
+                  <GoogleMapsAutocomplete
+                    onAddressSelect={handleCommuteAddressSelect}
+                    placeholder="Enter your address or destination"
+                  />
+                  {commuteAddress && (
+                    <div className="text-xs text-gray-600 mt-1 truncate"><span className="font-medium">Selected:</span> {commuteAddress}</div>
+                  )}
+                </div>
+                {/* Commute results UI */}
+                <div className="space-y-2 min-h-[100px]">
+                  {commuteLoading && (
+                    <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
+                  )}
+                  {commuteError && (
+                    <div className="text-sm text-red-600">{commuteError}</div>
+                  )}
+                  {commuteTimes && !commuteLoading && !commuteError && (
+                    <>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        {/* Car icon */}
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
+                        <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        {/* Transit icon (train) */}
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
+                        <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        {/* Bike icon */}
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
+                        <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-700">
+                        {/* Walk icon */}
+                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
+                        <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
+                      </div>
+                    </>
+                  )}
+                  {!commuteLoading && !commuteError && !commuteTimes && (
+                    <div className="text-xs text-gray-400">Enter an address to see commute times.</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1226,15 +1258,17 @@ export default function ListingDetails() {
                       </div>
                     );
                   })}
-                </div>
-                {user && host && user.id !== host.id && (
-                  <button
-                    onClick={() => setShowReviewModal(true)}
-                    className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full mt-8"
-                  >
-                    Write a review
-                  </button>
-                )}
+                                  </div>
+                  {user && host && user.id !== host.id && (
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setShowReviewModal(true)}
+                        className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                      >
+                        Write a review
+                      </button>
+                    </div>
+                  )}
               </div>
               
               {/* Empty Right Side */}
@@ -1279,15 +1313,17 @@ export default function ListingDetails() {
                     })}
                   </div>
                   {user && host && user.id !== host.id && (
-                    <button
-                      onClick={() => {
-                        const event = new CustomEvent('openReviewModal');
-                        window.dispatchEvent(event);
-                      }}
-                      className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black w-full mt-8"
-                    >
-                      Write a review
-                    </button>
+                    <div className="mt-4">
+                      <button
+                        onClick={() => {
+                          const event = new CustomEvent('openReviewModal');
+                          window.dispatchEvent(event);
+                        }}
+                        className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                      >
+                        Write a review
+                      </button>
+                    </div>
                   )}
                   </div>
                 </div>

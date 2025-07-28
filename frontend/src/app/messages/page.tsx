@@ -282,7 +282,7 @@ export default function MessagesPage() {
               >
                 {userId === currentListing.user_id ? 'Your Listing' : 'View Listing'}
               </button>
-              <div className="font-bold text-lg text-black mb-4">{currentListing.title}</div>
+              <div className="font-bold text-lg text-black mb-4 pt-6">{currentListing.title}</div>
               {/* Gallery */}
               <div className="relative w-full h-48 mb-6 group">
                 <img

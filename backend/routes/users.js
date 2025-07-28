@@ -44,12 +44,20 @@ module.exports = (pool) => {
   router.get('/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      const { rows } = await pool.query(
+        `SELECT u.*, univ.name as university_name 
+         FROM users u 
+         LEFT JOIN universities univ ON u.university_id = univ.id 
+         WHERE u.id = $1`, 
+        [id]
+      );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Not found' });
       }
+      console.log('User data returned:', rows[0]); // Debug log
       res.json(rows[0]);
     } catch (err) {
+      console.error('Error fetching user:', err);
       res.status(500).json({ error: err.message });
     }
   });

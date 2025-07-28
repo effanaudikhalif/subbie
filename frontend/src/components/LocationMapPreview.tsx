@@ -36,6 +36,250 @@ interface LocationMapPreviewProps {
   onBoundsChange?: (bounds: { sw: { lat: number, lng: number }, ne: { lat: number, lng: number } }) => void;
 }
 
+// Custom OverlayView class for the listing card
+class ListingCardOverlay extends google.maps.OverlayView {
+  private div!: HTMLDivElement;
+  private position: google.maps.LatLng;
+  private listing: Listing;
+  private onClose: () => void;
+  private onNextImage: (listingId: string) => void;
+  private onPrevImage: (listingId: string) => void;
+  private onToggleWishlist: (e: React.MouseEvent) => void;
+  private currentImageIndex: number;
+  private isInWishlist: boolean;
+  private wishlistLoading: boolean;
+  private user: any;
+
+  constructor(
+    position: google.maps.LatLng,
+    listing: Listing,
+    onClose: () => void,
+    onNextImage: (listingId: string) => void,
+    onPrevImage: (listingId: string) => void,
+    onToggleWishlist: (e: React.MouseEvent) => void,
+    currentImageIndex: number,
+    isInWishlist: boolean,
+    wishlistLoading: boolean,
+    user: any
+  ) {
+    super();
+    this.position = position;
+    this.listing = listing;
+    this.onClose = onClose;
+    this.onNextImage = onNextImage;
+    this.onPrevImage = onPrevImage;
+    this.onToggleWishlist = onToggleWishlist;
+    this.currentImageIndex = currentImageIndex;
+    this.isInWishlist = isInWishlist;
+    this.wishlistLoading = wishlistLoading;
+    this.user = user;
+  }
+
+  onAdd() {
+    this.div = document.createElement('div');
+    this.div.style.position = 'absolute';
+    this.div.style.zIndex = '1000';
+    this.div.style.pointerEvents = 'auto';
+    this.div.style.transform = 'translate(-50%, -100%)';
+    this.div.style.marginTop = '-10px';
+    
+    this.renderContent();
+    const panes = this.getPanes();
+    if (panes && panes.overlayMouseTarget) {
+      panes.overlayMouseTarget.appendChild(this.div);
+    }
+  }
+
+  draw() {
+    if (!this.div) return;
+
+    const projection = this.getProjection();
+    if (!projection) return;
+
+    const point = projection.fromLatLngToDivPixel(this.position);
+    if (point) {
+      this.div.style.left = point.x + 'px';
+      this.div.style.top = point.y + 'px';
+    }
+  }
+
+  onRemove() {
+    if (this.div && this.div.parentNode) {
+      this.div.parentNode.removeChild(this.div);
+    }
+  }
+
+  updateContent(
+    currentImageIndex: number,
+    isInWishlist: boolean,
+    wishlistLoading: boolean
+  ) {
+    this.currentImageIndex = currentImageIndex;
+    this.isInWishlist = isInWishlist;
+    this.wishlistLoading = wishlistLoading;
+    this.renderContent();
+  }
+
+  private getUniversityDisplay = (universityName: string | undefined) => {
+    if (!universityName) return '';
+    
+    const fullText = `Hosted by ${universityName} student`;
+    
+    if (fullText.length <= 25) {
+      return universityName;
+    }
+    
+    const words = universityName.split(' ');
+    const initials = words.map(word => word.charAt(0).toUpperCase()).join('');
+    
+    return initials;
+  };
+
+  private renderContent() {
+    if (!this.div) return;
+
+    this.div.innerHTML = `
+      <div class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300" style="width: 210px; background-color: #ffffff;">
+        <div class="relative overflow-hidden">
+          <img 
+            src="${(() => {
+              const imageUrl = this.listing.images && this.listing.images.length > 0 
+                ? `http://localhost:4000${this.listing.images[this.currentImageIndex]?.url || this.listing.images[0].url}` 
+                : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
+              return imageUrl;
+            })()}"
+            alt="${this.listing.title}" 
+            class="w-full h-40 object-cover hover:scale-105 transition-transform duration-300" 
+          />
+          
+          ${this.listing.images && this.listing.images.length > 1 ? `
+            <div class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full z-10">
+              ${this.currentImageIndex + 1} / ${this.listing.images.length}
+            </div>
+          ` : ''}
+          
+          ${this.user && this.listing.user_id && this.user.id === this.listing.user_id ? `
+            <div class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+              Your Listing
+            </div>
+          ` : `
+            <button 
+              class="absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 ${this.wishlistLoading ? 'opacity-50' : ''}"
+              title="${this.isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}"
+              onclick="window.toggleWishlist(event, '${this.listing.id}')"
+            >
+              ${this.wishlistLoading ? `
+                <div class="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+              ` : `
+                <svg 
+                  class="w-4 h-4 ${this.isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}" 
+                  fill="${this.isInWishlist ? 'currentColor' : 'none'}" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              `}
+            </button>
+          `}
+          
+          <button 
+            class="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200"
+            onclick="window.closeListingCard()"
+          >
+            <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          ${this.listing.images && this.listing.images.length > 1 ? `
+            ${this.currentImageIndex > 0 ? `
+              <button
+                onclick="window.prevImage('${this.listing.id}')"
+                class="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
+              >
+                <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            ` : ''}
+            ${this.currentImageIndex < this.listing.images.length - 1 ? `
+              <button
+                onclick="window.nextImage('${this.listing.id}')"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
+              >
+                <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ` : ''}
+          ` : ''}
+        </div>
+        
+        <div class="p-4 flex flex-col flex-1 justify-between min-h-[100px]" style="background-color: #ffffff;">
+          <div class="flex justify-between items-start mb-2">
+            <h3 class="text-sm font-semibold text-gray-700 truncate w-full">${this.listing.title}</h3>
+          </div>
+          
+          ${this.listing.name ? `
+            <div class="flex items-center mb-3">
+              <span class="text-sm font-medium text-gray-700 truncate w-full">
+                Hosted by ${this.getUniversityDisplay(this.listing.university_name)} student
+              </span>
+            </div>
+          ` : ''}
+          
+          <div class="flex items-center text-sm text-gray-700 mb-3">
+            <div class="flex items-center space-x-2">
+              <div class="flex items-center">
+                <span class="text-sm font-medium text-gray-700">${this.listing.bedrooms}</span>
+                <img src="/icons/bed.png" alt="bed" class="w-4 h-4 ml-1" />
+              </div>
+              <span>•</span>
+              <div class="flex items-center">
+                <span class="text-sm font-medium text-gray-700">${this.listing.bathrooms}</span>
+                <img src="/icons/bath-tub.png" alt="bathroom" class="w-4 h-4 ml-1" />
+              </div>
+              ${this.listing.totalReviews && this.listing.totalReviews > 0 ? `
+                <span>•</span>
+                <span class="flex items-center">
+                  <svg class="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  <span class="text-sm font-medium text-gray-700">${this.listing.averageRating?.toFixed(1) || '0.0'}</span>
+                </span>
+              ` : `
+                <span>•</span>
+                <span class="text-gray-500">No reviews</span>
+              `}
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <div class="text-sm font-semibold text-black">
+              ${(() => {
+                // This would need to be calculated based on dateRange prop
+                return `
+                  ${this.listing.price_per_night ? `$${Math.round(this.listing.price_per_night)}` : 'N/A'}
+                  <span class="text-sm font-normal text-gray-500 ml-1">per night</span>
+                `;
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add click handler for the entire card
+    this.div.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target && !target.closest('button')) {
+        window.open(`/listings/${this.listing.id}`, '_blank');
+      }
+    });
+  }
+}
+
 const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   searchLocation,
   listings = [],
@@ -51,12 +295,12 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
-  const [infoWindowPosition, setInfoWindowPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const prevSearchLocationRef = useRef<string | undefined>(undefined);
   const redMarkerRef = useRef<google.maps.Marker | null>(null);
   const searchLocationCoords = useRef<{ lat: number, lng: number } | null>(null);
+  const overlayRef = useRef<ListingCardOverlay | null>(null);
 
   const getUniversityDisplay = (universityName: string | undefined) => {
     if (!universityName) return '';
@@ -164,6 +408,29 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
     }
   };
 
+  const closeListingCard = () => {
+    if (overlayRef.current) {
+      overlayRef.current.setMap(null);
+      overlayRef.current = null;
+    }
+    setSelectedListing(null);
+  };
+
+  // Set up global functions for the overlay
+  useEffect(() => {
+    (window as any).closeListingCard = closeListingCard;
+    (window as any).nextImage = handleNextImage;
+    (window as any).prevImage = handlePrevImage;
+    (window as any).toggleWishlist = toggleWishlist;
+
+    return () => {
+      delete (window as any).closeListingCard;
+      delete (window as any).nextImage;
+      delete (window as any).prevImage;
+      delete (window as any).toggleWishlist;
+    };
+  }, [selectedListing, currentImageIndices, isInWishlist, wishlistLoading]);
+
   const addMarkersToMap = (mapInstance: google.maps.Map) => {
     markers.forEach(marker => marker.setMap(null));
 
@@ -222,8 +489,31 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
           });
 
           marker.addListener('click', () => {
+            // Close existing overlay
+            if (overlayRef.current) {
+              overlayRef.current.setMap(null);
+              overlayRef.current = null;
+            }
+
             setSelectedListing(listing);
-            setInfoWindowPosition({ lat, lng });
+            
+            // Create new overlay
+            const position = new google.maps.LatLng(lat, lng);
+            const overlay = new ListingCardOverlay(
+              position,
+              listing,
+              closeListingCard,
+              handleNextImage,
+              handlePrevImage,
+              toggleWishlist,
+              currentImageIndices[listing.id] || 0,
+              isInWishlist,
+              wishlistLoading,
+              user
+            );
+            
+            overlay.setMap(mapInstance);
+            overlayRef.current = overlay;
           });
 
           newMarkers.push(marker);
@@ -233,6 +523,17 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
 
     setMarkers(newMarkers);
   };
+
+  // Update overlay content when state changes
+  useEffect(() => {
+    if (overlayRef.current && selectedListing) {
+      overlayRef.current.updateContent(
+        currentImageIndices[selectedListing.id] || 0,
+        isInWishlist,
+        wishlistLoading
+      );
+    }
+  }, [currentImageIndices, isInWishlist, wishlistLoading, selectedListing]);
 
   useEffect(() => {
     if (prevSearchLocationRef.current === searchLocation) {
@@ -277,7 +578,8 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                   elementType: 'labels',
                   stylers: [{ visibility: 'off' }]
                 }
-              ]
+              ],
+              backgroundColor: '#ffffff'
             });
 
             if (results[0].geometry.viewport) {
@@ -354,7 +656,8 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
           WebkitBorderRadius: '0.5rem',
           borderRadius: '0.5rem',
           WebkitTransform: 'translate3d(0, 0, 0)',
-          transform: 'translate3d(0, 0, 0)'
+          transform: 'translate3d(0, 0, 0)',
+          backgroundColor: '#ffffff'
         }}
       />
       {isLoading && (
@@ -368,193 +671,6 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
             <p className="font-semibold">Map Error</p>
             <p className="text-sm">{error}</p>
           </div>
-        </div>
-      )}
-      
-      {selectedListing && infoWindowPosition && (
-        <div className="absolute inset-0 pointer-events-none">
-          <Link 
-            href={`/listings/${selectedListing.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bg-white rounded-lg shadow-md overflow-hidden pointer-events-auto cursor-pointer hover:shadow-lg transition-shadow duration-300"
-            style={{
-              width: '210px',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 1000
-            }}
-          >
-            <div className="relative overflow-hidden">
-              <img 
-                src={(() => {
-                  const currentIndex = currentImageIndices[selectedListing.id] || 0;
-                  const imageUrl = selectedListing.images && selectedListing.images.length > 0 
-                    ? `http://localhost:4000${selectedListing.images[currentImageIndices[selectedListing.id] || 0]?.url || selectedListing.images[0].url}` 
-                    : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
-                  return imageUrl;
-                })()}
-                alt={selectedListing.title} 
-                className="w-full h-40 object-cover hover:scale-105 transition-transform duration-300" 
-              />
-              
-              {selectedListing.images && selectedListing.images.length > 1 && (
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full z-10">
-                  {(currentImageIndices[selectedListing.id] || 0) + 1} / {selectedListing.images.length}
-                </div>
-              )}
-              
-              {user && selectedListing.user_id && user.id === selectedListing.user_id ? (
-                <div className="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700">
-                  Your Listing
-                </div>
-              ) : (
-                <button 
-                  onClick={toggleWishlist}
-                  disabled={wishlistLoading}
-                  className={`absolute top-2 left-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200 disabled:opacity-50`}
-                  title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-                >
-                  {wishlistLoading ? (
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <svg 
-                      className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`} 
-                      fill={isInWishlist ? 'currentColor' : 'none'} 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-              
-              <button 
-                className="absolute top-2 right-2 bg-white bg-opacity-80 rounded-full p-2 hover:bg-opacity-100 transition-all duration-200"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSelectedListing(null);
-                  setInfoWindowPosition(null);
-                }}
-              >
-                <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              
-              {selectedListing.images && selectedListing.images.length > 1 && (
-                <>
-                  {/* Left arrow - only show if not on first image */}
-                  {(currentImageIndices[selectedListing.id] || 0) > 0 && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handlePrevImage(selectedListing.id);
-                      }}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
-                    >
-                      <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-                  )}
-                  {/* Right arrow - only show if not on last image */}
-                  {(currentImageIndices[selectedListing.id] || 0) < selectedListing.images.length - 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleNextImage(selectedListing.id);
-                      }}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 hover:bg-opacity-100 transition-all duration-200 opacity-0 hover:opacity-100"
-                    >
-                      <svg className="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-            
-            <div className="p-4 flex flex-col flex-1 justify-between min-h-[100px]">
-              {/* Title */}
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-sm font-semibold text-gray-700 truncate w-full">{selectedListing.title}</h3>
-              </div>
-              
-              {/* Host Info */}
-              {selectedListing.name && (
-                <div className="flex items-center mb-3">
-                  <span className="text-sm font-medium text-gray-700 truncate w-full">
-                    Hosted by {getUniversityDisplay(selectedListing.university_name)} student
-                  </span>
-                </div>
-              )}
-              
-              {/* Property Details */}
-              <div className="flex items-center text-sm text-gray-700 mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-700">{selectedListing.bedrooms}</span>
-                    <img src="/icons/bed.png" alt="bed" className="w-4 h-4 ml-1" />
-                  </div>
-                  <span>•</span>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-700">{selectedListing.bathrooms}</span>
-                    <img src="/icons/bath-tub.png" alt="bathroom" className="w-4 h-4 ml-1" />
-                  </div>
-                  {selectedListing.totalReviews && selectedListing.totalReviews > 0 ? (
-                    <>
-                      <span>•</span>
-                      <span className="flex items-center">
-                        <svg className="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-700">{selectedListing.averageRating?.toFixed(1) || '0.0'}</span>
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span>•</span>
-                      <span className="text-gray-500">No reviews</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              {/* Price section at the bottom */}
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-black">
-                  {(() => {
-                    if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
-                      const checkIn = new Date(dateRange[0].startDate);
-                      const checkOut = new Date(dateRange[0].endDate);
-                      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-                      const totalPrice = nights * selectedListing.price_per_night;
-                      return (
-                        <>
-                          <span className="text-sm font-semibold text-black-600">${Number(totalPrice).toLocaleString()}</span>
-                          <span className="text-sm font-normal text-gray-600"> for {nights} night{nights !== 1 ? 's' : ''}</span>
-                        </>
-                      );
-                    } else {
-                      return (
-                        <>
-                          {selectedListing.price_per_night ? `$${Math.round(selectedListing.price_per_night)}` : 'N/A'}
-                          <span className="text-sm font-normal text-gray-500 ml-1">per night</span>
-                        </>
-                      );
-                    }
-                  })()}
-                </div>
-              </div>
-            </div>
-          </Link>
         </div>
       )}
     </div>

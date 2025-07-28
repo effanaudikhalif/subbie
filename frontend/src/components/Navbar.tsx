@@ -83,30 +83,9 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
             
             {/* Mobile dropdown - Small rectangle on right */}
             {menuOpen && user && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col">
-                <Link
-                  href="/my-listings"
-                  className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  My Listings
-                </Link>
-                <Link
-                  href="/messages"
-                  className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Messages
-                </Link>
-                <Link
-                  href="/wishlist"
-                  className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Wishlist
-                </Link>
+              <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] flex flex-col overflow-hidden">
                 <button
-                  className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                  className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
                   onClick={() => {
                     setMenuOpen(false);
                     setProfileModalOpen(true);
@@ -114,6 +93,36 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 >
                   Profile
                 </button>
+                <Link
+                  href="/my-listings"
+                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  My Listings
+                </Link>
+                <Link
+                  href="/messages"
+                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Messages
+                </Link>
+                <Link
+                  href="/wishlist"
+                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Wishlist
+                </Link>
               </div>
             )}
           </div>
@@ -136,10 +145,10 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
               {profileDropdownOpen && (
                 <div
                   ref={dropdownRef}
-                  className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] py-2 flex flex-col"
+                  className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] flex flex-col overflow-hidden"
                 >
                   <button
-                    className="px-4 py-2 text-left hover:bg-gray-100 rounded-t-lg block w-full cursor-pointer text-black merriweather-regular"
+                    className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
                     onClick={() => {
                       setProfileDropdownOpen(false);
                       setProfileModalOpen(true);
@@ -149,21 +158,30 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   </button>
                   <Link
                     href="/my-listings"
-                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => setProfileDropdownOpen(false)}
                   >
                     My Listings
                   </Link>
                   <Link
                     href="/messages"
-                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => setProfileDropdownOpen(false)}
                   >
                     Messages
                   </Link>
                   <Link
                     href="/wishlist"
-                    className="px-4 py-2 text-left hover:bg-gray-100 block w-full cursor-pointer text-black merriweather-regular"
+                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     onClick={() => setProfileDropdownOpen(false)}
                   >
                     Wishlist

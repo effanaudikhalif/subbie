@@ -1,3 +1,4 @@
+@import "normalize.css";
 @import "tailwindcss";
 
 :root {
@@ -207,5 +208,53 @@ html, body, #__next {
   .rounded-lg {
     -webkit-border-radius: 0.5rem !important;
     border-radius: 0.5rem !important;
+  }
+}
+
+/* Safari-specific image grid fixes */
+@supports (-webkit-appearance: none) {
+  /* Force grid display for image layouts */
+  .grid {
+    display: -webkit-grid !important;
+    display: grid !important;
+  }
+  
+  /* 3-column grid layout with wider first column */
+  .md\:\[grid-template-columns\:2fr_1fr_1fr\] {
+    -webkit-grid-template-columns: 2fr 1fr 1fr !important;
+    grid-template-columns: 2fr 1fr 1fr !important;
+  }
+  
+  /* Force grid row span for first image */
+  .row-span-2 {
+    -webkit-grid-row: span 2 !important;
+    grid-row: span 2 !important;
+  }
+  
+  /* Ensure images display properly */
+  .group img {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+  
+  /* Safari-specific border radius fixes for listing cards */
+  .rounded-lg {
+    -webkit-border-radius: 0.5rem !important;
+    border-radius: 0.5rem !important;
+  }
+  
+  .rounded-t-lg {
+    -webkit-border-top-left-radius: 0.5rem !important;
+    -webkit-border-top-right-radius: 0.5rem !important;
+    border-top-left-radius: 0.5rem !important;
+    border-top-right-radius: 0.5rem !important;
+  }
+  
+  /* Force Safari to render border radius on image containers */
+  .group\/image-area {
+    -webkit-border-radius: 0.5rem 0.5rem 0 0 !important;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 }

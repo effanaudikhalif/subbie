@@ -120,7 +120,8 @@ export default function SearchBar({
           onChange={e => setWhere(e.target.value)}
           onFocus={() => setShowCalendar(false)}
           placeholder="Search destinations"
-          className="w-full bg-transparent outline-none border-none text-gray-700 placeholder-gray-400 text-sm merriweather-regular"
+          className="w-full bg-transparent outline-none border-none text-black placeholder-gray-400 text-sm merriweather-medium"
+          style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}
           disabled={isLoading}
         />
         {isLoading && (
@@ -139,7 +140,17 @@ export default function SearchBar({
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check in</div>
-        <div className={checkIn === 'Add dates' ? 'text-gray-400 text-sm merriweather-regular' : 'text-black text-sm merriweather-regular'}>{checkIn}</div>
+        <input
+          type="text"
+          value={checkIn}
+          readOnly
+          className="w-full bg-transparent outline-none border-none text-black text-sm merriweather-medium"
+          style={{ 
+            color: checkIn === 'Add dates' ? '#9CA3AF' : '#000000',
+            fontSize: '0.875rem', 
+            lineHeight: '1.25rem' 
+          }}
+        />
       </div>
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check out */}
@@ -148,7 +159,17 @@ export default function SearchBar({
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check out</div>
-        <div className={checkOut === 'Add dates' ? 'text-gray-400 text-sm merriweather-regular' : 'text-black text-sm merriweather-regular'}>{checkOut}</div>
+        <input
+          type="text"
+          value={checkOut}
+          readOnly
+          className="w-full bg-transparent outline-none border-none text-black text-sm merriweather-medium"
+          style={{ 
+            color: checkOut === 'Add dates' ? '#9CA3AF' : '#000000',
+            fontSize: '0.875rem', 
+            lineHeight: '1.25rem' 
+          }}
+        />
       </div>
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Who */}
@@ -161,11 +182,16 @@ export default function SearchBar({
           onBlur={e => e.target.placeholder = 'Add guests'}
           onChange={e => setGuests(e.target.value.replace(/\D/g, ''))}
           placeholder="Add guests"
-          className="w-full bg-transparent outline-none border-none text-gray-700 placeholder-gray-400 text-sm merriweather-regular"
+          className="w-full bg-transparent outline-none border-none text-black placeholder-gray-400 text-sm merriweather-medium"
+          style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}
         />
       </div>
       {/* Search Button */}
-      <button className="ml-2 mr-1 bg-teal-600 hover:bg-teal-700 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" onClick={onSearch}>
+      <button 
+        className="ml-2 bg-teal-600 hover:bg-teal-700 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" 
+        style={{ marginRight: '10px' }}
+        onClick={onSearch}
+      >
         <FaSearch className="text-white text-lg" />
       </button>
       {/* Calendar Dropdown */}
