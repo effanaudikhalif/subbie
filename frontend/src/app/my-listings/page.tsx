@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Navbar from "../../components/Navbar";
+import MobileNavbar from "../../components/MobileNavbar";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
 import PrivacyMap from "../../components/PrivacyMap";
@@ -8,6 +9,7 @@ import CancellationForm from "../../components/CancellationForm";
 import ReviewsSection from "../../components/ReviewsSection";
 import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from "next/link";
 
 interface ListingImage {
   url: string;
@@ -65,6 +67,33 @@ export default function MyListingsPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages'>('all');
   const [bookingFilter, setBookingFilter] = useState<'pending' | 'approved' | 'completed'>('pending');
   const [deletingListing, setDeletingListing] = useState<string | null>(null);
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+            const checkMobile = () => {
+          setIsMobile(window.innerWidth < 1024);
+        };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // MobileNavbar state
+  const [where, setWhere] = useState('');
+  const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
+
+  // Search handler for MobileNavbar
+  const handleSearch = () => {
+    const checkin = dateRange[0].startDate ? new Date(dateRange[0].startDate).toISOString().slice(0,10) : '';
+    const checkout = dateRange[0].endDate ? new Date(dateRange[0].endDate).toISOString().slice(0,10) : '';
+    router.push(
+      `/listings?where=${encodeURIComponent(where)}&checkin=${checkin}&checkout=${checkout}`
+    );
+  };
   
   // Lazy loading states
   const [loadedTabs, setLoadedTabs] = useState<Set<string>>(new Set(['all']));
@@ -702,8 +731,19 @@ export default function MyListingsPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
-      <Navbar />
-      <div className="flex flex-1 mt-25 overflow-hidden">
+      {isMobile ? (
+        <MobileNavbar
+          where={where}
+          setWhere={setWhere}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          onSearch={handleSearch}
+          isMyListingsPage={true}
+        />
+      ) : (
+        <Navbar />
+      )}
+      <div className={`flex flex-1 overflow-hidden ${isMobile ? 'mt-20' : 'mt-25'}`}>
         {activeTab === 'messages' ? (
           <>
             {/* Sidebar */}
@@ -944,79 +984,77 @@ export default function MyListingsPage() {
           <>
             {/* Simple grid of listing cards */}
             <div className="flex-1 overflow-hidden">
-              <div className="h-full overflow-y-auto scrollbar-hide pt-8 pb-8 px-4">
-                <div className="max-w-7xl mx-auto">
-                  {/* Header with Add Listings button and toggle buttons */}
-                  <div className="flex justify-between items-center mb-6 mt-6">
-                    <div className="flex gap-4 items-center mb-8">
-                      <button
-                        onClick={() => setShowActive(true)}
-                        className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        Active Listings
-                      </button>
-                      <button
-                        onClick={() => setShowActive(false)}
-                        className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${!showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
-                      >
-                        Inactive Listings
-                      </button>
-                      <button
-                        onClick={() => router.push('/add-listings')}
-                        className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
-                      >
-                        Add Listing
-                      </button>
-                    </div>
+              <div className={`h-full overflow-y-auto scrollbar-hide pt-8 px-4 ${isMobile ? 'pb-20' : 'pb-8'}`}>
+                {/* Header with Add Listings button and toggle buttons */}
+                <div className={`flex justify-between items-center mb-6 ${isMobile ? 'justify-center mt-4' : 'justify-center mt-6'}`}>
+                  <div className={`flex gap-4 items-center mb-8 ${isMobile ? 'justify-center w-full' : 'justify-center w-full'}`}>
+                    <button
+                      onClick={() => setShowActive(true)}
+                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      onClick={() => setShowActive(false)}
+                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${!showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      Inactive
+                    </button>
+                    <button
+                      onClick={() => router.push('/add-listings')}
+                      className="bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
+                    >
+                      +
+                    </button>
                   </div>
-
-                {/* Loading state */}
-                {loading ? (
-                  <div className="text-center text-gray-500 py-8">Loading your listings...</div>
-                ) : listings.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">
-                    <p className="text-lg mb-4">You don't have any listings yet.</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Listings grid based on toggle */}
-                    {(showActive ? activeListings : inactiveListings).length > 0 ? (
-                      <div className="mb-8">
-                        <div className="flex flex-wrap -mx-1">
-                          {(showActive ? activeListings : inactiveListings).map((listing) => (
-                            <ListingCard 
-                              key={listing.id}
-                              id={listing.id}
-                              title={listing.title}
-                              images={listing.images}
-                              name={listing.name}
-                              avatar_url={listing.avatar_url}
-                              university_name={listing.university_name}
-                              bedrooms={listing.bedrooms}
-                              bathrooms={listing.bathrooms}
-                              price_per_night={listing.price_per_night}
-                              amenities={listing.amenities}
-                              hideWishlist={true}
-                              showHostControls={true}
-                              listingStatus={listing.status}
-                              onToggleStatus={handleToggleStatus}
-                              onEditListing={handleEditListing}
-                              onDeleteListing={handleDeleteListing}
-                              isDeleting={deletingListing === listing.id}
-                              cardHeight="h-[350px]"
-                              cardMargin="mx-4"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center text-gray-500 py-8">
-                        <p className="text-lg mb-4">No {showActive ? 'active' : 'inactive'} listings found.</p>
-                      </div>
-                    )}
-                  </>
-                )}
                 </div>
+
+              {/* Loading state */}
+              {loading ? (
+                <div className="text-center text-gray-500 py-8">Loading your listings...</div>
+              ) : listings.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <p className="text-lg mb-4">You don't have any listings yet.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Listings grid based on toggle */}
+                  {(showActive ? activeListings : inactiveListings).length > 0 ? (
+                    <div className="mb-8 flex justify-center">
+                      <div className="flex flex-wrap -mx-1 -my-2 justify-center">
+                        {(showActive ? activeListings : inactiveListings).map((listing) => (
+                        <ListingCard 
+                          key={listing.id}
+                          id={listing.id}
+                          title={listing.title}
+                          images={listing.images}
+                          name={listing.name}
+                          avatar_url={listing.avatar_url}
+                          university_name={listing.university_name}
+                          bedrooms={listing.bedrooms}
+                          bathrooms={listing.bathrooms}
+                          price_per_night={listing.price_per_night}
+                          amenities={listing.amenities}
+                          hideWishlist={true}
+                          showHostControls={true}
+                          listingStatus={listing.status}
+                          onToggleStatus={handleToggleStatus}
+                          onEditListing={handleEditListing}
+                          onDeleteListing={handleDeleteListing}
+                          isDeleting={deletingListing === listing.id}
+                          cardHeight="h-[350px]"
+                          cardMargin="mx-4 my-4"
+                        />
+                      ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <p className="text-lg mb-4">No {showActive ? 'active' : 'inactive'} listings found.</p>
+                    </div>
+                  )}
+                </>
+              )}
               </div>
             </div>
           </>
@@ -1132,6 +1170,51 @@ export default function MyListingsPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Mobile Footer - Only show on mobile */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-around z-50 shadow-lg">
+          <Link 
+            href="/my-listings" 
+            className="flex flex-col items-center text-blue-600 transition-colors"
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span className="text-xs">Listings</span>
+          </Link>
+          
+          <Link 
+            href="/messages" 
+            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <span className="text-xs">Messages</span>
+          </Link>
+          
+          <Link 
+            href="/wishlist" 
+            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span className="text-xs">Wishlist</span>
+          </Link>
+          
+          <Link 
+            href="/profile" 
+            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="text-xs">Profile</span>
+          </Link>
         </div>
       )}
     </div>

@@ -1084,15 +1084,32 @@ export default function ListingDetails() {
               {user && user.id !== listing.user_id ? (
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
                   <div className="text-black text-2xl font-bold mb-2">
-                    {selectedRange.start && selectedRange.end ? (
-                      (() => {
-                        const nights = Math.round((selectedRange.end.getTime() - selectedRange.start.getTime()) / (1000 * 60 * 60 * 24));
-                        const total = nights * Number(listing?.price_per_night ?? 0);
-                        return <>{formatPrice(total)} <span className="text-base font-normal text-gray-600">for {nights} night{nights !== 1 ? 's' : ''}</span></>;
-                      })()
-                    ) : (
-                      <>{formatPrice(Number(listing?.price_per_night ?? 0))} <span className="text-base font-normal text-gray-600">per night</span></>
-                    )}
+                    <div className="text-2xl font-bold text-black">
+                      {(() => {
+                        const { start, end } = selectedRange;
+                        let nights = 1;
+                        if (start && end) {
+                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          nights = diff === 0 ? 1 : diff;
+                        }
+                        if (!selectedRange.start || !selectedRange.end) {
+                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                        }
+                        if (nights === 1) {
+                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                        }
+                        return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
+                      })()}
+                      <span className="text-sm font-normal text-gray-500">
+                        {(() => {
+                          const { start, end } = selectedRange;
+                          if (!start || !end) return '/night';
+                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          const nights = diff === 0 ? 1 : diff;
+                          return nights === 1 ? '/night' : ` for ${nights} nights`;
+                        })()}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-4 mb-4">
                     {listing.start_date && listing.end_date ? (
@@ -1116,7 +1133,32 @@ export default function ListingDetails() {
               ) : (
                 <div className="bg-white rounded-2xl shadow p-6 border border-gray-200">
                   <div className="text-black text-2xl font-bold mb-2">
-                    {formatPrice(Number(listing?.price_per_night ?? 0))} <span className="text-base font-normal text-gray-600">per night</span>
+                    <div className="text-2xl font-bold text-black">
+                      {(() => {
+                        const { start, end } = selectedRange;
+                        let nights = 1;
+                        if (start && end) {
+                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          nights = diff === 0 ? 1 : diff;
+                        }
+                        if (!selectedRange.start || !selectedRange.end) {
+                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                        }
+                        if (nights === 1) {
+                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                        }
+                        return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
+                      })()}
+                      <span className="text-sm font-normal text-gray-500">
+                        {(() => {
+                          const { start, end } = selectedRange;
+                          if (!start || !end) return '/night';
+                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                          const nights = diff === 0 ? 1 : diff;
+                          return nights === 1 ? '/night' : ` for ${nights} nights`;
+                        })()}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-4 mb-4">
                     {listing.start_date && listing.end_date ? (

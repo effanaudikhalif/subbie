@@ -13,9 +13,14 @@ interface MobileNavbarProps {
   dateRange: any[];
   setDateRange: (v: any[]) => void;
   onSearch: () => void;
+  isMessagesPage?: boolean;
+  isMyListingsPage?: boolean;
+  isWishlistPage?: boolean;
+  listingId?: string;
+  isOwner?: boolean;
 }
 
-export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch }: MobileNavbarProps) {
+export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, listingId, isOwner }: MobileNavbarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -153,15 +158,39 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm" style={{ height: '80px' }}>
       {/* Logo and Search Bar Row */}
-      <div className="pl-0 pr-4 py-2 flex items-center gap-0 h-full">
+      <div className="pl-0 pr-4 py-1 flex items-center gap-0 h-full">
         {/* Logo */}
         <div className="flex-shrink-0" style={{ marginLeft: '-24px' }}>
           <Logo className="hover:opacity-80 transition-opacity" />
         </div>
         
-        {/* Expandable Search Cylinder */}
-        <div className="flex-1">
-          {!isExpanded ? (
+        {/* Expandable Search Cylinder or Inbox Title */}
+        <div className="flex-1 flex justify-center">
+          {isMessagesPage ? (
+            /* Messages Page - Show Listing Info or Messages */
+            <div 
+              className={`w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center ${listingId ? 'cursor-pointer hover:bg-gray-200 transition-colors' : ''}`}
+              onClick={() => {
+                if (listingId) {
+                  router.push(`/listings/${listingId}`);
+                }
+              }}
+            >
+              <span className="text-gray-700 text-base font-medium">
+                {listingId ? (isOwner ? 'Your Listing' : 'View Listing') : 'Messages'}
+              </span>
+            </div>
+          ) : isMyListingsPage ? (
+            /* My Listings Page - Show My Listings */
+            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
+              <span className="text-gray-700 text-base font-medium">My Listings</span>
+            </div>
+          ) : isWishlistPage ? (
+            /* Wishlist Page - Show Wishlist */
+            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
+              <span className="text-gray-700 text-base font-medium">Wishlist</span>
+            </div>
+          ) : !isExpanded ? (
             /* Collapsed State - Cylinder */
             <div 
               className="w-full bg-gray-100 rounded-full pl-6 pr-2 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-all duration-300"
@@ -172,7 +201,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
                 <FaSearch className="text-white text-sm" />
               </div>
             </div>
-        ) : (
+          ) : (
           /* Expanded State - Full Search Form */
           <div className="mobile-search-form border border-gray-200 rounded-2xl p-4 shadow-lg transition-all duration-300 absolute top-0 left-0 w-full z-50" style={{ backgroundColor: '#ffffff' }}>
             {/* Location Input with Google Autocomplete */}
