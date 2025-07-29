@@ -62,7 +62,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   // Mobile detection
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
+      const mobile = window.innerWidth <= 1024;
       console.log('Mobile detection:', mobile, 'Window width:', window.innerWidth);
       setIsMobile(mobile);
       
@@ -734,7 +734,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
           display: none !important;
         }
         /* Hide circular controls on mobile only */
-        @media (max-width: 767px) {
+        @media (max-width: 1024px) {
           .gm-style-moc,
           .gm-style-mt,
           .gm-style-ml,
