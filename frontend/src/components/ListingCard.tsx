@@ -39,6 +39,8 @@ interface ListingCardProps {
   end_date?: string;
   // User ownership prop
   isOwnListing?: boolean;
+  // Custom text size prop
+  textSize?: string;
 }
 
 const CARD_HEIGHT = 'h-[300px]';
@@ -92,7 +94,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
   cardMargin,
   cardWidth,
   end_date,
-  isOwnListing = false
+  isOwnListing = false,
+  textSize
 }) => {
   const { user } = useAuth();
   const router = useRouter();
@@ -517,26 +520,26 @@ const ListingCard: React.FC<ListingCardProps> = ({
         <div className="p-4 flex flex-col flex-1 justify-between min-h-[100px]">
           {/* Title */}
           <div className="flex justify-between items-start">
-            <h3 className="text-sm font-semibold text-gray-700 truncate w-full">{title}</h3>
+            <h3 className={`${textSize || 'text-sm'} font-semibold text-gray-700 truncate w-full`}>{title}</h3>
           </div>
           {/* Host Info - only if not shortCard */}
           {!shortCard && name && (
             <div className="flex items-center">
-              <span className="text-sm font-medium text-gray-700 truncate w-full">
+              <span className={`${textSize || 'text-sm'} font-medium text-gray-700 truncate w-full`}>
                 Hosted by {getUniversityDisplay(university_name)} student
               </span>
             </div>
           )}
           {/* Property Details */}
-          <div className="flex items-center text-sm text-gray-700">
+          <div className={`flex items-center ${textSize || 'text-sm'} text-gray-700`}>
             <div className="flex items-center space-x-2">
               <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-700">{bedrooms}</span>
+                <span className={`${textSize || 'text-sm'} font-medium text-gray-700`}>{bedrooms}</span>
                 <img src="/icons/bed.png" alt="bed" className="w-4 h-4 ml-1" />
               </div>
               <span>•</span>
               <div className="flex items-center">
-                <span>{bathrooms}</span>
+                <span className={`${textSize || 'text-sm'}`}>{bathrooms}</span>
                 <img src="/icons/bath-tub.png" alt="bathroom" className="w-4 h-4 ml-1" />
               </div>
               {totalReviews && totalReviews > 0 ? (
@@ -546,13 +549,13 @@ const ListingCard: React.FC<ListingCardProps> = ({
                     <svg className="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
-                    <span>{averageRating?.toFixed(1) || '0.0'}</span>
+                    <span className={`${textSize || 'text-sm'}`}>{averageRating?.toFixed(1) || '0.0'}</span>
                   </span>
                 </>
               ) : (
                 <>
                   <span>•</span>
-                  <span className="text-gray-500">No reviews</span>
+                  <span className={`${textSize || 'text-sm'} text-gray-500`}>No reviews</span>
                 </>
               )}
             </div>
@@ -560,7 +563,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
           {/* Price/total price section at the bottom */}
           {!shortCard && (
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-black">
+              <div className={`${textSize || 'text-sm'} font-semibold text-black`}>
                 {(() => {
                   if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
                     const checkIn = new Date(dateRange[0].startDate);
@@ -569,15 +572,15 @@ const ListingCard: React.FC<ListingCardProps> = ({
                     const totalPrice = nights * price_per_night;
                     return (
                       <>
-                        <span className="text-sm font-semibold text-black-600">${Number(totalPrice).toLocaleString()}</span>
-                        <span className="text-sm font-normal text-gray-600"> for {nights} night{nights !== 1 ? 's' : ''}</span>
+                        <span className={`${textSize || 'text-sm'} font-semibold text-black-600`}>${Number(totalPrice).toLocaleString()}</span>
+                        <span className={`${textSize || 'text-sm'} font-normal text-gray-600`}> for {nights} night{nights !== 1 ? 's' : ''}</span>
                       </>
                     );
                   } else {
                     return (
                       <>
-                        {price_per_night ? `$${Math.round(price_per_night)}` : 'N/A'}
-                        <span className="text-sm font-normal text-gray-500 ml-1">per night</span>
+                        <span className={`${textSize || 'text-sm'}`}>{price_per_night ? `$${Math.round(price_per_night)}` : 'N/A'}</span>
+                        <span className={`${textSize || 'text-sm'} font-normal text-gray-500 ml-1`}>per night</span>
                       </>
                     );
                   }

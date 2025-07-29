@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
 import { useRouter } from "next/navigation";
-import Background from "../../components/Background";
 
 interface University {
   id: string;
@@ -134,7 +133,6 @@ export default function RegisterPage() {
 
   return (
     <div className="relative min-h-screen bg-white flex flex-col justify-center items-center pt-12 pb-12">
-      <Background />
       <div className="relative z-10 w-full max-w-md px-4">
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           Create your account
@@ -187,11 +185,11 @@ export default function RegisterPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-              placeholder="Create a password (min 6 characters)"
+              placeholder="Enter your password"
             />
           </div>
 
-          {/* University */}
+          {/* University Selection */}
           <div>
             <label htmlFor="university" className="block text-sm font-medium text-gray-700">
               University
@@ -204,12 +202,28 @@ export default function RegisterPage() {
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
             >
               <option value="">Select your university</option>
-              {universities.map((university) => (
+              {universities.map(university => (
                 <option key={university.id} value={university.id}>
                   {university.name}
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Major Field */}
+          <div>
+            <label htmlFor="major" className="block text-sm font-medium text-gray-700">
+              Major
+            </label>
+            <input
+              id="major"
+              type="text"
+              required
+              value={major}
+              onChange={e => setMajor(e.target.value)}
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              placeholder="Enter your major"
+            />
           </div>
 
           {/* Education Level */}
@@ -225,27 +239,10 @@ export default function RegisterPage() {
               className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
             >
               <option value="">Select your education level</option>
-              <option value="Undergraduate">Undergraduate</option>
-              <option value="Graduate">Graduate</option>
-              <option value="PhD">PhD</option>
-              <option value="Other">Other</option>
+              <option value="undergraduate">Undergraduate</option>
+              <option value="graduate">Graduate</option>
+              <option value="phd">PhD</option>
             </select>
-          </div>
-
-          {/* Major */}
-          <div>
-            <label htmlFor="major" className="block text-sm font-medium text-gray-700">
-              Major
-            </label>
-            <input
-              id="major"
-              type="text"
-              required
-              value={major}
-              onChange={e => setMajor(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
-              placeholder="Enter your major"
-            />
           </div>
 
           {/* Graduation Year */}

@@ -15,8 +15,6 @@ export default function SearchBar({
   setDateRange,
   showCalendar,
   setShowCalendar,
-  guests,
-  setGuests,
   onSearch,
 }: {
   where: string;
@@ -25,8 +23,6 @@ export default function SearchBar({
   setDateRange: (v: any[]) => void;
   showCalendar: boolean;
   setShowCalendar: (v: boolean) => void;
-  guests: string;
-  setGuests: (v: string) => void;
   onSearch: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,6 +45,12 @@ export default function SearchBar({
         });
 
         const google = await loader.load();
+        
+        // Add Safari-specific check
+        if (!inputRef.current || !(inputRef.current instanceof HTMLInputElement)) {
+          console.log('Input element not available for autocomplete');
+          return;
+        }
         
         const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
           types: ['establishment', 'geocode'], // Prioritize establishments first
@@ -78,7 +80,10 @@ export default function SearchBar({
     };
 
     if (process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-      initAutocomplete();
+      // Add delay for Safari to ensure DOM is ready
+      setTimeout(() => {
+        initAutocomplete();
+      }, 100);
     } else {
       setError('Google Maps API key not configured');
     }
@@ -109,9 +114,9 @@ export default function SearchBar({
     : 'Add dates';
 
   return (
-    <div className="w-full max-w-2xl bg-white rounded-2xl shadow flex items-center px-1 py-0 relative">
+    <div className="w-full max-w-lg bg-white rounded-2xl shadow flex items-center px-1 py-0 relative">
       {/* Where */}
-      <div className="flex-[1.3] px-4 py-1 flex flex-col items-start justify-center relative">
+      <div className="flex-[1.5] px-4 py-1 flex flex-col items-start justify-center relative">
         <div className="merriweather-medium text-black mb-0.5 text-sm">Where</div>
         <input
           ref={inputRef}
@@ -136,7 +141,7 @@ export default function SearchBar({
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check in */}
       <div
-        className="flex-[0.7] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
+        className="flex-[1] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check in</div>
@@ -155,7 +160,7 @@ export default function SearchBar({
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check out */}
       <div
-        className="flex-[0.7] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
+        className="flex-[1] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check out</div>
@@ -169,21 +174,6 @@ export default function SearchBar({
             fontSize: '0.875rem', 
             lineHeight: '1.25rem' 
           }}
-        />
-      </div>
-      <div className="h-8 w-px bg-gray-200 mx-1" />
-      {/* Who */}
-      <div className="flex-[0.8] px-4 py-1 flex flex-col items-start justify-center">
-        <div className="merriweather-medium text-black mb-0.5 text-sm">Who</div>
-        <input
-          type="text"
-          value={guests}
-          onFocus={e => e.target.placeholder = ''}
-          onBlur={e => e.target.placeholder = 'Add guests'}
-          onChange={e => setGuests(e.target.value.replace(/\D/g, ''))}
-          placeholder="Add guests"
-          className="w-full bg-transparent outline-none border-none text-black placeholder-gray-400 text-sm merriweather-medium"
-          style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}
         />
       </div>
       {/* Search Button */}
@@ -394,7 +384,6 @@ function Home() {
     },
   ]);
   const [showCalendar, setShowCalendar] = React.useState(false);
-  const [guests, setGuests] = React.useState('');
 
   const handleSearch = () => {
     let startDate: Date | null = null;
@@ -414,7 +403,6 @@ function Home() {
     if (where) params.push(`where=${encodeURIComponent(where)}`);
     if (checkin) params.push(`checkin=${checkin}`);
     if (checkout) params.push(`checkout=${checkout}`);
-    if (guests) params.push(`guests=${guests}`);
     window.location.href = `/listings?${params.join('&')}`;
   };
 
@@ -427,8 +415,6 @@ function Home() {
         setDateRange={setDateRange}
         showCalendar={showCalendar}
         setShowCalendar={setShowCalendar}
-        guests={guests}
-        setGuests={setGuests}
         onSearch={handleSearch}
       />
     </Navbar>

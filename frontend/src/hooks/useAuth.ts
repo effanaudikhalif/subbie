@@ -178,7 +178,16 @@ export function useAuth() {
   const fetchUserListings = async (userId: string) => {
     try {
       console.log('Fetching listings for user:', userId);
-      const response = await fetch(`http://localhost:4000/api/listings?user_id=${userId}`);
+      
+      // Add timeout to the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`http://localhost:4000/api/listings?user_id=${userId}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
       console.log('Listings response status:', response.status);
       
       if (response.ok) {
@@ -196,7 +205,7 @@ export function useAuth() {
           timestamp: Date.now()
         }));
       } else {
-        console.log('No listings found or error');
+        console.log('No listings found or error, status:', response.status);
         const defaultData = {
           hasListings: false,
           listingsCount: 0
@@ -209,6 +218,14 @@ export function useAuth() {
       }
     } catch (error) {
       console.error('Error fetching user listings:', error);
+      
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.log('Network error - backend server might be down');
+      } else if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Request timeout - server took too long to respond');
+      }
+      
       const defaultData = {
         hasListings: false,
         listingsCount: 0

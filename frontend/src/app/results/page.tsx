@@ -171,8 +171,6 @@ export default function Results() {
             setDateRange={setDateRange}
             showCalendar={showCalendar}
             setShowCalendar={setShowCalendar}
-            guests={guests}
-            setGuests={setGuests}
             onSearch={handleSearch}
           />
         </div>
