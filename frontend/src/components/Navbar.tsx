@@ -19,6 +19,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [isExtraExtraSmallSize, setIsExtraExtraSmallSize] = useState(false);
   const profileBtnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -39,22 +40,48 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
     return () => document.removeEventListener("mousedown", handleClick);
   }, [profileDropdownOpen]);
 
+  // Detect extra extra small size
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsExtraExtraSmallSize(width >= 750 && width < 925);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <>
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between pl-2 pr-13 py-6 bg-gray-50 shadow-sm backdrop-blur-md h-25">
         {/* Left: Logo */}
-        <div className="flex items-center">
+        <div className={`flex items-center ${isExtraExtraSmallSize ? 'pr-8' : ''}`}>
           <Logo className="hover:opacity-80 transition-opacity" />
         </div>
         
         {/* Center: SearchBar or my-listings tabs */}
-        <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full flex justify-center">
-          {pathname === '/my-listings' ? (
-            <div />
-          ) : (
-            <div className="pointer-events-auto w-full max-w-2xl flex justify-center">{children}</div>
-          )}
-        </div>
+        {isExtraExtraSmallSize ? (
+          <div className="flex-1 flex justify-center">
+            {pathname === '/my-listings' ? (
+              <div />
+            ) : (
+              <div className="pointer-events-auto max-w-sm">
+                {children}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none w-full flex justify-center">
+            {pathname === '/my-listings' ? (
+              <div />
+            ) : (
+              <div className="pointer-events-auto w-full flex justify-center max-w-2xl">
+                {children}
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Right: Login button and hamburger */}
         <div className="flex items-center gap-4">

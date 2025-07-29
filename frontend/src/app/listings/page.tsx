@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import MobileNavbar from '../../components/MobileNavbar';
 import SearchBar from '../../components/Searchbar';
 import LocationMapPreview from '../../components/LocationMapPreview';
+import DraggableMapContainer from '../../components/DraggableMapContainer';
 import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
@@ -61,6 +62,7 @@ export default function Results() {
   const [isMobileLarge, setIsMobileLarge] = useState(false);
   const [isMobileMedium, setIsMobileMedium] = useState(false);
   const [isMobileSmall, setIsMobileSmall] = useState(false);
+  const [mapHeight, setMapHeight] = useState(300); // Default map height for mobile small
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -558,15 +560,19 @@ export default function Results() {
           /* Mobile/Extra Small Layout: Top-bottom */
           <>
             {/* Top half - Map */}
-            {!isExtraSmallSize && !isExtraExtraSmallSize && (
-              <div className={`h-[50vh] w-full ${isMobileLarge || isMobileMedium || isMobileSmall ? 'px-0' : 'px-4'}`}>
-                <LocationMapPreview 
+            {!isExtraSmallSize && !isExtraExtraSmallSize && !isMobileSmall && !isMobileMedium && !isMobileLarge && (
+              <div className={`w-full px-4`} style={{ height: '50vh' }}>
+                <DraggableMapContainer 
                   key={mapRefreshKey}
                   searchLocation={where}
                   listings={listingsWithRatings}
-                  className={`h-full w-full ${isMobileLarge || isMobileMedium || isMobileSmall ? 'rounded-none' : 'rounded-lg'}`}
+                  className="h-full w-full rounded-lg"
                   dateRange={dateRange}
                   onBoundsChange={setVisibleBounds}
+                  isMobileSmall={isMobileSmall}
+                  isMobileMedium={isMobileMedium}
+                  isMobileLarge={isMobileLarge}
+                  onMapHeightChange={setMapHeight}
                 />
               </div>
             )}
@@ -607,254 +613,402 @@ export default function Results() {
               </div>
             )}
 
-            {/* Places count above map for Mobile Small */}
+            {/* Mobile Small Layout with fixed spacing */}
             {isMobileSmall && (
-              <div className="px-4 mb-0 text-center">
-                <h2 className="merriweather-medium text-black font-bold text-sm pt-4 pb-3">
-                  {filteredListings.length} places within map area
-                </h2>
+              <div className="flex flex-col h-full">
+                {/* Map container with draggable height */}
+                <div style={{ height: `${mapHeight}px` }}>
+                  <DraggableMapContainer 
+                    key={mapRefreshKey}
+                    searchLocation={where}
+                    listings={listingsWithRatings}
+                    className="h-full w-full rounded-none"
+                    dateRange={dateRange}
+                    onBoundsChange={setVisibleBounds}
+                    isMobileSmall={isMobileSmall}
+                    isMobileMedium={isMobileMedium}
+                    isMobileLarge={isMobileLarge}
+                    onMapHeightChange={setMapHeight}
+                  />
+                </div>
+                
+                {/* Fixed spacing and text */}
+                <div className="px-4 py-3">
+                  <h2 className="merriweather-medium text-black font-bold text-sm text-center">
+                    {filteredListings.length} places within map area
+                  </h2>
+                </div>
+                
+                {/* Listings container with fixed spacing */}
+                <div className="px-4 flex-1">
+                  <div className="grid grid-cols-1 w-full justify-items-center" style={{ gridAutoRows: 'minmax(300px, auto)', gap: '30px' }}>
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id} style={{
+                          width: '95%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[300px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Bottom half - Listings */}
-            <div className={`${isMobileLarge ? 'px-2' : 'px-4'} ${isExtraExtraSmallSize ? '-mt-2' : isExtraSmallSize ? '-mt-2' : 'mt-4'}`}>
-              {/* Three listing cards per row for extra small */}
-              {isExtraSmallSize && (
-                <div className="grid grid-cols-3 gap-4 w-full justify-items-center" style={{ gridAutoRows: 'minmax(300px, auto)' }}>
-                  {paginatedListings.map(listing => {
-                    console.log(`Listing ${listing.id} amenities:`, listing.amenities);
-                    return (
-                      <div key={listing.id} style={{
-                        transform: 'scale(1.2)',
-                        transformOrigin: 'center',
-                        transition: 'transform 0.3s ease',
-                        WebkitTransform: 'scale(1.2)',
-                        WebkitTransformOrigin: 'center',
-                        WebkitTransition: 'transform 0.3s ease',
-                        WebkitBoxSizing: 'border-box',
-                        boxSizing: 'border-box',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingBottom: '75px'
-                      }}>
-                        <ListingCard
-                          id={listing.id}
-                          title={listing.title}
-                          images={listing.images || []}
-                          name={listing.name}
-                          avatar_url={listing.avatar_url}
-                          university_name={listing.university_name}
-                          bedrooms={listing.bedrooms}
-                          bathrooms={listing.bathrooms}
-                          price_per_night={listing.price_per_night}
-                          dateRange={dateRange}
-                          averageRating={listing.averageRating}
-                          totalReviews={listing.totalReviews}
-                          amenities={listing.amenities || []}
-                          cardHeight="h-[300px]"
-                          cardMargin=""
-                          isOwnListing={user?.id === listing.user_id}
-                        />
-                      </div>
-                    );
-                  })}
+            {/* Mobile Medium Layout with fixed spacing */}
+            {isMobileMedium && (
+              <div className="flex flex-col h-full" style={{ marginTop: '-16px' }}>
+                {/* Map container with draggable height */}
+                <div style={{ height: `${mapHeight}px`, marginTop: '-16px' }}>
+                  <DraggableMapContainer 
+                    key={mapRefreshKey}
+                    searchLocation={where}
+                    listings={listingsWithRatings}
+                    className="h-full w-full rounded-none"
+                    dateRange={dateRange}
+                    onBoundsChange={setVisibleBounds}
+                    isMobileSmall={isMobileSmall}
+                    isMobileMedium={isMobileMedium}
+                    isMobileLarge={isMobileLarge}
+                    onMapHeightChange={setMapHeight}
+                  />
                 </div>
-              )}
-
-              {/* Three listing cards per row for extra extra small */}
-              {isExtraExtraSmallSize && (
-                <div className="grid grid-cols-3 gap-4 w-full justify-items-center" style={{ gridAutoRows: 'minmax(280px, auto)' }}>
-                  {paginatedListings.map(listing => {
-                    console.log(`Listing ${listing.id} amenities:`, listing.amenities);
-                    return (
-                      <div key={listing.id} style={{
-                        transform: 'scale(1.0)',
-                        transformOrigin: 'center',
-                        transition: 'transform 0.3s ease',
-                        WebkitTransform: 'scale(1.0)',
-                        WebkitTransformOrigin: 'center',
-                        WebkitTransition: 'transform 0.3s ease',
-                        WebkitBoxSizing: 'border-box',
-                        boxSizing: 'border-box',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingBottom: '15px'
-                      }}>
-                        <ListingCard
-                          id={listing.id}
-                          title={listing.title}
-                          images={listing.images || []}
-                          name={listing.name}
-                          avatar_url={listing.avatar_url}
-                          university_name={listing.university_name}
-                          bedrooms={listing.bedrooms}
-                          bathrooms={listing.bathrooms}
-                          price_per_night={listing.price_per_night}
-                          dateRange={dateRange}
-                          averageRating={listing.averageRating}
-                          totalReviews={listing.totalReviews}
-                          amenities={listing.amenities || []}
-                          cardHeight="h-[280px]"
-                          cardMargin=""
-                          isOwnListing={user?.id === listing.user_id}
-                        />
-                      </div>
-                    );
-                  })}
+                
+                {/* Fixed spacing and text */}
+                <div className="px-4 py-3 pb-6">
+                  <h2 className="merriweather-medium text-black font-bold text-sm text-center">
+                    {filteredListings.length} places within map area
+                  </h2>
                 </div>
-              )}
-
-              {/* Three listing cards per row for Mobile Large */}
-              {isMobileLarge && (
-                <div className="grid grid-cols-3 gap-4 w-full justify-items-center">
-                  {paginatedListings.map(listing => {
-                    console.log(`Listing ${listing.id} amenities:`, listing.amenities);
-                    return (
-                      <div key={listing.id}>
-                        <ListingCard
-                          id={listing.id}
-                          title={listing.title}
-                          images={listing.images || []}
-                          name={listing.name}
-                          avatar_url={listing.avatar_url}
-                          university_name={listing.university_name}
-                          bedrooms={listing.bedrooms}
-                          bathrooms={listing.bathrooms}
-                          price_per_night={listing.price_per_night}
-                          dateRange={dateRange}
-                          averageRating={listing.averageRating}
-                          totalReviews={listing.totalReviews}
-                          amenities={listing.amenities || []}
-                          cardHeight="h-[320px]"
-                          cardMargin=""
-                          isOwnListing={user?.id === listing.user_id}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Two listing cards per row for Mobile Medium */}
-              {isMobileMedium && (
-                <div className="grid grid-cols-2 gap-y-30 gap-x-4 w-full justify-items-center pt-10">
-                  {paginatedListings.map(listing => {
-                    console.log(`Listing ${listing.id} amenities:`, listing.amenities);
-                    return (
-                      <div key={listing.id} style={{
-                        transform: 'scale(1.3)',
-                        transformOrigin: 'center',
-                        transition: 'transform 0.3s ease',
-                        WebkitTransform: 'scale(1.3)',
-                        WebkitTransformOrigin: 'center',
-                        WebkitTransition: 'transform 0.3s ease',
-                        WebkitBoxSizing: 'border-box',
-                        boxSizing: 'border-box'
-                      }}>
-                        <ListingCard
-                          id={listing.id}
-                          title={listing.title}
-                          images={listing.images || []}
-                          name={listing.name}
-                          avatar_url={listing.avatar_url}
-                          university_name={listing.university_name}
-                          bedrooms={listing.bedrooms}
-                          bathrooms={listing.bathrooms}
-                          price_per_night={listing.price_per_night}
-                          dateRange={dateRange}
-                          averageRating={listing.averageRating}
-                          totalReviews={listing.totalReviews}
-                          amenities={listing.amenities || []}
-                          cardHeight="h-[300px]"
-                          cardMargin=""
-                          isOwnListing={user?.id === listing.user_id}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* One listing card per row for Mobile Small */}
-              {isMobileSmall && (
-                <div className="grid grid-cols-1 w-full justify-items-center" style={{ gridAutoRows: 'minmax(300px, auto)', gap: '30px' }}>
-                  {paginatedListings.map(listing => {
-                    console.log(`Listing ${listing.id} amenities:`, listing.amenities);
-                    return (
-                      <div key={listing.id} style={{
-                        width: '95%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <ListingCard
-                          id={listing.id}
-                          title={listing.title}
-                          images={listing.images || []}
-                          name={listing.name}
-                          avatar_url={listing.avatar_url}
-                          university_name={listing.university_name}
-                          bedrooms={listing.bedrooms}
-                          bathrooms={listing.bathrooms}
-                          price_per_night={listing.price_per_night}
-                          dateRange={dateRange}
-                          averageRating={listing.averageRating}
-                          totalReviews={listing.totalReviews}
-                          amenities={listing.amenities || []}
-                          cardHeight="h-[325px]"
-                          cardWidth="w-[90vw]"
-                          cardMargin=""
-                          textSize="text-lg"
-                          isOwnListing={user?.id === listing.user_id}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="mt-8 flex justify-center items-center space-x-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  
-                  <div className="flex space-x-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md ${
-                          currentPage === pageNum
-                            ? 'bg-teal-600 text-white'
-                            : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    ))}
+                
+                {/* Listings container with fixed spacing */}
+                <div className="px-4 flex-1">
+                  <div className="grid grid-cols-2 gap-y-30 gap-x-4 w-full justify-items-center pt-10">
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id} style={{
+                          transform: 'scale(1.3)',
+                          transformOrigin: 'center',
+                          transition: 'transform 0.3s ease',
+                          WebkitTransform: 'scale(1.3)',
+                          WebkitTransformOrigin: 'center',
+                          WebkitTransition: 'transform 0.3s ease',
+                          WebkitBoxSizing: 'border-box',
+                          boxSizing: 'border-box'
+                        }}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[300px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                  
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Mobile Large Layout with fixed spacing */}
+            {isMobileLarge && (
+              <div className="flex flex-col h-full" style={{ marginTop: '-16px' }}>
+                {/* Map container with draggable height */}
+                <div style={{ height: `${mapHeight}px`, marginTop: '-16px' }}>
+                  <DraggableMapContainer 
+                    key={mapRefreshKey}
+                    searchLocation={where}
+                    listings={listingsWithRatings}
+                    className="h-full w-full rounded-none"
+                    dateRange={dateRange}
+                    onBoundsChange={setVisibleBounds}
+                    isMobileSmall={isMobileSmall}
+                    isMobileMedium={isMobileMedium}
+                    isMobileLarge={isMobileLarge}
+                    onMapHeightChange={setMapHeight}
+                  />
+                </div>
+                
+                {/* Fixed spacing and text */}
+                <div className="px-4 py-3 pb-6">
+                  <h2 className="merriweather-medium text-black font-bold text-sm text-center">
+                    {filteredListings.length} places within map area
+                  </h2>
+                </div>
+                
+                {/* Listings container with fixed spacing */}
+                <div className="px-4 flex-1">
+                  <div className="grid grid-cols-3 gap-4 w-full justify-items-center">
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[320px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom half - Listings for other mobile sizes */}
+            {!isMobileSmall && !isMobileMedium && !isMobileLarge && (
+              <div className={`${isMobileLarge ? 'px-2' : 'px-4'} ${isExtraExtraSmallSize ? '-mt-2' : isExtraSmallSize ? '-mt-2' : 'mt-4'}`}>
+                {/* Three listing cards per row for extra small */}
+                {isExtraSmallSize && (
+                  <div className="grid grid-cols-3 gap-4 w-full justify-items-center" style={{ gridAutoRows: 'minmax(300px, auto)' }}>
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id} style={{
+                          transform: 'scale(1.2)',
+                          transformOrigin: 'center',
+                          transition: 'transform 0.3s ease',
+                          WebkitTransform: 'scale(1.2)',
+                          WebkitTransformOrigin: 'center',
+                          WebkitTransition: 'transform 0.3s ease',
+                          WebkitBoxSizing: 'border-box',
+                          boxSizing: 'border-box',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingBottom: '75px'
+                        }}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[300px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Three listing cards per row for extra extra small */}
+                {isExtraExtraSmallSize && (
+                  <div className="grid grid-cols-3 gap-4 w-full justify-items-center" style={{ gridAutoRows: 'minmax(280px, auto)' }}>
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id} style={{
+                          transform: 'scale(1.0)',
+                          transformOrigin: 'center',
+                          transition: 'transform 0.3s ease',
+                          WebkitTransform: 'scale(1.0)',
+                          WebkitTransformOrigin: 'center',
+                          WebkitTransition: 'transform 0.3s ease',
+                          WebkitBoxSizing: 'border-box',
+                          boxSizing: 'border-box',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingBottom: '15px'
+                        }}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[280px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Three listing cards per row for Mobile Large */}
+                {isMobileLarge && (
+                  <div className="grid grid-cols-3 gap-4 w-full justify-items-center">
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[320px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Two listing cards per row for Mobile Medium */}
+                {isMobileMedium && (
+                  <div className="grid grid-cols-2 gap-y-30 gap-x-4 w-full justify-items-center pt-10">
+                    {paginatedListings.map(listing => {
+                      console.log(`Listing ${listing.id} amenities:`, listing.amenities);
+                      return (
+                        <div key={listing.id} style={{
+                          transform: 'scale(1.3)',
+                          transformOrigin: 'center',
+                          transition: 'transform 0.3s ease',
+                          WebkitTransform: 'scale(1.3)',
+                          WebkitTransformOrigin: 'center',
+                          WebkitTransition: 'transform 0.3s ease',
+                          WebkitBoxSizing: 'border-box',
+                          boxSizing: 'border-box'
+                        }}>
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            dateRange={dateRange}
+                            averageRating={listing.averageRating}
+                            totalReviews={listing.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[300px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex justify-center items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`px-3 py-2 text-sm font-medium rounded-md ${
+                            currentPage === pageNum
+                              ? 'bg-teal-600 text-white'
+                              : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </div>

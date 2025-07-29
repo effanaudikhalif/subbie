@@ -25,6 +25,19 @@ export default function SearchBar({
   setShowCalendar: (v: boolean) => void;
   onSearch: () => void;
 }) {
+  const [isExtraExtraSmallSize, setIsExtraExtraSmallSize] = useState(false);
+
+  // Detect extra extra small size
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsExtraExtraSmallSize(width >= 750 && width < 925);
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const inputRef = useRef<HTMLInputElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -114,9 +127,9 @@ export default function SearchBar({
     : 'Add dates';
 
   return (
-    <div className="w-full max-w-lg bg-white rounded-2xl shadow flex items-center px-1 py-0 relative">
+    <div className={`w-full bg-white rounded-2xl shadow flex items-center px-1 py-0 relative ${isExtraExtraSmallSize ? 'max-w-lg' : 'max-w-lg'}`}>
       {/* Where */}
-      <div className="flex-[1.5] px-4 py-1 flex flex-col items-start justify-center relative">
+      <div className={`py-1 flex flex-col items-start justify-center relative ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1.5]'}`}>
         <div className="merriweather-medium text-black mb-0.5 text-sm">Where</div>
         <input
           ref={inputRef}
@@ -141,7 +154,7 @@ export default function SearchBar({
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check in */}
       <div
-        className="flex-[1] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
+        className={`py-1 flex flex-col items-start justify-center cursor-pointer ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1]'}`}
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check in</div>
@@ -160,7 +173,7 @@ export default function SearchBar({
       <div className="h-8 w-px bg-gray-200 mx-1" />
       {/* Check out */}
       <div
-        className="flex-[1] px-4 py-1 flex flex-col items-start justify-center cursor-pointer"
+        className={`py-1 flex flex-col items-start justify-center cursor-pointer ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1]'}`}
         onClick={() => setShowCalendar(!showCalendar)}
       >
         <div className="merriweather-medium text-black mb-0.5 text-sm">Check out</div>
@@ -179,7 +192,7 @@ export default function SearchBar({
       {/* Search Button */}
       <button 
         className="ml-2 bg-teal-600 hover:bg-teal-700 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" 
-        style={{ marginRight: '10px' }}
+        style={{ marginRight: isExtraExtraSmallSize ? '2px' : '10px' }}
         onClick={onSearch}
       >
         <FaSearch className="text-white text-lg" />

@@ -151,34 +151,30 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm">
-      <div className="flex items-center justify-end px-4 py-2">
-        {/* Login Button */}
-        {!user && (
-          <Link href="/login" className="text-gray-700 text-base merriweather-medium px-3 py-1">
-            Log In
-          </Link>
-        )}
-      </div>
-
-      {/* Expandable Search Cylinder */}
-      <div className="px-4 pb-2">
-        {!isExpanded ? (
-          /* Collapsed State - Cylinder */
-          <div 
-            className="w-full bg-gray-100 rounded-full px-6 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-all duration-300"
-            onClick={handleExpand}
-          >
-            <div className="flex items-center">
-              <span className="text-gray-500 text-base">Search your sublet</span>
+    <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm" style={{ height: '80px' }}>
+      {/* Logo and Search Bar Row */}
+      <div className="pl-0 pr-4 py-2 flex items-center gap-0 h-full">
+        {/* Logo */}
+        <div className="flex-shrink-0" style={{ marginLeft: '-24px' }}>
+          <Logo className="hover:opacity-80 transition-opacity" />
+        </div>
+        
+        {/* Expandable Search Cylinder */}
+        <div className="flex-1">
+          {!isExpanded ? (
+            /* Collapsed State - Cylinder */
+            <div 
+              className="w-full bg-gray-100 rounded-full pl-6 pr-2 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-all duration-300"
+              onClick={handleExpand}
+            >
+              <span className="text-gray-500 text-base">Search</span>
+              <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                <FaSearch className="text-white text-sm" />
+              </div>
             </div>
-            <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
-              <FaSearch className="text-white text-sm" />
-            </div>
-          </div>
         ) : (
           /* Expanded State - Full Search Form */
-          <div className="mobile-search-form bg-white border border-gray-200 rounded-2xl p-4 shadow-lg transition-all duration-300">
+          <div className="mobile-search-form border border-gray-200 rounded-2xl p-4 shadow-lg transition-all duration-300 absolute top-0 left-0 w-full z-50" style={{ backgroundColor: '#ffffff' }}>
             {/* Location Input with Google Autocomplete */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Where</label>
@@ -263,6 +259,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
             </button>
           </div>
         )}
+        </div>
       </div>
     </header>
   );
