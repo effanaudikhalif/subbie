@@ -1,10 +1,13 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
+import MobileNavbar from '../../components/MobileNavbar';
 import { useAuth } from '../../hooks/useAuth';
 import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import MapPreview from '../../components/MapPreview';
+import PhotoUpload from '../../components/PhotoUpload';
+import CompactCalendar from '../../components/CompactCalendar';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -23,7 +26,7 @@ interface FormData {
   bathrooms: number;
   occupants: string[];
   amenities: string[];
-  photos: File[];
+  photos: (File | string)[];
   title: string;
   description: string;
   price_per_night: number;
@@ -35,12 +38,39 @@ export default function BecomeHost() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const [showPhotoModal, setShowPhotoModal] = useState(false);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mobile navbar state
+  const [where, setWhere] = useState('');
+  const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
 
   const [aiAboutLoading, setAiAboutLoading] = useState(false);
   const [aiAboutError, setAiAboutError] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  
+  // Mobile responsiveness state management
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+
+    // Check on mount
+    checkMobile();
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Mobile navbar search handler
+  const handleMobileSearch = () => {
+    if (where.trim()) {
+      router.push(`/results?location=${encodeURIComponent(where.trim())}`);
+    }
+  };
   
   const getAboutPromptData = () => {
     const {
@@ -202,15 +232,7 @@ export default function BecomeHost() {
     }));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setFormData(prev => ({
-      ...prev,
-      photos: [...prev.photos, ...files].slice(0, 7) // Keep max 7 photos
-    }));
-    // Reset the input value to allow re-uploading the same file
-    e.target.value = '';
-  };
+
 
   const handleAddressSelect = (addressData: {
     street: string;
@@ -234,6 +256,31 @@ export default function BecomeHost() {
       longitude: addressData.longitude
     }));
   };
+
+  const handleCalendarChange = ({ startDate, endDate }: { startDate: Date | null, endDate: Date | null }) => {
+    setFormData(prev => ({
+      ...prev,
+      start_date: startDate ? startDate.toISOString().split('T')[0] : '',
+      end_date: endDate ? endDate.toISOString().split('T')[0] : '',
+    }));
+  };
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showCalendar && !(event.target as Element).closest('.calendar-container')) {
+        setShowCalendar(false);
+      }
+    };
+
+    if (showCalendar) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showCalendar]);
 
   // Helper function to render error messages
   const renderError = (field: string) => {
@@ -1037,217 +1084,14 @@ export default function BecomeHost() {
 
       case 7:
         return (
-          <div className="max-w-4xl mx-auto mt-30 text-center">
-            <h2 className="text-3xl font-bold mb-8 text-black">Upload photos</h2>
-            {formData.photos.length === 0 ? (
-              <div className="border-2 border-dashed border-gray-400 rounded-xl p-8 hover:border-gray-500 transition-colors relative">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handlePhotoUpload}
-                  className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
-              key={`file-input-${currentStep}`}
-            />
-                <div className="text-center">
-                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-black" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
-                    </svg>
-                  </div>
-                  <p className="text-lg text-gray-600">Click to upload photos</p>
-                  <p className="text-sm text-gray-500 mt-2">Drag and drop or click to browse</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] md:grid-rows-2 gap-4 rounded-3xl overflow-hidden" style={{ height: '500px', minHeight: '300px', maxWidth: '1400px', width: '100%' }}>
-                  {/* First column: one big image spanning two rows */}
-                  <div className="relative md:row-span-2 h-full w-full">
-                    {formData.photos[0] ? (
-                      <>
-                        <img
-                          src={URL.createObjectURL(formData.photos[0])}
-                          alt="Preview 1"
-                          className="w-full h-full object-cover rounded-2xl"
-                          style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                        />
-                        <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-3 py-1 rounded-lg text-sm font-medium">
-                          Cover Photo
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              photos: prev.photos.filter((_, i) => i !== 0)
-                            }));
-                          }}
-                          className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
-                        >
-                          ×
-                        </button>
-                      </>
-                    ) : (
-                      <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={handlePhotoUpload}
-                          className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
-                          key={`file-input-cover-${currentStep}`}
-                        />
-                        <div className="text-center">
-                          <div className="w-12 h-12 mx-auto mb-2 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-500">Add photo</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {/* Second column: two stacked images */}
-                  {[1, 2].map((index) => (
-                    <div key={index} className="relative h-full w-full">
-                      {formData.photos[index] ? (
-                        <>
-                          <img
-                            src={URL.createObjectURL(formData.photos[index])}
-                        alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover rounded-2xl"
-                            style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            photos: prev.photos.filter((_, i) => i !== index)
-                          }));
-                        }}
-                            className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
-                      >
-                        ×
-                      </button>
-                        </>
-                      ) : (
-                        <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={handlePhotoUpload}
-                            className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
-                            key={`file-input-${index}-${currentStep}`}
-                          />
-                          <div className="text-center">
-                            <div className="w-8 h-8 mx-auto mb-1 flex items-center justify-center">
-                              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
-                              </svg>
-                            </div>
-                            <p className="text-xs text-gray-500">Add</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {/* Third column: two stacked images */}
-                  {[3, 4].map((index) => (
-                    <div key={index} className="relative h-full w-full">
-                      {formData.photos[index] ? (
-                        <>
-                          <img
-                            src={URL.createObjectURL(formData.photos[index])}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover rounded-2xl"
-                            style={{ height: '100%', width: '100%', objectFit: 'cover' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                photos: prev.photos.filter((_, i) => i !== index)
-                              }));
-                            }}
-                            className="absolute top-2 right-2 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-gray-800"
-                          >
-                            ×
-                          </button>
-                        </>
-                      ) : (
-                        <div className="border-2 border-dashed border-gray-400 rounded-2xl h-full w-full hover:border-gray-500 transition-colors relative flex items-center justify-center">
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            onChange={handlePhotoUpload}
-                            className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
-                            key={`file-input-${index}-${currentStep}`}
-                          />
-                          <div className="text-center">
-                            <div className="w-8 h-8 mx-auto mb-1 flex items-center justify-center">
-                              <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
-                              </svg>
-                            </div>
-                            <p className="text-xs text-gray-500">Add</p>
-                </div>
-              </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {/* Add More Photos Button */}
-                {formData.photos.length >= 5 && (
-                  <div className="mt-6 flex justify-center gap-4">
-                    {formData.photos.length < 7 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.createElement('input');
-                          input.type = 'file';
-                          input.multiple = true;
-                          input.accept = 'image/*';
-                          input.onchange = (e) => {
-                            const files = Array.from((e.target as HTMLInputElement).files || []);
-                            const newPhotos = [...formData.photos, ...files].slice(0, 7);
-                            setFormData(prev => ({ ...prev, photos: newPhotos }));
-                          };
-                          input.click();
-                        }}
-                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-400 rounded-lg text-gray-700 hover:border-gray-500 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Add More Photos
-                      </button>
-                    )}
-                    {formData.photos.length > 5 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPhotoModal(true);
-                          setCurrentPhotoIndex(0);
-                        }}
-                        className="inline-flex items-center gap-2 px-6 py-3 border-2 border-gray-400 rounded-lg text-gray-700 hover:border-gray-500 hover:bg-gray-50 transition-colors"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View All Photos ({formData.photos.length})
-                      </button>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+          <div className="max-w-4xl mx-auto mt-30">
+            <h2 className="text-3xl font-bold mb-8 text-center text-black">Upload photos</h2>
+                           <PhotoUpload
+                 photos={formData.photos}
+                 onPhotosChange={(newPhotos) => setFormData(prev => ({ ...prev, photos: newPhotos }))}
+                 maxPhotos={7}
+                 minPhotos={5}
+               />
           </div>
         );
 
@@ -1372,29 +1216,35 @@ export default function BecomeHost() {
             <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
             <div className="space-y-6">
               <div className="relative">
-                <input
-                  type="date"
-                  placeholder=" "
-                  value={formData.start_date}
-                  onChange={(e) => handleInputChange('start_date', e.target.value)}
-                  className="w-full p-4 border border-gray-400 rounded-lg text-black appearance-none focus:outline-none focus:ring-2 focus:ring-black hide-date-placeholder"
-                  style={{ WebkitTextFillColor: formData.start_date ? undefined : 'transparent' }}
-                />
-                {!formData.start_date && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none select-none">Start date</span>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  type="date"
-                  placeholder=" "
-                  value={formData.end_date}
-                  onChange={(e) => handleInputChange('end_date', e.target.value)}
-                  className="w-full p-4 border border-gray-400 rounded-lg text-black appearance-none focus:outline-none focus:ring-2 focus:ring-black hide-date-placeholder"
-                  style={{ WebkitTextFillColor: formData.end_date ? undefined : 'transparent' }}
-                />
-                {!formData.end_date && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none select-none">End date</span>
+                <div 
+                  className="w-full p-4 border border-gray-400 rounded-lg text-black cursor-pointer hover:border-gray-600 focus-within:ring-2 focus-within:ring-black"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-sm text-gray-500">Start date</div>
+                      <div className="text-black">
+                        {formData.start_date ? new Date(formData.start_date).toLocaleDateString() : 'Select start date'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">End date</div>
+                      <div className="text-black">
+                        {formData.end_date ? new Date(formData.end_date).toLocaleDateString() : 'Select end date'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {showCalendar && (
+                  <div className="absolute top-full left-0 mt-2 z-50 calendar-container">
+                    <CompactCalendar
+                      value={{
+                        startDate: formData.start_date ? new Date(formData.start_date) : null,
+                        endDate: formData.end_date ? new Date(formData.end_date) : null
+                      }}
+                      onChange={handleCalendarChange}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -1427,13 +1277,42 @@ export default function BecomeHost() {
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
-      <Navbar />
+      {isMobile ? (
+        <MobileNavbar
+          where={where}
+          setWhere={setWhere}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          onSearch={handleMobileSearch}
+          isAddListingPage={true}
+        />
+      ) : (
+        <Navbar />
+      )}
       <div className="flex-1 flex flex-col">
+
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-4">
+        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-4 relative">
           <div className="w-full max-w-4xl">
             {renderStep()}
           </div>
+          {/* Close Button */}
+          {!isMobile && (
+            <div className="absolute top-31 right-13 z-10">
+              <button
+                onClick={() => {
+                  console.log('X button clicked');
+                  router.push('/my-listings');
+                }}
+                className="w-10 h-10 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
+                title="Exit to My Listings"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Error Message Centered Above Progress Bar */}
@@ -1546,127 +1425,7 @@ export default function BecomeHost() {
       </div>
       </div>
 
-      {/* Photo Modal */}
-      {showPhotoModal && formData.photos.length > 0 && (
-        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
-          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            {/* Close button */}
-            <button
-              onClick={() => setShowPhotoModal(false)}
-              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
 
-            {/* Main photo */}
-            <div className="relative">
-              <img
-                src={URL.createObjectURL(formData.photos[currentPhotoIndex])}
-                alt={`Photo ${currentPhotoIndex + 1}`}
-                className="w-full h-full object-contain max-h-[70vh] rounded-lg"
-              />
-              
-              {/* Photo counter */}
-              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                {currentPhotoIndex + 1} of {formData.photos.length}
-              </div>
-            </div>
-
-            {/* Navigation buttons */}
-            {formData.photos.length > 1 && (
-              <>
-                {currentPhotoIndex > 0 && (
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => prev - 1)}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                {currentPhotoIndex < formData.photos.length - 1 && (
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => prev + 1)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-                )}
-              </>
-            )}
-
-            {/* Thumbnail strip */}
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-              {formData.photos.map((photo, index) => (
-                <div key={index} className="relative flex-shrink-0">
-                  <button
-                    onClick={() => setCurrentPhotoIndex(index)}
-                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                      index === currentPhotoIndex ? 'border-black' : 'border-gray-400'
-                    }`}
-                  >
-                    <img
-                      src={URL.createObjectURL(photo)}
-                      alt={`Thumbnail ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                  <button
-                    onClick={() => {
-                      const newPhotos = formData.photos.filter((_, i) => i !== index);
-                      setFormData(prev => ({
-                        ...prev,
-                        photos: newPhotos
-                      }));
-                      
-                      // If we're deleting the last photo, close the modal
-                      if (newPhotos.length === 0) {
-                        setShowPhotoModal(false);
-                        return;
-                      }
-                      
-                      // Adjust current photo index if needed
-                      if (currentPhotoIndex >= index && currentPhotoIndex > 0) {
-                        setCurrentPhotoIndex(prev => prev - 1);
-                      } else if (currentPhotoIndex >= newPhotos.length) {
-                        setCurrentPhotoIndex(newPhotos.length - 1);
-                      }
-                    }}
-                    className="absolute top-1 right-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-gray-800"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              {formData.photos.length < 7 && (
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center hover:border-gray-500 transition-colors relative">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        const newPhotos = [...formData.photos, ...files].slice(0, 7);
-                        setFormData(prev => ({ ...prev, photos: newPhotos }));
-                      }}
-                      className="w-full h-full absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

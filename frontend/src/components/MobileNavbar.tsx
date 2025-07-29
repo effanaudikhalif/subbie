@@ -16,11 +16,14 @@ interface MobileNavbarProps {
   isMessagesPage?: boolean;
   isMyListingsPage?: boolean;
   isWishlistPage?: boolean;
+  isListingDetailsPage?: boolean;
+  isAddListingPage?: boolean;
+  isEditListingPage?: boolean;
   listingId?: string;
   isOwner?: boolean;
 }
 
-export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, listingId, isOwner }: MobileNavbarProps) {
+export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, isListingDetailsPage = false, isAddListingPage = false, isEditListingPage = false, listingId, isOwner }: MobileNavbarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,7 +169,25 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
         
         {/* Expandable Search Cylinder or Inbox Title */}
         <div className="flex-1 flex justify-center">
-          {isMessagesPage ? (
+          {isAddListingPage || isEditListingPage ? (
+            /* Add/Edit Listing Page - Show X Button */
+            <div className="flex-1 flex justify-end pr-4">
+              <button
+                onClick={() => router.push('/my-listings')}
+                className="w-10 h-10 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
+                title="Exit to My Listings"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : isListingDetailsPage ? (
+            /* Listing Details Page - Show Listing Title */
+            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
+              <span className="text-gray-700 text-base font-medium">Listing Details</span>
+            </div>
+          ) : isMessagesPage ? (
             /* Messages Page - Show Listing Info or Messages */
             <div 
               className={`w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center ${listingId ? 'cursor-pointer hover:bg-gray-200 transition-colors' : ''}`}

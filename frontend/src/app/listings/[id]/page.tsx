@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from "react";
 import type { User } from '../../../types/User';
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "../../../components/Navbar";
+import MobileNavbar from "../../../components/MobileNavbar";
 import SearchBar from "../../../components/Searchbar";
 import PrivacyMap from "../../../components/PrivacyMap";
 import BookingForm from "../../../components/BookingForm";
@@ -57,6 +59,8 @@ export default function ListingDetails() {
   const [host, setHost] = useState<User | null>(null);
   const [university, setUniversity] = useState<University | null>(null);
   const [showAmenitiesModal, setShowAmenitiesModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const { user } = useAuth();
 
   // SearchBar state
@@ -482,6 +486,23 @@ export default function ListingDetails() {
     );
   };
 
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      const mobile = width <= 900;
+      const smallScreen = width < 700;
+      console.log('Screen width:', width, 'isMobile:', mobile, 'isSmallScreen:', smallScreen);
+      setIsMobile(mobile);
+      setIsSmallScreen(smallScreen);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   useEffect(() => {
     // Apply overscroll behavior to prevent bounce
     document.documentElement.style.overscrollBehavior = 'contain';
@@ -491,12 +512,28 @@ export default function ListingDetails() {
     document.documentElement.style.backgroundColor = 'white';
     document.body.style.backgroundColor = 'white';
     
+    // Add custom CSS for hiding scrollbars
+    const style = document.createElement('style');
+    style.textContent = `
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    `;
+    document.head.appendChild(style);
+    
     // Cleanup function to reset
     return () => {
       document.documentElement.style.overscrollBehavior = '';
       document.body.style.overscrollBehavior = '';
       document.documentElement.style.backgroundColor = '';
       document.body.style.backgroundColor = '';
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
     };
   }, []);
 
@@ -783,6 +820,92 @@ export default function ListingDetails() {
   // Add state for photo modal
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
+  // Wishlist state
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  // Check if listing is in wishlist
+  useEffect(() => {
+    if (!user || !listing?.id) return;
+
+    const checkWishlistStatus = async () => {
+      try {
+        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${listing.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsInWishlist(data.inWishlist);
+        }
+      } catch (error) {
+        console.error('Error checking wishlist status:', error);
+      }
+    };
+
+    checkWishlistStatus();
+  }, [user, listing?.id]);
+
+  // Listen for wishlist changes from other components
+  useEffect(() => {
+    const handleWishlistChange = (event: CustomEvent) => {
+      const { listingId, inWishlist } = event.detail;
+      if (listingId === listing?.id) {
+        setIsInWishlist(inWishlist);
+      }
+    };
+
+    window.addEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    return () => {
+      window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
+    };
+  }, [listing?.id]);
+
+  const toggleWishlist = async () => {
+    if (!user) {
+      alert('Please log in to add items to your wishlist');
+      return;
+    }
+
+    setWishlistLoading(true);
+    try {
+      if (isInWishlist) {
+        // Remove from wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${listing?.id}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          setIsInWishlist(false);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: listing?.id, inWishlist: false }
+          }));
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: user.id,
+            listing_id: listing?.id,
+          }),
+        });
+        if (response.ok) {
+          setIsInWishlist(true);
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('wishlistChanged', {
+            detail: { listingId: listing?.id, inWishlist: true }
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      alert('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -841,751 +964,844 @@ export default function ListingDetails() {
   console.log('Final images array:', images);
 
         return (
-    <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
-      <div className="fixed inset-0 bg-white -z-10"></div>
-      <Navbar fixed={false} />
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 mt-8 pt-8 pb-8 mb-8">
-        <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
-        <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] gap-4 rounded-3xl overflow-hidden" style={{ 
-          height: '500px', 
-          minHeight: '300px',
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridTemplateRows: 'repeat(2, 1fr)'
-        } as React.CSSProperties & {
-          WebkitDisplay?: string;
-          WebkitGridTemplateColumns?: string;
-          WebkitGridTemplateRows?: string;
-        }}>
-          {/* First column: one big image spanning two rows */}
-          <div className="relative col-span-1 row-span-2 h-full w-full group" style={{
-            gridRow: 'span 2'
-          } as React.CSSProperties & {
-            WebkitGridRow?: string;
-          }}>
-            <img
-              src={images[0]?.url}
-              alt={listing.title}
-              className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-              style={{ 
-                height: '100%', 
-                width: '100%', 
-                objectFit: 'cover',
-                transform: 'translateZ(0)'
-              }}
-              onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
-            />
-          </div>
-          {/* Second column: two stacked images */}
-          {images.slice(1, 3).map((img, i) => (
-            <div key={i} className="relative col-span-1 h-full w-full group">
-              <img
-                src={img.url}
-                alt={listing.title}
-                className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                style={{ 
-                  height: '100%', 
-                  width: '100%', 
-                  objectFit: 'cover',
-                  transform: 'translateZ(0)'
-                }}
-                onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 1); }}
+          <div className="min-h-screen bg-white pt-16" style={{ overscrollBehavior: 'contain', backgroundColor: 'white' }}>
+            <div className="fixed inset-0 bg-white -z-10"></div>
+            {!isMobile ? (
+              <Navbar fixed={false} />
+            ) : (
+              <MobileNavbar
+                where=""
+                setWhere={() => {}}
+                dateRange={dateRange}
+                setDateRange={setDateRange}
+                onSearch={() => {}}
+                isListingDetailsPage={true}
               />
-            </div>
-          ))}
-          {/* Third column: two stacked images */}
-          {images.slice(3, 5).map((img, i) => (
-            <div key={i} className="relative col-span-1 h-full w-full group">
-              <img
-                src={img.url}
-                alt={listing.title}
-                className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
-                style={{ 
-                  height: '100%', 
-                  width: '100%', 
-                  objectFit: 'cover',
-                  transform: 'translateZ(0)'
-                }}
-                onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 3); }}
-              />
-            </div>
-          ))}
-        </div>
-        {/* Optionally, add more details below */}
-        <div className="mt-12 relative">
-          <div className="lg:grid lg:grid-cols-3 lg:gap-8" style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr 1fr',
-            gap: '2rem'
-          }}>
-            {/* Left: Listing details */}
-            <div className="lg:col-span-1">
-            {/* Meet your host Section (moved above About this place) */}
-            <div className="mb-8">
-              <h3 className="text-black font-semibold text-xl mb-6">Meet your host</h3>
-              <div className="flex items-center">
-                <div className="mr-6">
-                  {host?.avatar_url ? (
-                    <img 
-                      src={host.avatar_url} 
-                      alt={host.name || 'Host'} 
-                      className="w-25 h-25 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => setShowProfileModal(true)}
-                    />
-                  ) : (
-                    <div 
-                      className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => setShowProfileModal(true)}
+            )}
+            <div className={`max-w-6xl mx-auto px-4 sm:px-8 ${!isMobile ? 'mt-8 pt-8' : 'mt-2 pt-2'} pb-8 mb-8`}>
+              <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
+              {isSmallScreen ? (
+                // Full-width single image for small screens
+                <div className="w-screen -mx-4 sm:-mx-8 mb-8 relative" style={{ height: '70vh', minHeight: '400px' }}>
+                  <img
+                    src={images[0]?.url}
+                    alt={listing.title}
+                    className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+                    style={{ 
+                      height: '100%', 
+                      width: '100%', 
+                      objectFit: 'cover',
+                      transform: 'translateZ(0)'
+                    }}
+                    onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
+                  />
+                  {/* Wishlist heart icon - only show if user is not the host */}
+                  {user && user.id !== listing.user_id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleWishlist(); }}
+                      disabled={wishlistLoading}
+                      className="absolute top-4 left-4 bg-white border border-gray-200 rounded-full p-2 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
                     >
-                      <span className="text-gray-600 text-5xl font-medium">
-                        {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
-                      </span>
-                    </div>
+                      {wishlistLoading ? (
+                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg
+                          className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                          fill={isInWishlist ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-start">
-                    <div>
-                      <div className="flex items-center mb-4">
-                        <p className="text-black font-semibold text-lg mr-3">
-                          {host?.name || 'Host'}
-                        </p>
-                        {hostReviewStats && (
+              ) : (
+                                 // Original grid layout for larger screens
+                 <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] gap-4 rounded-3xl overflow-hidden" style={{ 
+                   height: '500px', 
+                   minHeight: '300px',
+                   display: 'grid',
+                   gridTemplateColumns: '1fr',
+                   gridTemplateRows: 'repeat(2, 1fr)'
+                 } as React.CSSProperties & {
+                   WebkitDisplay?: string;
+                   WebkitGridTemplateColumns?: string;
+                   WebkitGridTemplateRows?: string;
+                 }}>
+                   {/* First column: one big image spanning two rows */}
+                   <div className="relative col-span-1 row-span-2 h-full w-full group" style={{
+                     gridRow: 'span 2'
+                   } as React.CSSProperties & {
+                     WebkitGridRow?: string;
+                   }}>
+                     <img
+                       src={images[0]?.url}
+                       alt={listing.title}
+                       className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                       style={{ 
+                         height: '100%', 
+                         width: '100%', 
+                         objectFit: 'cover',
+                         transform: 'translateZ(0)'
+                       }}
+                       onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
+                     />
+                     {/* Wishlist heart icon - only show if user is not the host */}
+                     {user && user.id !== listing.user_id && (
+                       <button
+                         onClick={(e) => { e.stopPropagation(); toggleWishlist(); }}
+                         disabled={wishlistLoading}
+                         className="absolute top-4 left-4 bg-white border border-gray-200 rounded-full p-2 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+                       >
+                         {wishlistLoading ? (
+                           <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                         ) : (
+                           <svg
+                             className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                             fill={isInWishlist ? 'currentColor' : 'none'}
+                             stroke="currentColor"
+                             viewBox="0 0 24 24"
+                           >
+                             <path
+                               strokeLinecap="round"
+                               strokeLinejoin="round"
+                               strokeWidth={2}
+                               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                             />
+                           </svg>
+                         )}
+                       </button>
+                     )}
+                   </div>
+                   {/* Second column: two stacked images */}
+                   {images.slice(1, 3).map((img, i) => (
+                     <div key={i} className="relative col-span-1 h-full w-full group">
+                       <img
+                         src={img.url}
+                         alt={listing.title}
+                         className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                         style={{ 
+                           height: '100%', 
+                           width: '100%', 
+                           objectFit: 'cover',
+                           transform: 'translateZ(0)'
+                         }}
+                         onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 1); }}
+                       />
+                     </div>
+                   ))}
+                   {/* Third column: two stacked images */}
+                   {images.slice(3, 5).map((img, i) => (
+                     <div key={i} className="relative col-span-1 h-full w-full group">
+                       <img
+                         src={img.url}
+                         alt={listing.title}
+                         className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                         style={{ 
+                           height: '100%', 
+                           width: '100%', 
+                           objectFit: 'cover',
+                           transform: 'translateZ(0)'
+                         }}
+                         onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 3); }}
+                       />
+                     </div>
+                   ))}
+                 </div>
+               )}
+              {/* Optionally, add more details below */}
+              <div className="mt-12 relative">
+                <div className={`${!isMobile ? 'lg:grid lg:grid-cols-3 lg:gap-8' : 'flex flex-col'} ${!isMobile ? '' : 'gap-6'}`} style={{
+                  display: !isMobile ? 'grid' : 'flex',
+                  gridTemplateColumns: !isMobile ? '2fr 1fr' : 'auto',
+                  gap: !isMobile ? '2rem' : '1.5rem'
+                }}>
+                  {/* Left: Listing details */}
+                  <div className={`${!isMobile ? 'lg:col-span-1' : 'order-1'}`}>
+                    {/* Meet your host Section (moved above About this place) */}
+                    <div className="mb-8">
+                      <h3 className="text-black font-semibold text-xl mb-6">Meet your host</h3>
+                      <div className="flex items-center">
+                        <div className="mr-6">
+                          {host?.avatar_url ? (
+                            <img 
+                              src={host.avatar_url} 
+                              alt={host.name || 'Host'} 
+                              className="w-25 h-25 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => setShowProfileModal(true)}
+                            />
+                          ) : (
+                            <div 
+                              className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => setShowProfileModal(true)}
+                            >
+                              <span className="text-gray-600 text-5xl font-medium">
+                                {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start">
+                            <div>
+                              <div className="flex items-center mb-4">
+                                <p className="text-black font-semibold text-lg mr-3">
+                                  {host?.name || 'Host'}
+                                </p>
+                                {hostReviewStats && (
+                                  <div className="flex items-center">
+                                    <span className="text-black mr-1">★</span>
+                                    <span className="text-black font-semibold text-base mr-1">{hostReviewStats.avg.toFixed(1)}</span>
+                                    <span className="text-gray-700 text-sm">({hostReviewStats.count})</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-gray-700 mb-1">
+                                  {university?.name || 'University'}, Undergraduate
+                                </p>
+                                <p className="text-gray-700 mb-1">
+                                  {host?.major || 'Student'}, Class of {host?.graduation_year || '2025'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* About this place Section */}
+                    <div className="mb-8">
+                      <h3 className="text-black font-semibold text-xl mb-2">About this place</h3>
+                      <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
+                    </div>
+                    {/* Property details */}
+                    <div className="mt-8">
+                      <h3 className="text-black font-semibold mb-2 text-xl">Property details</h3>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        {listing.property_type && (
                           <div className="flex items-center">
-                            <span className="text-black mr-1">★</span>
-                            <span className="text-black font-semibold text-base mr-1">{hostReviewStats.avg.toFixed(1)}</span>
-                            <span className="text-gray-700 text-sm">({hostReviewStats.count})</span>
+                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="text-gray-700">{formatPropertyText(listing.property_type)}</span>
+                          </div>
+                        )}
+                        {listing.bedrooms && (
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                            </svg>
+                            <span className="text-gray-700">{listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                        {listing.bathrooms && (
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                            </svg>
+                            <span className="text-gray-700">{listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                        {listing.max_occupancy && (
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                            </svg>
+                            <span className="text-gray-700">{listing.max_occupancy} guest{listing.max_occupancy !== 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                        {listing.guest_space && (
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="text-gray-700">{formatPropertyText(listing.guest_space)}</span>
                           </div>
                         )}
                       </div>
-                      <div>
-                        <p className="text-gray-700 mb-1">
-                          {university?.name || 'University'}, Undergraduate
-                        </p>
-                        <p className="text-gray-700 mb-1">
-                          {host?.major || 'Student'}, Class of {host?.graduation_year || '2025'}
-                        </p>
-                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* About this place Section */}
-            <div className="mb-8">
-              <h3 className="text-black font-semibold text-xl mb-2">About this place</h3>
-              <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
-            </div>
-            {/* Property details */}
-            <div className="mt-8">
-              <h3 className="text-black font-semibold mb-2 text-xl">Property details</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                {listing.property_type && (
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="text-gray-700">{formatPropertyText(listing.property_type)}</span>
-                  </div>
-                )}
-                {listing.bedrooms && (
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    <span className="text-gray-700">{listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-                {listing.bathrooms && (
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                    </svg>
-                    <span className="text-gray-700">{listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-                {listing.max_occupancy && (
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                    <span className="text-gray-700">{listing.max_occupancy} guest{listing.max_occupancy !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-                {listing.guest_space && (
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <span className="text-gray-700">{formatPropertyText(listing.guest_space)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Amenities */}
-            <div className="mt-8">
-              <h3 className="text-black font-semibold mb-2 text-xl">Amenities</h3>
-              {listing.amenities && listing.amenities.length > 0 ? (
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3">
-                  {(() => {
-                    // Sort amenities in order: Living Essentials, College Essentials, Extra
-                    const livingEssentials = listing.amenities.filter((a: any) => 
-                      ['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking']
-                      .includes(a.name)
-                    );
-                    const collegeEssentials = listing.amenities.filter((a: any) => 
-                      ['Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                      .includes(a.name)
-                    );
-                    const extra = listing.amenities.filter((a: any) => 
-                      !['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking', 'Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
-                      .includes(a.name)
-                    );
                     
-                    const sortedAmenities = [...livingEssentials, ...collegeEssentials, ...extra];
-                    
-                    // Show only first 10 amenities
-                    const displayedAmenities = sortedAmenities.slice(0, 10);
-                    
-                    return displayedAmenities.map((a: any) => (
-                      <div key={a.code || a.name} className="flex items-center">
-                        {getAmenityIcon(a.name)}
-                        <span className="text-gray-700">{a.name}</span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              ) : (
-                <span className="text-gray-400">No amenities listed</span>
-              )}
-              
-              {/* Show all amenities button */}
-              {listing.amenities && listing.amenities.length > 0 && (
-                <button 
-                  onClick={() => setShowAmenitiesModal(true)}
-                  className="mt-8 bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
-                  style={{ marginTop: '22px' }}
-                >
-                  Show all {listing.amenities.length} amenities
-                </button>
-              )}
-            </div>
-          </div>
-          
-          {/* Right: Price and Booking Container - Now positioned to scroll from Meet your host to Show all amenities */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-28" style={{ 
-              position: 'sticky',
-              top: '7rem',
-              transform: 'translateZ(0)'
-            }}>
-              {/* Price and Booking Container */}
-              {user && user.id !== listing.user_id ? (
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
-                  <div className="text-black text-2xl font-bold mb-2">
-                    <div className="text-2xl font-bold text-black">
-                      {(() => {
-                        const { start, end } = selectedRange;
-                        let nights = 1;
-                        if (start && end) {
-                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                          nights = diff === 0 ? 1 : diff;
-                        }
-                        if (!selectedRange.start || !selectedRange.end) {
-                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
-                        }
-                        if (nights === 1) {
-                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
-                        }
-                        return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
-                      })()}
-                      <span className="text-sm font-normal text-gray-500">
-                        {(() => {
-                          const { start, end } = selectedRange;
-                          if (!start || !end) return '/night';
-                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                          const nights = diff === 0 ? 1 : diff;
-                          return nights === 1 ? '/night' : ` for ${nights} nights`;
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4 mb-4">
-                    {listing.start_date && listing.end_date ? (
-                      <CompactCalendar 
-                        startDate={listing.start_date} 
-                        endDate={listing.end_date} 
-                        selectedRange={selectedRange}
-                        setSelectedRange={setSelectedRange}
-                      />
-                    ) : (
-                      <div className="text-black text-base font-medium">Availability not specified</div>
-                    )}
-                  </div>
-                  <button
-                    onClick={handleMessageHost}
-                    className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
-                  >
-                    Message host
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl shadow p-6 border border-gray-200">
-                  <div className="text-black text-2xl font-bold mb-2">
-                    <div className="text-2xl font-bold text-black">
-                      {(() => {
-                        const { start, end } = selectedRange;
-                        let nights = 1;
-                        if (start && end) {
-                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                          nights = diff === 0 ? 1 : diff;
-                        }
-                        if (!selectedRange.start || !selectedRange.end) {
-                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
-                        }
-                        if (nights === 1) {
-                          return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
-                        }
-                        return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
-                      })()}
-                      <span className="text-sm font-normal text-gray-500">
-                        {(() => {
-                          const { start, end } = selectedRange;
-                          if (!start || !end) return '/night';
-                          const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                          const nights = diff === 0 ? 1 : diff;
-                          return nights === 1 ? '/night' : ` for ${nights} nights`;
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4 mb-4">
-                    {listing.start_date && listing.end_date ? (
-                      <CompactCalendar 
-                        startDate={listing.start_date} 
-                        endDate={listing.end_date} 
-                        selectedRange={selectedRange}
-                        setSelectedRange={setSelectedRange}
-                      />
-                    ) : (
-                      <div className="text-black text-base font-medium">Availability not specified</div>
-                    )}
-                  </div>
-                  <div className="text-center text-gray-500">
-                    {user ? 'This is your own listing' : 'Please log in to book this listing'}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          </div>
-        </div>
-
-        {/* Location Map */}
-        <h3 className="mt-8 text-black font-semibold mb-2 text-xl">Location</h3>
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6" style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '1.5rem'
-        }}>
-          {/* Left: Map and location info */}
-          <div className="lg:col-span-1 relative">
-            <PrivacyMap
-              latitude={listing.latitude}
-              longitude={listing.longitude}
-              city={listing.city}
-              state={listing.state}
-              neighborhood={listing.neighborhood}
-              height="500px"
-            />
-          </div>
-          {/* Right: Commute Time, sticky */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-28" style={{ 
-              position: 'sticky',
-              top: '7rem',
-              transform: 'translateZ(0)'
-            }}>
-              {/* Commute Time Container */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full" style={{ width: '384px', minWidth: '384px', maxWidth: '384px' }}>
-                <div className="text-black text-lg font-semibold mb-2">
-                  Estimate Commute Time
-                </div>
-                <div className="mb-3">
-                  <GoogleMapsAutocomplete
-                    onAddressSelect={handleCommuteAddressSelect}
-                    placeholder="Enter your address or destination"
-                  />
-                  {commuteAddress && (
-                    <div className="text-xs text-gray-600 mt-1 truncate"><span className="font-medium">Selected:</span> {commuteAddress}</div>
-                  )}
-                </div>
-                {/* Commute results UI */}
-                <div className="space-y-2 min-h-[100px]">
-                  {commuteLoading && (
-                    <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
-                  )}
-                  {commuteError && (
-                    <div className="text-sm text-red-600">{commuteError}</div>
-                  )}
-                  {commuteTimes && !commuteLoading && !commuteError && (
-                    <>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        {/* Car icon */}
-                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
-                        <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        {/* Transit icon (train) */}
-                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
-                        <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        {/* Bike icon */}
-                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
-                        <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-700">
-                        {/* Walk icon */}
-                        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
-                        <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
-                      </div>
-                    </>
-                  )}
-                  {!commuteLoading && !commuteError && !commuteTimes && (
-                    <div className="text-xs text-gray-400">Enter an address to see commute times.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-                {/* Reviews Section with Rating Card */}
-        <div className="mt-8">
-          <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
-          {listingRatings && listingRatings.totalReviews === 0 ? (
-            /* No Reviews Layout - Rating Card on Left */
-            <div className="flex gap-6 items-start">
-              {/* Rating Card - Left Side */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-96">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold text-black mr-2">★</span>
-                    <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
-                    { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
-                    { name: 'Communication', rating: listingRatings.categoryRatings.communication },
-                    { name: 'Location', rating: listingRatings.categoryRatings.location },
-                    { name: 'Value', rating: listingRatings.categoryRatings.value },
-                  ].map((category) => {
-                    const percent = Math.max(0, Math.min(1, category.rating / 5));
-                    return (
-                      <div key={category.name} className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
-                        <div className="flex-1 mx-4">
-                          <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
-                            <div
-                              className="h-2 rounded-full bg-black transition-all"
-                              style={{ width: `${percent * 100}%` }}
-                            ></div>
-                          </div>
+                    {/* Amenities */}
+                    <div className="mt-8">
+                      <h3 className="text-black font-semibold mb-2 text-xl">Amenities</h3>
+                      {listing.amenities && listing.amenities.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                          {(() => {
+                            // Sort amenities in order: Living Essentials, College Essentials, Extra
+                            const livingEssentials = listing.amenities.filter((a: any) => 
+                              ['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking']
+                              .includes(a.name)
+                            );
+                            const collegeEssentials = listing.amenities.filter((a: any) => 
+                              ['Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
+                              .includes(a.name)
+                            );
+                            const extra = listing.amenities.filter((a: any) => 
+                              !['Wi-Fi', 'TV', 'Kitchen', 'Washer', 'Air conditioning', 'Free parking', 'Paid parking', 'Dedicated workspace', 'Quiet study area', 'High-speed Wi-Fi', 'Printer access', 'Coffee station', 'Whiteboard', 'Group study area']
+                              .includes(a.name)
+                            );
+                            
+                            const sortedAmenities = [...livingEssentials, ...collegeEssentials, ...extra];
+                            
+                            // Show only first 10 amenities
+                            const displayedAmenities = sortedAmenities.slice(0, 10);
+                            
+                            return displayedAmenities.map((a: any) => (
+                              <div key={a.code || a.name} className="flex items-center">
+                                {getAmenityIcon(a.name)}
+                                <span className="text-gray-700">{a.name}</span>
+                              </div>
+                            ));
+                          })()}
                         </div>
-                        <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
-                      </div>
-                    );
-                  })}
-                                  </div>
-                  {user && host && user.id !== host.id && (
-                    <div className="mt-4">
-                      <button
-                        onClick={() => setShowReviewModal(true)}
-                        className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
-                      >
-                        Write a review
-                      </button>
-                    </div>
-                  )}
-              </div>
-              
-              {/* Empty Right Side */}
-              <div className="flex-1"></div>
-            </div>
-          ) : (
-            /* Has Reviews Layout - Rating Card on Left, Reviews on Right */
-            <div className="flex gap-6 items-start">
-              {/* Rating Card - Left Side */}
-              {listingRatings && (
-                <div className="sticky top-28">
-                  <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-96">
-                                      <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center">
-                      <span className="text-2xl font-bold text-black mr-2">★</span>
-                      <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
+                      ) : (
+                        <span className="text-gray-400">No amenities listed</span>
+                      )}
+                      
+                      {/* Show all amenities button */}
+                      {listing.amenities && listing.amenities.length > 0 && (
+                        <button 
+                          onClick={() => setShowAmenitiesModal(true)}
+                          className="mt-8 bg-white border border-gray-200 rounded-2xl px-4 py-2 font-medium shadow-sm hover:bg-gray-50 transition-colors text-black"
+                          style={{ marginTop: '22px' }}
+                        >
+                          Show all {listing.amenities.length} amenities
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    {[
-                      { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
-                      { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
-                      { name: 'Communication', rating: listingRatings.categoryRatings.communication },
-                      { name: 'Location', rating: listingRatings.categoryRatings.location },
-                      { name: 'Value', rating: listingRatings.categoryRatings.value },
-                    ].map((category) => {
-                      const percent = Math.max(0, Math.min(1, category.rating / 5));
-                      return (
-                        <div key={category.name} className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
-                          <div className="flex-1 mx-4">
-                            <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
-                              <div
-                                className="h-2 rounded-full bg-black transition-all"
-                                style={{ width: `${percent * 100}%` }}
-                              ></div>
+                  
+                  {/* Right: Price and Booking Container - Now positioned to scroll from Meet your host to Show all amenities */}
+                  <div className={`${!isMobile ? 'lg:col-span-1' : 'order-2'}`}>
+                    <div className="lg:sticky lg:top-28" style={{ 
+                      position: 'sticky',
+                      top: '7rem',
+                      transform: 'translateZ(0)'
+                    }}>
+                      {/* Price and Booking Container */}
+                      {user && user.id !== listing.user_id ? (
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full">
+                          <div className="text-black text-2xl font-bold mb-2">
+                            <div className="text-2xl font-bold text-black">
+                              {(() => {
+                                const { start, end } = selectedRange;
+                                let nights = 1;
+                                if (start && end) {
+                                  const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                  nights = diff === 0 ? 1 : diff;
+                                }
+                                if (!selectedRange.start || !selectedRange.end) {
+                                  return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                                }
+                                if (nights === 1) {
+                                  return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                                }
+                                return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
+                              })()}
+                              <span className="text-sm font-normal text-gray-500">
+                                {(() => {
+                                  const { start, end } = selectedRange;
+                                  if (!start || !end) return '/night';
+                                  const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                  const nights = diff === 0 ? 1 : diff;
+                                  return nights === 1 ? '/night' : ` for ${nights} nights`;
+                                })()}
+                              </span>
                             </div>
                           </div>
-                          <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
+                          <div className="mt-4 mb-4">
+                            {listing.start_date && listing.end_date ? (
+                              <CompactCalendar 
+                                startDate={listing.start_date} 
+                                endDate={listing.end_date} 
+                                selectedRange={selectedRange}
+                                setSelectedRange={setSelectedRange}
+                              />
+                            ) : (
+                              <div className="text-black text-base font-medium">Availability not specified</div>
+                            )}
+                          </div>
+                          <button
+                            onClick={handleMessageHost}
+                            className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                          >
+                            Message host
+                          </button>
                         </div>
-                      );
-                    })}
+                      ) : (
+                        <div className="bg-white rounded-2xl shadow p-6 border border-gray-200">
+                          <div className="text-black text-2xl font-bold mb-2">
+                            <div className="text-2xl font-bold text-black">
+                              {(() => {
+                                const { start, end } = selectedRange;
+                                let nights = 1;
+                                if (start && end) {
+                                  const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                  nights = diff === 0 ? 1 : diff;
+                                }
+                                if (!selectedRange.start || !selectedRange.end) {
+                                  return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                                }
+                                if (nights === 1) {
+                                  return `${formatPrice(Number(listing?.price_per_night ?? 0))}`;
+                                }
+                                return `${formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights))}`;
+                              })()}
+                              <span className="text-sm font-normal text-gray-500">
+                                {(() => {
+                                  const { start, end } = selectedRange;
+                                  if (!start || !end) return '/night';
+                                  const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                                  const nights = diff === 0 ? 1 : diff;
+                                  return nights === 1 ? '/night' : ` for ${nights} nights`;
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-4 mb-4">
+                            {listing.start_date && listing.end_date ? (
+                              <CompactCalendar 
+                                startDate={listing.start_date} 
+                                endDate={listing.end_date} 
+                                selectedRange={selectedRange}
+                                setSelectedRange={setSelectedRange}
+                              />
+                            ) : (
+                              <div className="text-black text-base font-medium">Availability not specified</div>
+                            )}
+                          </div>
+                          <div className="text-center text-gray-500">
+                            {user ? 'This is your own listing' : 'Please log in to book this listing'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {user && host && user.id !== host.id && (
-                    <div className="mt-4">
-                      <button
-                        onClick={() => {
-                          const event = new CustomEvent('openReviewModal');
-                          window.dispatchEvent(event);
-                        }}
-                        className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
-                      >
-                        Write a review
-                      </button>
+                </div>
+              </div>
+
+              {/* Location Map */}
+              <h3 className="mt-8 text-black font-semibold mb-2 text-xl">Location</h3>
+              <div className={`${!isMobile ? 'lg:grid lg:grid-cols-3 lg:gap-6' : 'flex flex-col'} ${!isMobile ? '' : 'gap-6'}`} style={{
+                display: !isMobile ? 'grid' : 'flex',
+                gridTemplateColumns: !isMobile ? '2fr 1fr' : 'auto',
+                gap: !isMobile ? '1.5rem' : '1.5rem'
+              }}>
+                {/* Left: Map and location info */}
+                <div className={`${!isMobile ? 'lg:col-span-1' : 'order-1'} relative`}>
+                  <PrivacyMap
+                    latitude={listing.latitude}
+                    longitude={listing.longitude}
+                    city={listing.city}
+                    state={listing.state}
+                    neighborhood={listing.neighborhood}
+                    height="500px"
+                  />
+                </div>
+                {/* Right: Commute Time, sticky */}
+                <div className={`${!isMobile ? 'lg:col-span-1' : 'order-2'}`}>
+                  <div className="lg:sticky lg:top-28" style={{ 
+                    position: 'sticky',
+                    top: '7rem',
+                    transform: 'translateZ(0)'
+                  }}>
+                    {/* Commute Time Container */}
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full" style={{ width: '384px', minWidth: '384px', maxWidth: '384px' }}>
+                      <div className="text-black text-lg font-semibold mb-2">
+                        Estimate Commute Time
+                      </div>
+                      <div className="mb-3">
+                        <GoogleMapsAutocomplete
+                          onAddressSelect={handleCommuteAddressSelect}
+                          placeholder="Enter your address or destination"
+                        />
+                        {commuteAddress && (
+                          <div className="text-xs text-gray-600 mt-1 truncate"><span className="font-medium">Selected:</span> {commuteAddress}</div>
+                        )}
+                      </div>
+                      {/* Commute results UI */}
+                      <div className="space-y-2 min-h-[100px]">
+                        {commuteLoading && (
+                          <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
+                        )}
+                        {commuteError && (
+                          <div className="text-sm text-red-600">{commuteError}</div>
+                        )}
+                        {commuteTimes && !commuteLoading && !commuteError && (
+                          <>
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              {/* Car icon */}
+                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
+                              <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              {/* Transit icon (train) */}
+                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
+                              <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              {/* Bike icon */}
+                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
+                              <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              {/* Walk icon */}
+                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
+                              <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
+                            </div>
+                          </>
+                        )}
+                        {!commuteLoading && !commuteError && !commuteTimes && (
+                          <div className="text-xs text-gray-400">Enter an address to see commute times.</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reviews Section with Rating Card */}
+              <div className="mt-8">
+                <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
+                {listingRatings && listingRatings.totalReviews === 0 ? (
+                  /* No Reviews Layout - Rating Card on Left */
+                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`}>
+                    {/* Rating Card - Left Side */}
+                    <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${!isMobile ? 'w-96' : 'w-96'}`}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center">
+                          <span className="text-2xl font-bold text-black mr-2">★</span>
+                          <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {[
+                          { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
+                          { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
+                          { name: 'Communication', rating: listingRatings.categoryRatings.communication },
+                          { name: 'Location', rating: listingRatings.categoryRatings.location },
+                          { name: 'Value', rating: listingRatings.categoryRatings.value },
+                        ].map((category) => {
+                          const percent = Math.max(0, Math.min(1, category.rating / 5));
+                          return (
+                            <div key={category.name} className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
+                              <div className="flex-1 mx-4">
+                                <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                                  <div
+                                    className="h-2 rounded-full bg-black transition-all"
+                                    style={{ width: `${percent * 100}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                              <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {user && host && user.id !== host.id && (
+                        <div className="mt-4">
+                          <button
+                            onClick={() => setShowReviewModal(true)}
+                            className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                          >
+                            Write a review
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Empty Right Side */}
+                    <div className="flex-1"></div>
+                  </div>
+                ) : (
+                  /* Has Reviews Layout - Rating Card on Left, Reviews on Right */
+                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`}>
+                    {/* Rating Card - Left Side */}
+                    {listingRatings && (
+                      <div className={`${!isMobile ? 'sticky top-28' : ''}`}>
+                        <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${!isMobile ? 'w-96' : 'w-96'}`}>
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                              <span className="text-2xl font-bold text-black mr-2">★</span>
+                              <span className="text-2xl font-bold text-black">{listingRatings.averageRating.toFixed(1)}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {[
+                              { name: 'Cleanliness', rating: listingRatings.categoryRatings.cleanliness },
+                              { name: 'Accuracy', rating: listingRatings.categoryRatings.accuracy },
+                              { name: 'Communication', rating: listingRatings.categoryRatings.communication },
+                              { name: 'Location', rating: listingRatings.categoryRatings.location },
+                              { name: 'Value', rating: listingRatings.categoryRatings.value },
+                            ].map((category) => {
+                              const percent = Math.max(0, Math.min(1, category.rating / 5));
+                              return (
+                                <div key={category.name} className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
+                                  <div className="flex-1 mx-4">
+                                    <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                                      <div
+                                        className="h-2 rounded-full bg-black transition-all"
+                                        style={{ width: `${percent * 100}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                  <span className="text-sm font-bold text-gray-900 w-8 text-right flex-shrink-0">{category.rating.toFixed(1)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {user && host && user.id !== host.id && (
+                            <div className="mt-4">
+                              <button
+                                onClick={() => {
+                                  const event = new CustomEvent('openReviewModal');
+                                  window.dispatchEvent(event);
+                                }}
+                                className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
+                              >
+                                Write a review
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Reviews Section - Right Side */}
+                    <div className="flex-1">
+                      <ReviewsSection
+                        listingId={listing.id}
+                        reviewer={user as any}
+                        reviewee={host as any}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Other Listings Section */}
+              {otherListings.length > 0 && (
+                <div className={`mt-8 ${isMobile ? 'pb-20' : ''}`}>
+                  <h3 className="text-black font-semibold text-xl mb-6">Other listings</h3>
+                  {otherListingsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      {/* Sliding Gallery Container */}
+                      <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+                        {otherListings.map((otherListing) => (
+                          <div key={otherListing.id} className="cursor-pointer flex-shrink-0" onClick={() => router.push(`/listings/${otherListing.id}`)}>
+                            <ListingCard 
+                              id={otherListing.id}
+                              title={otherListing.title}
+                              images={otherListing.images}
+                              name={otherListing.name}
+                              avatar_url={otherListing.avatar_url}
+                              university_name={otherListing.university_name}
+                              bedrooms={otherListing.bedrooms}
+                              bathrooms={otherListing.bathrooms}
+                              price_per_night={otherListing.price_per_night}
+                              averageRating={otherListing.averageRating}
+                              totalReviews={otherListing.totalReviews}
+                              amenities={otherListing.amenities}
+                              cardMargin="mx-0"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Navigation Arrows */}
+                      {otherListings.length > 3 && (
+                        <>
+                          {/* Left Arrow */}
+                          <button
+                            onClick={() => {
+                              const container = document.querySelector('.overflow-x-auto');
+                              if (container) {
+                                container.scrollBy({ left: -400, behavior: 'smooth' });
+                              }
+                            }}
+                            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white border border-gray-200 rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow z-10"
+                          >
+                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          
+                          {/* Right Arrow */}
+                          <button
+                            onClick={() => {
+                              const container = document.querySelector('.overflow-x-auto');
+                              if (container) {
+                                container.scrollBy({ left: 400, behavior: 'smooth' });
+                              }
+                            }}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white border border-gray-200 rounded-full w-10 h-10 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow z-10"
+                          >
+                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
-                  </div>
                 </div>
               )}
-              
-              {/* Reviews Section - Right Side */}
-              <div className="flex-1">
-                <ReviewsSection
-                  listingId={listing.id}
-                  reviewer={user as any}
-                  reviewee={host as any}
-                />
-              </div>
             </div>
-          )}
-        </div>
-        
-        {/* Other Listings Section */}
-        {otherListings.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-black font-semibold text-xl mb-6">Other listings</h3>
-            {otherListingsLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap justify-start gap-10">
-                {otherListings.map((otherListing) => (
-                  <div key={otherListing.id} className="cursor-pointer" onClick={() => router.push(`/listings/${otherListing.id}`)}>
-                    <ListingCard 
-                      id={otherListing.id}
-                      title={otherListing.title}
-                      images={otherListing.images}
-                      name={otherListing.name}
-                      avatar_url={otherListing.avatar_url}
-                      university_name={otherListing.university_name}
-                      bedrooms={otherListing.bedrooms}
-                      bathrooms={otherListing.bathrooms}
-                      price_per_night={otherListing.price_per_night}
-                      averageRating={otherListing.averageRating}
-                      totalReviews={otherListing.totalReviews}
-                      amenities={otherListing.amenities}
-                      cardMargin="mx-0"
+            
+            {/* Photo Gallery Modal */}
+            {showPhotoModal && images.length > 0 && (
+              <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
+                <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowPhotoModal(false)}
+                    className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+
+                  {/* Main photo */}
+                  <div className="relative">
+                    <img
+                      src={images[currentPhotoIndex]?.url}
+                      alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
+                      className="w-full h-full object-contain max-h-[70vh] rounded-lg"
                     />
+                    
+                    {/* Photo counter */}
+                    <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
+                      {currentPhotoIndex + 1} of {images.length}
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
-      </div>
-      {/* Amenities Modal */}
-      {showAmenitiesModal && listing && listing.amenities && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 relative">
-            <div className="flex items-center justify-between pb-4">
-              <h3 className="text-xl font-semibold text-gray-900">All Amenities</h3>
-              <button
-                onClick={() => setShowAmenitiesModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Close amenities modal"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="border-b border-gray-200 absolute left-0 top-[72px] w-full" style={{marginLeft: 0, marginRight: 0}} />
-            <div className="pt-8 p-4 grid grid-cols-1 gap-4">
-              {listing.amenities.map((a: any) => (
-                <div key={a.code || a.name} className="flex items-center">
-                  {getAmenityIcon(a.name)}
-                  <span className="text-gray-700">{a.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Photo Gallery Modal */}
-      {showPhotoModal && images.length > 0 && (
-        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
-          <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={e => e.stopPropagation()}>
-            {/* Close button */}
-            <button
-              onClick={() => setShowPhotoModal(false)}
-              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            {/* Main photo */}
-            <div className="relative">
-              <img
-                src={images[currentPhotoIndex]?.url}
-                alt={`Photo ${currentPhotoIndex + 1}`}
-                className="w-full h-full object-contain max-h-[70vh] rounded-lg transition-transform duration-300 hover:scale-105"
-              />
-              {/* Photo counter */}
-              <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                {currentPhotoIndex + 1} of {images.length}
-              </div>
-            </div>
-            {/* Navigation buttons */}
-            {images.length > 1 && (
-              <>
-                {currentPhotoIndex > 0 && (
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => prev - 1)}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                {currentPhotoIndex < images.length - 1 && (
-                  <button
-                    onClick={() => setCurrentPhotoIndex(prev => prev + 1)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-              </>
-            )}
-            {/* Thumbnail strip */}
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
-              {images.map((img, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentPhotoIndex(index)}
-                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${index === currentPhotoIndex ? 'border-black' : 'border-gray-400'}`}
-                >
-                  <img
-                    src={img.url}
-                    alt={`Thumbnail ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Profile Modal */}
-      {showProfileModal && host && (
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          userId={host.id}
-        />
-      )}
+                  {/* Navigation buttons */}
+                  {images.length > 1 && (
+                    <>
+                      {currentPhotoIndex > 0 && (
+                        <button
+                          onClick={() => setCurrentPhotoIndex(prev => prev - 1)}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                      )}
+                      {currentPhotoIndex < images.length - 1 && (
+                        <button
+                          onClick={() => setCurrentPhotoIndex(prev => prev + 1)}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-opacity-75 transition-colors"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      )}
+                    </>
+                  )}
 
-      {/* Review Modal for listings without reviews */}
-      {showReviewModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-xl font-semibold text-gray-900">Write a Review</h3>
-              <button
-                onClick={() => setShowReviewModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form className="p-6 space-y-4" onSubmit={handleReviewSubmit}>
-              {/* Star Rating Components */}
-              {[
-                { label: 'Cleanliness', field: 'cleanliness_rating' },
-                { label: 'Accuracy', field: 'accuracy_rating' },
-                { label: 'Communication', field: 'communication_rating' },
-                { label: 'Location', field: 'location_rating' },
-                { label: 'Value', field: 'value_rating' },
-              ].map(({ label, field }) => (
-                <div key={field} className="mb-2">
-                  <label className="block text-gray-700 font-medium mb-1">{label}</label>
-                  <div className="flex items-center">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        className="focus:outline-none"
-                        onClick={() => setReviewForm(f => ({ ...f, [field]: star }))}
-                        aria-label={`Set ${label} to ${star} star${star > 1 ? 's' : ''}`}
-                      >
-                        <span className={star <= (reviewForm as any)[field] ? 'text-black text-2xl' : 'text-gray-300 text-2xl'}>★</span>
-                      </button>
+                  {/* Thumbnail strip */}
+                  <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+                    {images.map((image, index) => (
+                      <div key={index} className="relative flex-shrink-0">
+                        <button
+                          onClick={() => setCurrentPhotoIndex(index)}
+                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                            index === currentPhotoIndex ? 'border-black' : 'border-gray-400'
+                          }`}
+                        >
+                          <img
+                            src={image.url}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
-              ))}
-              <div>
-                <label className="block text-gray-700 font-medium mb-1">Comment</label>
-                <textarea
-                  value={reviewForm.comment}
-                  onChange={e => setReviewForm(f => ({ ...f, comment: e.target.value }))}
-                  className="w-full border border-gray-300 border-[1px] rounded-lg px-3 py-2 focus:border-black focus:outline-none text-black"
-                  rows={3}
-                />
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="ml-2 bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Submit Review
-                </button>
+            )}
+            
+            {/* Amenities Modal */}
+            {showAmenitiesModal && listing.amenities && (
+              <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
+                  <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-xl font-semibold text-gray-900">All Amenities</h3>
+                    <button
+                      onClick={() => setShowAmenitiesModal(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="p-6 space-y-3">
+                    {listing.amenities.map((amenity, index) => (
+                      <div key={index} className="flex items-center">
+                        {getAmenityIcon(amenity.name)}
+                        <span className="text-sm text-gray-700">{amenity.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </form>
+            )}
+            
+            {/* Mobile Footer */}
+            {user && isMobile && (
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50">
+                <div className="flex justify-around items-center">
+                  <Link href="/listings" className="flex flex-col items-center text-gray-600 hover:text-black">
+                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    </svg>
+                    <span className="text-xs">Listings</span>
+                  </Link>
+                  <Link href="/wishlist" className="flex flex-col items-center text-gray-600 hover:text-black">
+                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span className="text-xs">Wishlist</span>
+                  </Link>
+                  <Link href="/bookings" className="flex flex-col items-center text-gray-600 hover:text-black">
+                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <span className="text-xs">Bookings</span>
+                  </Link>
+                  <Link href="/messages" className="flex flex-col items-center text-gray-600 hover:text-black">
+                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="text-xs">Messages</span>
+                  </Link>
+                  <Link href="/profile" className="flex flex-col items-center text-gray-600 hover:text-black">
+                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-xs">Profile</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
-    </div>
-  );
+        );
 }
