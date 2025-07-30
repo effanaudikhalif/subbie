@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { buildApiUrl } from "../utils/api";
 import { useAuth } from "../hooks/useAuth";
 
 interface ChatBoxProps {
@@ -49,7 +50,7 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("http://localhost:4000/api/conversations/find-or-create", {
+        const res = await fetch(buildApiUrl("/api/conversations/find-or-create"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -75,7 +76,7 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
     let isMounted = true;
     async function fetchMessages() {
       try {
-        const res = await fetch(`http://localhost:4000/api/messages/conversation/${conversationId}`);
+        const res = await fetch(buildApiUrl(`/api/messages/conversation/${conversationId}`));
         const msgs = await res.json();
         if (isMounted) setMessages(msgs);
       } catch (e) {
@@ -96,7 +97,7 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
     if (!input.trim() || !conversationId || !userId) return;
     setSending(true);
     try {
-      const res = await fetch("http://localhost:4000/api/messages", {
+      const res = await fetch(buildApiUrl("/api/messages"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

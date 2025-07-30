@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import { User } from '@supabase/supabase-js';
+import { buildApiUrl } from '../utils/api';
 
 interface UserProfile {
   id: string;
@@ -110,7 +111,7 @@ export function useAuth() {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      const response = await fetch(`http://localhost:4000/api/users/${userId}`);
+      const response = await fetch(buildApiUrl(`/api/users/${userId}`));
       console.log('Profile response status:', response.status);
       
       if (response.ok) {
@@ -119,7 +120,7 @@ export function useAuth() {
         
         // Also fetch university name
         if (userData.university_id) {
-          const uniResponse = await fetch(`http://localhost:4000/api/universities/${userData.university_id}`);
+          const uniResponse = await fetch(buildApiUrl(`/api/universities/${userData.university_id}`));
           if (uniResponse.ok) {
             const uniData = await uniResponse.json();
             setProfile({
@@ -149,7 +150,7 @@ export function useAuth() {
         
         console.log('Creating profile with data:', basicProfile);
         
-        const createResponse = await fetch('http://localhost:4000/api/users', {
+        const createResponse = await fetch(buildApiUrl('/api/users'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -183,7 +184,7 @@ export function useAuth() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const response = await fetch(`http://localhost:4000/api/listings?user_id=${userId}`, {
+      const response = await fetch(buildApiUrl(`/api/listings?user_id=${userId}`), {
         signal: controller.signal
       });
       

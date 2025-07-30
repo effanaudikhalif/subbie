@@ -6,6 +6,7 @@ import MobileNavbar from '../../components/MobileNavbar';
 import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { buildApiUrl } from '../../utils/api';
 
 interface WishlistItem {
   id: string;
@@ -68,7 +69,7 @@ export default function WishlistPage() {
 
     const fetchWishlist = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/api/wishlist/user/${user.id}`);
+        const response = await fetch(buildApiUrl(`/api/wishlist/user/${user.id}`));
         if (!response.ok) {
           throw new Error('Failed to fetch wishlist');
         }
@@ -86,7 +87,7 @@ export default function WishlistPage() {
 
   // Fetch average ratings for listings
   useEffect(() => {
-    fetch('http://localhost:4000/api/listings/average-ratings')
+    fetch(buildApiUrl('/api/listings/average-ratings'))
       .then(res => res.json())
       .then(data => {
         setAverageRatings(data);

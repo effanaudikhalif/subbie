@@ -5,6 +5,7 @@ import ChatBox from "../../components/ChatBox";
 import Navbar from "../../components/Navbar";
 import PrivacyMap from "../../components/PrivacyMap";
 import { useSearchParams, useRouter } from "next/navigation";
+import { buildApiUrl } from "../../utils/api";
 import Link from "next/link";
 import MobileNavbar from "../../components/MobileNavbar";
 
@@ -199,12 +200,12 @@ export default function MessagesPage() {
     async function fetchConversations() {
       if (!isMounted) return;
       setLoading(true);
-      const res = await fetch(`http://localhost:4000/api/conversations/user/${userId}`);
+      const res = await fetch(buildApiUrl(`/api/conversations/user/${userId}`));
       const data = await res.json();
       // Fetch messages for each conversation to check if there are actual messages
       const conversationsWithMessages = await Promise.all(
         data.map(async (conversation: Conversation) => {
-          const messagesRes = await fetch(`http://localhost:4000/api/messages/conversation/${conversation.id}`);
+          const messagesRes = await fetch(buildApiUrl(`/api/messages/conversation/${conversation.id}`));
           const messages = await messagesRes.json();
           // Only include conversations that have messages
           return { ...conversation, hasMessages: messages.length > 0 };
@@ -279,11 +280,11 @@ export default function MessagesPage() {
       const listingDetailsObj: Record<string, any> = {};
       await Promise.all([
         ...otherUserIds.map(async (id) => {
-          const res = await fetch(`http://localhost:4000/api/users/${id}`);
+          const res = await fetch(buildApiUrl(`/api/users/${id}`));
           if (res.ok) userProfilesObj[id] = await res.json();
         }),
         ...listingIds.map(async (id) => {
-          const res = await fetch(`http://localhost:4000/api/listings/${id}`);
+          const res = await fetch(buildApiUrl(`/api/listings/${id}`));
           if (res.ok) {
             const listing = await res.json();
             listingTitlesObj[id] = listing.title;
@@ -549,7 +550,7 @@ export default function MessagesPage() {
                   <div className="font-bold text-lg text-black mb-2">{currentListing.title}</div>
                   <div className="relative w-full h-48 rounded-xl overflow-hidden">
                     <img
-                      src={images[currentImageIndex]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImageIndex].url}` : images[currentImageIndex].url}
+                      src={images[currentImageIndex]?.url.startsWith('/uploads/') ? buildApiUrl(images[currentImageIndex].url) : images[currentImageIndex].url}
                       alt={currentListing.title}
                       className="w-full h-full object-cover"
                     />

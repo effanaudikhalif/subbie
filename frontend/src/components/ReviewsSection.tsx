@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
+import { buildApiUrl } from '../utils/api';
 import type { User } from '../types/User';
 
 interface Review {
@@ -55,7 +56,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
   const fetchReviews = async () => {
     try {
       // Fetch reviews for this listing
-      const response = await fetch(`http://localhost:4000/api/host-reviews`);
+      const response = await fetch(buildApiUrl('/api/host-reviews'));
       if (response.ok) {
         const allReviews = await response.json();
         // Filter reviews for this listing by listing_id
@@ -64,7 +65,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
         const reviewsWithNames = await Promise.all(
           listingReviews.map(async (review: Review) => {
             try {
-              const userResponse = await fetch(`http://localhost:4000/api/users/${review.reviewer_id}`);
+              const userResponse = await fetch(buildApiUrl(`/api/users/${review.reviewer_id}`));
               if (userResponse.ok) {
                 const user = await userResponse.json();
                 return { ...review, reviewer_name: user.name, reviewer_avatar: user.avatar_url };
@@ -150,7 +151,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
       return;
     }
     try {
-      const res = await fetch('http://localhost:4000/api/host-reviews', {
+              const res = await fetch(buildApiUrl('/api/host-reviews'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

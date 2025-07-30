@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import type { User } from '../../../types/User';
 import { useParams, useRouter } from "next/navigation";
+import { buildApiUrl, buildImageUrl } from '../../../utils/api';
 import Link from "next/link";
 import Navbar from "../../../components/Navbar";
 import MobileNavbar from "../../../components/MobileNavbar";
@@ -82,7 +83,7 @@ export default function ListingDetails() {
     
     try {
       // Create or find conversation
-      const response = await fetch('http://localhost:4000/api/conversations/find-or-create', {
+      const response = await fetch(buildApiUrl('/api/conversations/find-or-create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -447,18 +448,18 @@ export default function ListingDetails() {
     async function fetchAll() {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:4000/api/listings/${id}`);
+        const res = await fetch(buildApiUrl(`/api/listings/${id}`));
         const data = await res.json();
         setListing(data);
 
         // Fetch host user
         if (data.user_id) {
-          const userRes = await fetch(`http://localhost:4000/api/users/${data.user_id}`);
+          const userRes = await fetch(buildApiUrl(`/api/users/${data.user_id}`));
           const user = await userRes.json();
           setHost(user);
           // Fetch university
           if (user.university_id) {
-            const uniRes = await fetch(`http://localhost:4000/api/universities/${user.university_id}`);
+            const uniRes = await fetch(buildApiUrl(`/api/universities/${user.university_id}`));
             const uni = await uniRes.json();
             setUniversity(uni);
           }
@@ -483,7 +484,7 @@ export default function ListingDetails() {
     async function fetchHostReviews() {
       if (!host?.id) return;
       try {
-        const res = await fetch(`http://localhost:4000/api/host-reviews/user/${host.id}`);
+        const res = await fetch(buildApiUrl(`/api/host-reviews/user/${host.id}`));
         if (!res.ok) return;
         const reviews = await res.json();
         if (!Array.isArray(reviews) || reviews.length === 0) {
@@ -546,7 +547,7 @@ export default function ListingDetails() {
       return;
     }
     try {
-      const res = await fetch('http://localhost:4000/api/host-reviews', {
+              const res = await fetch(buildApiUrl('/api/host-reviews'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -624,7 +625,7 @@ export default function ListingDetails() {
   const fetchListingRatings = async () => {
     if (!listing?.id) return;
     try {
-      const response = await fetch(`http://localhost:4000/api/host-reviews`);
+              const response = await fetch(buildApiUrl(`/api/host-reviews`));
       if (response.ok) {
         const allReviews = await response.json();
         // Filter reviews for this listing
@@ -688,14 +689,14 @@ export default function ListingDetails() {
       if (!user?.id || !listing?.city) return;
       setOtherListingsLoading(true);
       try {
-        const response = await fetch(`http://localhost:4000/api/listings?exclude_user_id=${user.id}&city=${encodeURIComponent(listing.city)}`);
+        const response = await fetch(buildApiUrl(`/api/listings?exclude_user_id=${user.id}&city=${encodeURIComponent(listing.city)}`));
         if (response.ok) {
           const data = await response.json();
           // Filter out the current listing
           const filteredListings = data.filter((l: any) => l.id !== listing?.id);
           
           // Fetch ratings for the other listings
-          const ratingsResponse = await fetch('http://localhost:4000/api/listings/average-ratings');
+          const ratingsResponse = await fetch(buildApiUrl('/api/listings/average-ratings'));
           if (ratingsResponse.ok) {
             const ratingsData = await ratingsResponse.json();
             
@@ -737,7 +738,7 @@ export default function ListingDetails() {
 
     const checkWishlistStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${listing.id}`);
+        const response = await fetch(buildApiUrl(`/api/wishlist/check/${user.id}/${listing.id}`));
         if (response.ok) {
           const data = await response.json();
           setIsInWishlist(data.inWishlist);
@@ -775,7 +776,7 @@ export default function ListingDetails() {
     try {
       if (isInWishlist) {
         // Remove from wishlist
-        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${listing?.id}`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist/${user.id}/${listing?.id}`), {
           method: 'DELETE',
         });
         if (response.ok) {
@@ -787,7 +788,7 @@ export default function ListingDetails() {
         }
       } else {
         // Add to wishlist
-        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -850,7 +851,7 @@ export default function ListingDetails() {
   // Convert relative URLs to absolute URLs for uploaded images
   images = images.map(img => ({
     ...img,
-    url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
+                url: img.url.startsWith('/uploads/') ? buildImageUrl(img.url) : img.url
   }));
 
   // Ensure we have at least 5 images for the grid layout

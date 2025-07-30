@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
 import { useRouter } from "next/navigation";
+import { buildApiUrl } from "../../utils/api";
 
 interface University {
   id: string;
@@ -27,7 +28,7 @@ export default function RegisterPage() {
   useEffect(() => {
     const fetchUniversities = async () => {
       try {
-        const response = await fetch('http://localhost:4000/api/universities');
+        const response = await fetch(buildApiUrl('/api/universities'));
         if (response.ok) {
           const data = await response.json();
           setUniversities(data);
@@ -128,7 +129,7 @@ export default function RegisterPage() {
           stripe_account: null
         };
 
-        const response = await fetch('http://localhost:4000/api/users', {
+        const response = await fetch(buildApiUrl('/api/users'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

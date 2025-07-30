@@ -177,7 +177,7 @@ module.exports = (pool) => {
       }
 
       // Create the avatar URL (this will be served from /uploads/ endpoint)
-      const avatarUrl = `http://localhost:4000/uploads/${req.file.filename}`;
+      const avatarUrl = `${process.env.API_BASE_URL || 'http://localhost:4000'}/uploads/${req.file.filename}`;
       
       // Update the user's avatar_url in the database
       const { rows } = await pool.query(

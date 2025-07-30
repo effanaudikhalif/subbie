@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../hooks/useAuth';
+import { buildApiUrl, buildImageUrl } from '../utils/api';
 import { useRouter } from 'next/navigation';
 
 interface ListingCardProps {
@@ -123,7 +124,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   };
 
   const imageUrl = images.length > 0 
-    ? `http://localhost:4000${images[currentImageIndex]?.url || images[0].url}` 
+            ? buildImageUrl(images[currentImageIndex]?.url || images[0].url) 
     : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80"; // Default image if no images are available
 
   const totalPrice = dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate ? (() => {
@@ -145,7 +146,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
     const checkWishlistStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${id}`);
+        const response = await fetch(buildApiUrl(`/api/wishlist/check/${user.id}/${id}`));
         if (response.ok) {
           const data = await response.json();
           setIsInWishlist(data.inWishlist);
@@ -186,7 +187,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
     try {
       if (isInWishlist) {
         // Remove from wishlist
-        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${id}`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist/${user.id}/${id}`), {
           method: 'DELETE',
         });
         if (response.ok) {
@@ -198,7 +199,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
         }
       } else {
         // Add to wishlist
-        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -9,6 +9,7 @@ import CancellationForm from "../../components/CancellationForm";
 import ReviewsSection from "../../components/ReviewsSection";
 import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { buildApiUrl, buildImageUrl } from '../../utils/api';
 import Link from "next/link";
 
 interface ListingImage {
@@ -103,7 +104,7 @@ export default function MyListingsPage() {
   const fetchCompleteListing = async (listingId: string) => {
     try {
       console.log('Fetching complete listing for ID:', listingId);
-      const response = await fetch(`http://localhost:4000/api/listings/${listingId}`);
+      const response = await fetch(buildApiUrl(`/api/listings/${listingId}`));
       console.log('Response status:', response.status);
       if (response.ok) {
         const completeListing = await response.json();
@@ -135,7 +136,7 @@ export default function MyListingsPage() {
     try {
       switch (tabName) {
         case 'bookings':
-          const bookingsRes = await fetch(`http://localhost:4000/api/bookings`);
+          const bookingsRes = await fetch(buildApiUrl('/api/bookings'));
           const bookingsData = await bookingsRes.json();
           if (Array.isArray(bookingsData)) {
             setBookings(bookingsData.filter((b: Booking) => b.host_id === userId));
@@ -143,11 +144,11 @@ export default function MyListingsPage() {
           break;
           
         case 'messages':
-          const convosRes = await fetch(`http://localhost:4000/api/conversations/user/${userId}`);
+                      const convosRes = await fetch(buildApiUrl(`/api/conversations/user/${userId}`));
           const convosData = await convosRes.json();
           const convosWithMessages = await Promise.all(
             convosData.map(async (conversation: any) => {
-              const messagesRes = await fetch(`http://localhost:4000/api/messages/conversation/${conversation.id}`);
+              const messagesRes = await fetch(buildApiUrl(`/api/messages/conversation/${conversation.id}`));
               const messages = await messagesRes.json();
               return { ...conversation, hasMessages: messages.length > 0 };
             })
@@ -378,7 +379,7 @@ export default function MyListingsPage() {
     // Check if user has already written a review for this booking
     if (user) {
       try {
-        const response = await fetch(`http://localhost:4000/api/renter-reviews`);
+        const response = await fetch(buildApiUrl('/api/renter-reviews'));
         if (response.ok) {
           const allReviews = await response.json();
           const userReview = allReviews.find((review: any) => 
@@ -426,7 +427,7 @@ export default function MyListingsPage() {
       
       if (isEditingRenterReview && existingRenterReview) {
         // Update existing review
-        response = await fetch(`http://localhost:4000/api/renter-reviews/${existingRenterReview.id}`, {
+                    response = await fetch(buildApiUrl(`/api/renter-reviews/${existingRenterReview.id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -436,7 +437,7 @@ export default function MyListingsPage() {
         });
       } else {
         // Create new review
-        response = await fetch('http://localhost:4000/api/renter-reviews', {
+                  response = await fetch(buildApiUrl('/api/renter-reviews'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -479,7 +480,7 @@ export default function MyListingsPage() {
   // Fetch already reviewed bookings for this host (on mount)
   useEffect(() => {
     if (!userId) return;
-    fetch(`http://localhost:4000/api/renter-reviews/reviewer/${userId}`)
+            fetch(buildApiUrl(`/api/renter-reviews/reviewer/${userId}`))
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -492,7 +493,7 @@ export default function MyListingsPage() {
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    fetch(`http://localhost:4000/api/listings?user_id=${userId}`)
+            fetch(buildApiUrl(`/api/listings?user_id=${userId}`))
       .then(res => res.json())
       .then(data => {
         setListings(Array.isArray(data) ? data : []);
@@ -523,11 +524,11 @@ export default function MyListingsPage() {
       const listingTitlesObj: Record<string, string> = {};
       await Promise.all([
         ...otherUserIds.map(async (id) => {
-          const res = await fetch(`http://localhost:4000/api/users/${id}`);
+          const res = await fetch(buildApiUrl(`/api/users/${id}`));
           if (res.ok) userProfilesObj[id] = await res.json();
         }),
         ...listingIds.map(async (id) => {
-          const res = await fetch(`http://localhost:4000/api/listings/${id}`);
+          const res = await fetch(buildApiUrl(`/api/listings/${id}`));
           if (res.ok) {
             const listing = await res.json();
             listingTitlesObj[id] = listing.title;
@@ -547,7 +548,7 @@ export default function MyListingsPage() {
     const userProfilesObj: Record<string, any> = {};
     Promise.all(
       guestIds.map(async (id) => {
-        const res = await fetch(`http://localhost:4000/api/users/${id}`);
+        const res = await fetch(buildApiUrl(`/api/users/${id}`));
         if (res.ok) userProfilesObj[id] = await res.json();
       })
     ).then(() => {
@@ -573,7 +574,7 @@ export default function MyListingsPage() {
 
     setDeletingListing(listingId);
     try {
-      const response = await fetch(`http://localhost:4000/api/listings/${listingId}`, {
+      const response = await fetch(buildApiUrl(`/api/listings/${listingId}`), {
         method: 'DELETE',
       });
 
@@ -610,7 +611,7 @@ export default function MyListingsPage() {
 
     setCancellationLoading(true);
     try {
-      const response = await fetch(`http://localhost:4000/api/bookings/${cancellingBooking.id}/cancel-host`, {
+      const response = await fetch(buildApiUrl(`/api/bookings/${cancellingBooking.id}/cancel-host`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -665,7 +666,7 @@ export default function MyListingsPage() {
     if (selectedBooking) {
       setBookingConversationId(null);
       setBookingConversationLoading(true);
-      fetch('http://localhost:4000/api/conversations/find-or-create', {
+              fetch(buildApiUrl('/api/conversations/find-or-create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -695,7 +696,7 @@ export default function MyListingsPage() {
   // Add a handler to set a listing to inactive
   const handleSetInactive = async (listingId: string) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/listings/${listingId}/status`, {
+      const response = await fetch(buildApiUrl(`/api/listings/${listingId}/status`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'inactive' })
@@ -714,7 +715,7 @@ export default function MyListingsPage() {
   const handleToggleStatus = async (listingId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' || currentStatus === 'approved' || !currentStatus ? 'inactive' : 'active';
     try {
-      const response = await fetch(`http://localhost:4000/api/listings/${listingId}/status`, {
+      const response = await fetch(buildApiUrl(`/api/listings/${listingId}/status`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
@@ -1244,7 +1245,7 @@ function ListingDetailsView({
   });
   images = images.map(img => ({
     ...img,
-    url: img.url.startsWith('/uploads/') ? `http://localhost:4000${img.url}` : img.url
+                url: img.url.startsWith('/uploads/') ? buildImageUrl(img.url) : img.url
   }));
 
   // Host/university info is not fetched here, so just show placeholders
@@ -1417,14 +1418,14 @@ function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: B
   // Use the status from the booking prop directly instead of local state
   const status = booking.status;
   useEffect(() => {
-    fetch(`http://localhost:4000/api/listings/${booking.listing_id}`)
+            fetch(buildApiUrl(`/api/listings/${booking.listing_id}`))
       .then(res => res.json())
       .then(data => setListing(data))
       .catch(() => setListing(null));
   }, [booking.listing_id]);
 
   const handleApprove = async () => {
-    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/accept`, {
+    const res = await fetch(buildApiUrl(`/api/bookings/${booking.id}/accept`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1444,7 +1445,7 @@ function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: B
       return;
     }
     
-    const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/end`, {
+    const res = await fetch(buildApiUrl(`/api/bookings/${booking.id}/end`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1463,7 +1464,7 @@ function ApprovedBookingDetailsView({ booking, showApproveButton }: { booking: B
     <div className="w-full min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-8 mt-8">
         {listing && listing.images && listing.images.length > 0 && (
-          <img src={listing.images[0].url.startsWith('/uploads/') ? `http://localhost:4000${listing.images[0].url}` : listing.images[0].url} alt={listing.title} className="rounded-xl w-full h-64 object-cover mb-6" />
+          <img src={listing.images[0].url.startsWith('/uploads/') ? buildImageUrl(listing.images[0].url) : listing.images[0].url} alt={listing.title} className="rounded-xl w-full h-64 object-cover mb-6" />
         )}
         <div className="font-bold text-2xl text-black mb-1">{listing?.title || "Listing"}</div>
         <div className="text-gray-500 mb-2">{listing?.city}, {listing?.state}</div>
@@ -1510,7 +1511,7 @@ function MessagesReservationPanel({ conversation, guest, listingId }: { conversa
 
   React.useEffect(() => {
     async function fetchListing() {
-      const res = await fetch(`http://localhost:4000/api/listings/${listingId}`);
+      const res = await fetch(buildApiUrl(`/api/listings/${listingId}`));
       if (res.ok) setListing(await res.json());
     }
     if (listingId) fetchListing();

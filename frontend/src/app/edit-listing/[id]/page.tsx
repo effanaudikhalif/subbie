@@ -8,6 +8,7 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import MapPreview from '../../../components/MapPreview';
 import PhotoUpload from '../../../components/PhotoUpload';
 import CompactCalendar from '../../../components/CompactCalendar';
+import { buildApiUrl } from '../../../utils/api';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -99,7 +100,7 @@ export default function EditListing() {
     setAiAboutLoading(true);
     setAiAboutError('');
     try {
-      const response = await fetch('http://localhost:4000/api/openai/suggest', {
+      const response = await fetch(buildApiUrl('/api/openai/suggest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -175,7 +176,7 @@ export default function EditListing() {
     const fetchListing = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:4000/api/listings/${id}`);
+        const response = await fetch(buildApiUrl(`/api/listings/${id}`));
         if (response.ok) {
           const listingData = await response.json();
           console.log('listingData.images:', listingData.images); // Debug: see what backend returns
@@ -198,7 +199,7 @@ export default function EditListing() {
             bathrooms: listingData.bathrooms || 1,
             occupants: listingData.occupants || [],
             amenities: listingData.amenities?.map((a: any) => a.code || a) || [],
-            photos: listingData.images?.map((img: any) => `http://localhost:4000${img.url}`) || [], // Map images to full URLs
+            photos: listingData.images?.map((img: any) => buildApiUrl(img.url)) || [], // Map images to full URLs
             title: listingData.title || '',
             description: listingData.description || '',
             price_per_night: Number(listingData.price_per_night) || 100, // Always coerce to number
@@ -495,7 +496,7 @@ export default function EditListing() {
         console.error('Invalid amenity codes being sent:', invalidAmenities);
       }
 
-      const response = await fetch(`http://localhost:4000/api/listings/${id}`, {
+      const response = await fetch(buildApiUrl(`/api/listings/${id}`), {
           method: 'PUT',
         body: submitData
       });

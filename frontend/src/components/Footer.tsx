@@ -22,30 +22,6 @@ export default function Footer() {
               
             </ul>
           </div>
-
-          {/* Legal Column */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Legal</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link 
-                  href="/terms" 
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  Terms of Service
-                </Link>
-              </li>
-              
-              <li>
-                <Link 
-                  href="/community-guidelines" 
-                  className="text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  Community Guidelines
-                </Link>
-              </li>
-            </ul>
-          </div>
         </div>
 
         

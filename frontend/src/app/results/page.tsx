@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { buildApiUrl } from '../../utils/api';
 import Navbar from '../../components/Navbar';
 import SearchBar from '../../components/Searchbar';
 import Link from 'next/link';
@@ -27,7 +28,7 @@ export default function Results() {
   const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/listings')
+          fetch(buildApiUrl('/api/listings'))
       .then(res => res.json())
       .then(data => {
         console.log('API listings:', data);
@@ -38,7 +39,7 @@ export default function Results() {
 
   // Fetch average ratings for listings
   useEffect(() => {
-    fetch('http://localhost:4000/api/listings/average-ratings')
+          fetch(buildApiUrl('/api/listings/average-ratings'))
       .then(res => res.json())
       .then(data => {
         setAverageRatings(data);

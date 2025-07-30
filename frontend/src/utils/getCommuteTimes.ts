@@ -1,6 +1,8 @@
 // Utility to fetch commute times using Google Maps Directions API
 // Usage: getCommuteTimes({lat, lng}, {lat, lng})
 
+import { buildApiUrl } from './api';
+
 export interface CommuteTimes {
   car: string | null;
   transit: string | null;
@@ -13,7 +15,7 @@ export async function getCommuteTimes(
   destination: { lat: number; lng: number }
 ): Promise<CommuteTimes> {
   // Call backend endpoint instead of Google directly
-  const res = await fetch('http://localhost:4000/api/commute-times', {
+  const res = await fetch(buildApiUrl('/api/commute-times'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ origin, destination })

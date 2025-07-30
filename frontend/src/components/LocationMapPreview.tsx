@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import Link from 'next/link';
 import { useAuth } from '../hooks/useAuth';
+import { buildApiUrl, buildImageUrl } from '../utils/api';
 
 interface Listing {
   id: string;
@@ -219,7 +220,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               <img 
                 src="${(() => {
                   const imageUrl = this.listing.images && this.listing.images.length > 0 
-                    ? `http://localhost:4000${this.listing.images[this.currentImageIndex]?.url || this.listing.images[0].url}` 
+                    ? buildImageUrl(this.listing.images[this.currentImageIndex]?.url || this.listing.images[0].url) 
                     : "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80";
                   return imageUrl;
                 })()}"
@@ -402,7 +403,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
 
     const checkWishlistStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:4000/api/wishlist/check/${user.id}/${selectedListing.id}`);
+        const response = await fetch(buildApiUrl(`/api/wishlist/check/${user.id}/${selectedListing.id}`));
         if (response.ok) {
           const data = await response.json();
           setIsInWishlist(data.inWishlist);
@@ -427,7 +428,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
     setWishlistLoading(true);
     try {
       if (isInWishlist) {
-        const response = await fetch(`http://localhost:4000/api/wishlist/${user.id}/${selectedListing.id}`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist/${user.id}/${selectedListing.id}`), {
           method: 'DELETE',
         });
         if (response.ok) {
@@ -437,7 +438,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
           }));
         }
       } else {
-        const response = await fetch(`http://localhost:4000/api/wishlist`, {
+        const response = await fetch(buildApiUrl(`/api/wishlist`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

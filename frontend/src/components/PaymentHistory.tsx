@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { buildApiUrl } from '../utils/api';
 
 interface PaymentTransaction {
   id: string;
@@ -121,7 +122,7 @@ export default function PaymentHistory({ userId }: PaymentHistoryProps) {
     const fetchPaymentHistory = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:4000/api/bookings/host/${userId}`);
+        const response = await fetch(buildApiUrl(`/api/bookings/host/${userId}`));
         const data = await response.json();
         
         // Filter for completed payments (confirmed bookings with payment data)

@@ -5,6 +5,7 @@ import Navbar from "../../components/Navbar";
 import MobileNavbar from "../../components/MobileNavbar";
 import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from "next/navigation";
+import { buildApiUrl } from "../../utils/api";
 import Link from "next/link";
 
 interface UserProfile {
@@ -93,7 +94,7 @@ export default function ProfilePage() {
     async function fetchProfile() {
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:4000/api/users/${targetUserId}`);
+        const response = await fetch(buildApiUrl(`/api/users/${targetUserId}`));
         if (response.ok) {
           const userData = await response.json();
           console.log('Profile data received:', userData); // Debug log
@@ -118,7 +119,7 @@ export default function ProfilePage() {
 
     async function fetchHostReviews() {
       try {
-        const response = await fetch(`http://localhost:4000/api/host-reviews?host_id=${targetUserId}`);
+        const response = await fetch(buildApiUrl(`/api/host-reviews?host_id=${targetUserId}`));
         if (response.ok) {
           const reviewsData = await response.json();
           setHostReviews(reviewsData);
@@ -130,7 +131,7 @@ export default function ProfilePage() {
 
     async function fetchUserListings() {
       try {
-        const response = await fetch(`http://localhost:4000/api/listings?user_id=${targetUserId}`);
+        const response = await fetch(buildApiUrl(`/api/listings?user_id=${targetUserId}`));
         if (response.ok) {
           const listingsData = await response.json();
           setUserListings(listingsData);
@@ -142,7 +143,7 @@ export default function ProfilePage() {
 
     async function fetchAverageRatings() {
       try {
-        const response = await fetch('http://localhost:4000/api/listings/average-ratings');
+        const response = await fetch(buildApiUrl('/api/listings/average-ratings'));
         if (response.ok) {
           const ratingsData = await response.json();
           setAverageRatings(ratingsData);
@@ -169,7 +170,7 @@ export default function ProfilePage() {
     
     try {
       // Update profile data
-      const response = await fetch(`http://localhost:4000/api/users/${user.id}`, {
+              const response = await fetch(buildApiUrl(`/api/users/${user.id}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +199,7 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append('avatar', editProfilePicture);
         
-        const avatarResponse = await fetch(`http://localhost:4000/api/users/${user.id}/avatar`, {
+        const avatarResponse = await fetch(buildApiUrl(`/api/users/${user.id}/avatar`), {
           method: 'POST',
           body: formData,
         });

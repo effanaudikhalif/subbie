@@ -8,6 +8,7 @@ import GoogleMapsAutocomplete from '../../components/GoogleMapsAutocomplete';
 import MapPreview from '../../components/MapPreview';
 import PhotoUpload from '../../components/PhotoUpload';
 import CompactCalendar from '../../components/CompactCalendar';
+import { buildApiUrl } from '../../utils/api';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -119,7 +120,7 @@ export default function BecomeHost() {
     setAiAboutLoading(true);
     setAiAboutError('');
     try {
-      const response = await fetch('http://localhost:4000/api/openai/suggest', {
+      const response = await fetch(buildApiUrl('/api/openai/suggest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -475,9 +476,9 @@ export default function BecomeHost() {
         photos_count: formData.photos.length
       });
 
-      console.log('Making request to:', 'http://localhost:4000/api/listings');
+      console.log('Making request to:', buildApiUrl('/api/listings'));
       
-      const response = await fetch('http://localhost:4000/api/listings', {
+      const response = await fetch(buildApiUrl('/api/listings'), {
         method: 'POST',
         body: submitData
       });
@@ -572,7 +573,7 @@ export default function BecomeHost() {
         submitData.append(`photos`, photo);
       });
 
-      const response = await fetch('http://localhost:4000/api/listings', {
+      const response = await fetch(buildApiUrl('/api/listings'), {
         method: 'POST',
         body: submitData
       });
