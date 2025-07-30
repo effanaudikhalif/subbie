@@ -19,7 +19,22 @@ const openaiRouter = require('./routes/openai');
 const ExpirationService = require('./expirationService');
 
 const app = express();
-app.use(cors());
+
+// Configure CORS to allow your Vercel domain
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://subly-2.vercel.app',
+    'https://subly.vercel.app',
+    'https://subly-frontend.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Serve static files from uploads directory with CORS headers
