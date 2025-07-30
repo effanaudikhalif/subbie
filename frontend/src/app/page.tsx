@@ -123,7 +123,7 @@ export default function Page() {
         </div>
 
         {/* Footer */}
-        <Footer />
+        {(!isMobile || !authUser) && <Footer />}
 
         {/* Mobile Footer - Only show on mobile and when user is logged in */}
         {authUser && isMobile && (
