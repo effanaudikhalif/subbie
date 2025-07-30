@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Navbar from "../../components/Navbar";
 import MobileNavbar from "../../components/MobileNavbar";
 import { useAuth } from "../../hooks/useAuth";
@@ -55,7 +55,7 @@ interface Booking {
   payment_status: string;
 }
 
-export default function MyListingsPage() {
+function MyListingsPageContent() {
   const { user } = useAuth();
   const userId = typeof user?.id === 'string' ? user.id : null;
   const router = useRouter();
@@ -1219,6 +1219,14 @@ export default function MyListingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MyListingsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MyListingsPageContent />
+    </Suspense>
   );
 }
 

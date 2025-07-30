@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import Navbar from "../../components/Navbar";
 import MobileNavbar from "../../components/MobileNavbar";
@@ -34,7 +34,7 @@ interface HostReview {
   created_at: string;
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -633,5 +633,13 @@ export default function ProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProfilePageContent />
+    </Suspense>
   );
 } 

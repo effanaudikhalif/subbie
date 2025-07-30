@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { buildApiUrl } from '../../utils/api';
 import Navbar from '../../components/Navbar';
@@ -7,7 +7,7 @@ import SearchBar from '../../components/Searchbar';
 import Link from 'next/link';
 import ListingCard from '../../components/ListingCard';
 
-export default function Results() {
+function ResultsContent() {
   const searchParams = useSearchParams();
   const [where, setWhere] = useState(searchParams?.get('where') || '');
   const [appliedWhere, setAppliedWhere] = useState(searchParams?.get('where') || '');
@@ -194,5 +194,13 @@ export default function Results() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Results() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResultsContent />
+    </Suspense>
   );
 } 

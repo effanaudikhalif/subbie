@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { buildApiUrl } from '../../utils/api';
 import { useRouter } from "next/navigation";
@@ -12,7 +12,7 @@ import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
 
-export default function Results() {
+function ResultsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -691,5 +691,13 @@ export default function Results() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Results() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ResultsContent />
+    </Suspense>
   );
 } 

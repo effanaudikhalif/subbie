@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, Suspense } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import ChatBox from "../../components/ChatBox";
 import Navbar from "../../components/Navbar";
@@ -43,7 +43,7 @@ function formatPrice(price: number) {
   return formatted.startsWith('$') ? formatted : `$${formatted}`;
 }
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -878,6 +878,14 @@ export default function MessagesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MessagesPageContent />
+    </Suspense>
   );
 } 
 
