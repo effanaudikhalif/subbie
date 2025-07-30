@@ -111,7 +111,9 @@ export function useAuth() {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching profile for user:', userId);
-      const response = await fetch(buildApiUrl(`/api/users/${userId}`));
+      const apiUrl = buildApiUrl(`/api/users/${userId}`);
+      console.log('Full API URL:', apiUrl);
+      const response = await fetch(apiUrl);
       console.log('Profile response status:', response.status);
       
       if (response.ok) {

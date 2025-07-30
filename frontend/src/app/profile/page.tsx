@@ -35,7 +35,7 @@ interface HostReview {
 }
 
 function ProfilePageContent() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, profile: authProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -91,30 +91,48 @@ function ProfilePageContent() {
     
     if (!targetUserId) return;
     
-    async function fetchProfile() {
-      try {
-        setLoading(true);
-        const response = await fetch(buildApiUrl(`/api/users/${targetUserId}`));
-        if (response.ok) {
-          const userData = await response.json();
-          console.log('Profile data received:', userData); // Debug log
-          setProfile(userData);
-          // Initialize edit form with current profile data (only if viewing own profile)
-          if (isOwnProfile) {
-            setEditForm({
-              name: userData.name || '',
-              about_me: userData.about_me || '',
-              major: userData.major || '',
-              graduation_year: userData.graduation_year?.toString() || '',
-              education_level: userData.education_level || ''
-            });
+    // Use auth profile data if viewing own profile
+    if (isOwnProfile && authProfile) {
+      setProfile({
+        ...authProfile,
+        graduation_year: authProfile.graduation_year?.toString()
+      });
+      setEditForm({
+        name: authProfile.name || '',
+        about_me: authProfile.about_me || '',
+        major: authProfile.major || '',
+        graduation_year: authProfile.graduation_year?.toString() || '',
+        education_level: authProfile.education_level || ''
+      });
+      setLoading(false);
+    } else {
+      // Fetch profile for other users
+      async function fetchOtherProfile() {
+        try {
+          setLoading(true);
+          const response = await fetch(buildApiUrl(`/api/users/${targetUserId}`));
+          if (response.ok) {
+            const userData = await response.json();
+            console.log('Profile data received:', userData); // Debug log
+            setProfile(userData);
+            // Initialize edit form with current profile data (only if viewing own profile)
+            if (isOwnProfile) {
+              setEditForm({
+                name: userData.name || '',
+                about_me: userData.about_me || '',
+                major: userData.major || '',
+                graduation_year: userData.graduation_year?.toString() || '',
+                education_level: userData.education_level || ''
+              });
+            }
           }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      } finally {
-        setLoading(false);
       }
+      fetchOtherProfile();
     }
 
     async function fetchHostReviews() {
@@ -153,7 +171,6 @@ function ProfilePageContent() {
       }
     }
 
-    fetchProfile();
     fetchHostReviews();
     fetchUserListings();
     fetchAverageRatings();
