@@ -25,7 +25,9 @@ const corsOptions = {
   origin: [
     'http://localhost:3000',
     'https://subly-frontend.vercel.app',
-,
+    'https://subly-frontend.vercel.app/',
+    'https://subly-frontend-git-main-effan-audi-khalifs-projects.vercel.app',
+    'https://subly-frontend-lrfzeqo7j-effan-audi-khalifs-projects.vercel.app',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
