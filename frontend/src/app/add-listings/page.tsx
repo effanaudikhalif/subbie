@@ -133,7 +133,8 @@ export default function BecomeHost() {
       let suggestion = data.suggestion || '';
       if (suggestion.length > 500) suggestion = suggestion.slice(0, 500);
       setFormData(prev => ({ ...prev, description: suggestion }));
-    } catch (err) {
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
       setAiAboutError('AI suggestion failed. Try again.');
     } finally {
       setAiAboutLoading(false);
@@ -208,7 +209,7 @@ export default function BecomeHost() {
     { value: 'roommate', label: 'Roommate' }
   ];
 
-  const handleInputChange = (field: keyof FormData, value: any) => {
+  const handleInputChange = (field: keyof FormData, value: string | number | boolean | (File | string)[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -221,14 +222,7 @@ export default function BecomeHost() {
     }));
   };
 
-  const handleOccupantToggle = (occupant: string) => {
-    setFormData(prev => ({
-      ...prev,
-      occupants: prev.occupants.includes(occupant)
-        ? prev.occupants.filter(o => o !== occupant)
-        : [...prev.occupants, occupant]
-    }));
-  };
+
 
 
 
@@ -456,7 +450,7 @@ export default function BecomeHost() {
       submitData.append('occupants', JSON.stringify(formData.occupants));
 
       // Add photos
-      formData.photos.forEach((photo, index) => {
+      formData.photos.forEach((photo) => {
         submitData.append(`photos`, photo);
       });
 
@@ -512,93 +506,7 @@ export default function BecomeHost() {
     }
   };
 
-  const handleSaveProgress = async () => {
-    if (savingProgress) return;
-    
-    setSavingProgress(true);
-    if (!user || !profile) {
-      alert('Please log in to save progress');
-      setSavingProgress(false);
-      return;
-    }
 
-    if (!user.id) {
-      alert('User ID is missing. Please log in again.');
-      setSavingProgress(false);
-      return;
-    }
-
-    try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-      submitData.append('user_id', user.id);
-      submitData.append('property_type', formData.property_type);
-      submitData.append('guest_space', formData.guest_space);
-      submitData.append('address', formData.address);
-      submitData.append('unit', formData.unit);
-      submitData.append('city', formData.city);
-      submitData.append('state', formData.state);
-      submitData.append('zip', formData.zip);
-      submitData.append('country', formData.country);
-      submitData.append('neighborhood', formData.neighborhood);
-      if (formData.latitude) submitData.append('latitude', formData.latitude.toString());
-      if (formData.longitude) submitData.append('longitude', formData.longitude.toString());
-      submitData.append('max_occupancy', formData.max_occupancy.toString());
-      submitData.append('bedrooms', formData.bedrooms.toString());
-      submitData.append('bathrooms', formData.bathrooms.toString());
-      // Set default title if not filled out yet
-      const defaultTitle = formData.title && formData.title.trim() !== '' 
-        ? formData.title 
-        : 'Draft Listing';
-      submitData.append('title', defaultTitle);
-      submitData.append('description', formData.description);
-      submitData.append('price_per_night', formData.price_per_night.toString());
-      // Provide default dates if not set
-      const today = new Date();
-      const defaultStartDate = formData.start_date && formData.start_date.trim() !== '' 
-        ? formData.start_date 
-        : today.toISOString().split('T')[0];
-      const defaultEndDate = formData.end_date && formData.end_date.trim() !== '' 
-        ? formData.end_date 
-        : new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 1 year from today
-      
-      submitData.append('start_date', defaultStartDate);
-      submitData.append('end_date', defaultEndDate);
-      submitData.append('amenities', JSON.stringify(formData.amenities));
-      submitData.append('occupants', JSON.stringify(formData.occupants));
-      submitData.append('status', 'inactive'); // Save as inactive
-
-      // Add photos
-      formData.photos.forEach((photo, index) => {
-        submitData.append(`photos`, photo);
-      });
-
-      const response = await fetch(buildApiUrl('/api/listings'), {
-        method: 'POST',
-        body: submitData
-      });
-
-      if (response.ok) {
-        alert('Progress saved successfully! Your listing has been saved as inactive.');
-        router.push('/my-listings');
-      } else {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          alert(`Error saving progress: ${errorData.message || errorData.error || 'Unknown error'}`);
-        } else {
-          const errorText = await response.text();
-          console.error('Server returned HTML error:', errorText);
-          alert('Error saving progress. Please check the console for details.');
-        }
-      }
-    } catch (error) {
-      console.error('Error saving progress:', error);
-      alert('Error saving progress. Please try again.');
-    } finally {
-      setSavingProgress(false);
-    }
-  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -890,7 +798,7 @@ export default function BecomeHost() {
                     key={occupant.value}
                     onClick={() => {
                       setFormData(prev => {
-                        let newOccupants = prev.occupants.includes(occupant.value)
+                        const newOccupants = prev.occupants.includes(occupant.value)
                           ? prev.occupants.filter(o => o !== occupant.value)
                           : [...prev.occupants, occupant.value];
                         return { ...prev, occupants: newOccupants };
@@ -921,7 +829,7 @@ export default function BecomeHost() {
                     key={occupant.value}
                     onClick={() => {
                       setFormData(prev => {
-                        let newOccupants = prev.occupants.includes(occupant.value)
+                        const newOccupants = prev.occupants.includes(occupant.value)
                           ? prev.occupants.filter(o => o !== occupant.value)
                           : [...prev.occupants, occupant.value];
                         return { ...prev, occupants: newOccupants };
