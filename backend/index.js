@@ -24,8 +24,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:3000',
-    'https://subly-2-pqh4tfx9b-effan-audi-khalifs-projects.vercel.app',
-    'https://subly-2.vercel.app/',
+    'https://subly-frontend.vercel.app/',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
