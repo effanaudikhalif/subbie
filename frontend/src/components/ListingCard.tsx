@@ -524,8 +524,32 @@ const ListingCard: React.FC<ListingCardProps> = ({
           </div>
           {/* Host Info - only if not shortCard */}
           {!shortCard && name && (
-            <div className="flex items-center">
-              <span className={`${textSize || 'text-sm'} font-medium text-gray-700 truncate w-full`}>
+            <div className="flex items-center gap-2">
+              {/* Host Avatar */}
+              {avatar_url ? (
+                <img
+                  src={avatar_url}
+                  alt={name}
+                  className="w-6 h-6 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAvatarClick?.();
+                  }}
+                />
+              ) : (
+                <div 
+                  className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAvatarClick?.();
+                  }}
+                >
+                  {name ? name.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
+              <span className={`${textSize || 'text-sm'} font-medium text-gray-700 truncate flex-1`}>
                 Hosted by {getUniversityDisplay(university_name)} student
               </span>
             </div>

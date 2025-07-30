@@ -43,7 +43,7 @@ export default function LoginPage() {
     <div className="relative min-h-screen bg-white flex flex-col justify-center items-center">
       <div className="relative z-10 w-full max-w-md px-4">
         <h2 className="mt-12 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to your account
+          Sign in
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
           Welcome back to Subly
@@ -67,7 +67,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your email address"
             />
           </div>
@@ -83,7 +83,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your password"
             />
           </div>

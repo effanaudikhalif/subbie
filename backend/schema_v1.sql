@@ -415,29 +415,35 @@ create table public.amenities (
 );
 
 insert into public.amenities (code, name, category) values
-  -- Core
-  ('wifi',                'Wi-Fi',                       'core'),
-  ('tv',                  'TV',                          'core'),
-  ('kitchen',             'Kitchen',                     'core'),
-  ('washer',              'Washer',                      'core'),
-  ('free_parking',        'Free parking on premises',    'core'),
-  ('paid_parking',        'Paid parking on premises',    'core'),
-  ('aircon',              'Air conditioning',            'core'),
-  ('workspace',           'Dedicated workspace',         'core'),
-  -- Extras
-  ('pool',                'Pool',                        'extra'),
-  ('hot_tub',             'Hot tub',                     'extra'),
-  ('patio',               'Patio',                       'extra'),
-  ('bbq',                 'BBQ grill',                   'extra'),
-  ('outdoor_dining',      'Outdoor dining area',         'extra'),
-  ('fire_pit',            'Fire pit',                    'extra'),
-  ('pool_table',          'Pool table',                  'extra'),
-  ('indoor_fireplace',    'Indoor fireplace',            'extra'),
-  ('piano',               'Piano',                       'extra'),
-  ('gym',                 'Exercise equipment',          'extra'),
-  ('lake_access',         'Lake access',                 'extra'),
-  ('beach_access',        'Beach access',                'extra'),
-  ('outdoor_shower',      'Outdoor shower',              'extra');
+  -- Living Essentials
+  ('wifi', 'Wi-Fi', 'living'),
+  ('heating', 'Heating', 'living'),
+  ('air_conditioning', 'Air conditioning', 'living'),
+  ('kitchen', 'Kitchen', 'living'),
+  ('cutlery', 'Cutlery', 'living'),
+  ('washer', 'Washer', 'living'),
+  ('dryer', 'Dryer', 'living'),
+  ('cleaning_supplies', 'Cleaning supplies', 'living'),
+  ('safe_locks', 'Safe locks', 'living'),
+  
+  -- College Essentials
+  ('dedicated_workspace', 'Dedicated workspace', 'college'),
+  ('printer', 'Printer', 'college'),
+  ('outlets', 'Outlets', 'college'),
+  ('storage', 'Storage', 'college'),
+  ('whiteboard', 'Whiteboard', 'college'),
+  ('bike_storage', 'Bike storage', 'college'),
+  ('coffee_maker', 'Coffee maker', 'college'),
+  ('monitor', 'Monitor', 'college'),
+  
+  -- Extra
+  ('tv', 'TV', 'extra'),
+  ('outdoor_space', 'Outdoor space', 'extra'),
+  ('parking', 'Parking', 'extra'),
+  ('gym', 'Gym', 'extra'),
+  ('games', 'Games', 'extra'),
+  ('dishwasher', 'Dishwasher', 'extra'),
+  ('speaker', 'Speaker', 'extra');
 
 /********************************************************************
 *  4. ── Junction table: listing ⇆ amenities                        *

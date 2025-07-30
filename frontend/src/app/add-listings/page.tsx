@@ -171,36 +171,33 @@ export default function BecomeHost() {
   const amenities = [
     // Living Essentials
     { code: 'wifi', name: 'Wi-Fi', category: 'living' },
-    { code: 'tv', name: 'TV', category: 'living' },
-    { code: 'kitchen', name: 'Kitchen', category: 'living' },
-    { code: 'washer', name: 'Washer', category: 'living' },
+    { code: 'heating', name: 'Heating', category: 'living' },
     { code: 'air_conditioning', name: 'Air conditioning', category: 'living' },
-    { code: 'free_parking', name: 'Free parking', category: 'living' },
-    { code: 'paid_parking', name: 'Paid parking', category: 'living' },
+    { code: 'kitchen', name: 'Kitchen', category: 'living' },
+    { code: 'cutlery', name: 'Cutlery', category: 'living' },
+    { code: 'washer', name: 'Washer', category: 'living' },
+    { code: 'dryer', name: 'Dryer', category: 'living' },
+    { code: 'cleaning_supplies', name: 'Cleaning supplies', category: 'living' },
+    { code: 'safe_locks', name: 'Safe locks', category: 'living' },
     
     // College Essentials
     { code: 'dedicated_workspace', name: 'Dedicated workspace', category: 'college' },
-    { code: 'quiet_study', name: 'Quiet study area', category: 'college' },
-    { code: 'high_speed_internet', name: 'High-speed Wi-Fi', category: 'college' },
-    { code: 'printer_access', name: 'Printer access', category: 'college' },
-    { code: 'coffee_station', name: 'Coffee station', category: 'college' },
+    { code: 'printer', name: 'Printer', category: 'college' },
+    { code: 'outlets', name: 'Outlets', category: 'college' },
+    { code: 'storage', name: 'Storage', category: 'college' },
     { code: 'whiteboard', name: 'Whiteboard', category: 'college' },
-    { code: 'group_study', name: 'Group study area', category: 'college' },
+    { code: 'bike_storage', name: 'Bike storage', category: 'college' },
+    { code: 'coffee_maker', name: 'Coffee maker', category: 'college' },
+    { code: 'monitor', name: 'Monitor', category: 'college' },
     
     // Extra
-    { code: 'pool', name: 'Pool', category: 'extra' },
-    { code: 'hot_tub', name: 'Hot tub', category: 'extra' },
-    { code: 'patio', name: 'Patio', category: 'extra' },
-    { code: 'bbq_grill', name: 'BBQ grill', category: 'extra' },
-    { code: 'outdoor_dining', name: 'Outdoor dining area', category: 'extra' },
-    { code: 'fire_pit', name: 'Fire pit', category: 'extra' },
-    { code: 'pool_table', name: 'Pool table', category: 'extra' },
-    { code: 'indoor_fireplace', name: 'Indoor fireplace', category: 'extra' },
-    { code: 'piano', name: 'Piano', category: 'extra' },
-    { code: 'gym_access', name: 'Exercise equipment', category: 'extra' },
-    { code: 'lake_access', name: 'Lake access', category: 'extra' },
-    { code: 'beach_access', name: 'Beach access', category: 'extra' },
-    { code: 'outdoor_shower', name: 'Outdoor shower', category: 'extra' }
+    { code: 'tv', name: 'TV', category: 'extra' },
+    { code: 'outdoor_space', name: 'Outdoor space', category: 'extra' },
+    { code: 'parking', name: 'Parking', category: 'extra' },
+    { code: 'gym', name: 'Gym', category: 'extra' },
+    { code: 'games', name: 'Games', category: 'extra' },
+    { code: 'dishwasher', name: 'Dishwasher', category: 'extra' },
+    { code: 'speaker', name: 'Speaker', category: 'extra' }
   ];
 
   const occupants = [
@@ -611,14 +608,10 @@ export default function BecomeHost() {
             <div className="space-y-4">
               {[
                 { value: 'house', label: 'House', icon: (
-                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
-                  </svg>
+                  <img src="/icons/icons8-house-30.png" alt="House" className="w-6 h-6" />
                 ) },
                 { value: 'apartment', label: 'Apartment', icon: (
-                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                  </svg>
+                  <img src="/icons/icons8-apartment-50.png" alt="Apartment" className="w-6 h-6" />
                 ) }
               ].map(option => (
                 <div
@@ -650,21 +643,13 @@ export default function BecomeHost() {
             <div className="space-y-4">
               {[
                 { value: 'entire_place', label: 'An entire place', description: 'Guests have the whole place to themselves', icon: (
-                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
-                  </svg>
+                  <img src="/icons/icons8-home-50.png" alt="Home" className="w-6 h-6" />
                 ) },
                 { value: 'room', label: 'A room', description: 'Guests have their own room in a home, plus access to shared spaces', icon: (
-                  <svg className="w-6 h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <rect x="3" y="10" width="18" height="7" rx="2" fill="currentColor" stroke="currentColor" />
-                    <rect x="6" y="7" width="5" height="4" rx="2" fill="currentColor" stroke="currentColor" />
-                    <rect x="15" y="7" width="3" height="4" rx="1.5" fill="currentColor" stroke="currentColor" />
-                  </svg>
+                  <img src="/icons/icons8-room-64.png" alt="Room" className="w-6 h-6" />
                 ) },
                 { value: 'shared_room', label: 'A shared room', description: 'Guests sleep in a shared room with others', icon: (
-                  <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"/>
-                  </svg>
+                  <img src="/icons/icons8-group-30.png" alt="Group" className="w-6 h-6" />
                 ) }
               ].map(option => (
                 <div
@@ -694,11 +679,11 @@ export default function BecomeHost() {
 
       case 3:
         return (
-          <div className="max-w-4xl mx-auto mt-30">
+          <div className="max-w-6xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Where's your place located?</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="flex gap-8">
               {/* Left Column - Address Form */}
-              <div className="space-y-4">
+              <div className="w-[55%] space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
                   <GoogleMapsAutocomplete
@@ -806,12 +791,12 @@ export default function BecomeHost() {
               </div>
 
               {/* Right Column - Map Preview */}
-              <div>
+              <div className="w-[45%] flex-shrink-0">
                 <MapPreview
                   latitude={formData.latitude}
                   longitude={formData.longitude}
                   address={`${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`}
-                  height="400px"
+                  height="calc(100vh - 300px)"
                 />
               </div>
             </div>
@@ -963,23 +948,26 @@ export default function BecomeHost() {
         );
 
       case 6:
-        // Split extra amenities
+        // Get living and college amenities
+        const livingAmenities = amenities.filter(a => a.category === 'living');
+        const collegeAmenities = amenities.filter(a => a.category === 'college');
         const extraAmenities = amenities.filter(a => a.category === 'extra');
-        const extraCol1 = extraAmenities.slice(0, 7);
-        const extraCol2 = extraAmenities.slice(7);
+        
         return (
           <div className="max-w-6xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                            {/* Living Essentials */}
-              <div>
+            
+            {/* Desktop Layout - 3 columns side by side */}
+            <div className="hidden md:flex gap-8">
+              {/* Living Essentials */}
+              <div className="w-1/3">
                 <h3 className="text-xl font-bold mb-4 text-black">Living Essentials</h3>
                 <div className="space-y-3">
-                  {amenities.filter(amenity => amenity.category === 'living').map(amenity => (
+                  {livingAmenities.map(amenity => (
                     <div
                       key={amenity.code}
                       onClick={() => handleAmenityToggle(amenity.code)}
-                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
                         formData.amenities.includes(amenity.code)
                           ? 'border-black bg-gray-50'
                           : 'border-gray-300'
@@ -999,14 +987,14 @@ export default function BecomeHost() {
               </div>
 
               {/* College Essentials */}
-              <div>
+              <div className="w-1/3">
                 <h3 className="text-xl font-bold mb-4 text-black">College Essentials</h3>
                 <div className="space-y-3">
-                  {amenities.filter(amenity => amenity.category === 'college').map(amenity => (
+                  {collegeAmenities.map(amenity => (
                     <div
                       key={amenity.code}
                       onClick={() => handleAmenityToggle(amenity.code)}
-                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
                         formData.amenities.includes(amenity.code)
                           ? 'border-black bg-gray-50'
                           : 'border-gray-300'
@@ -1025,15 +1013,45 @@ export default function BecomeHost() {
                 </div>
               </div>
 
-              {/* Extra - Column 1 */}
-              <div>
+              {/* Extra */}
+              <div className="w-1/3">
                 <h3 className="text-xl font-bold mb-4 text-black">Extra</h3>
                 <div className="space-y-3">
-                  {extraCol1.map(amenity => (
+                  {extraAmenities.map(amenity => (
                     <div
                       key={amenity.code}
                       onClick={() => handleAmenityToggle(amenity.code)}
-                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Layout - Single column */}
+            <div className="md:hidden">
+              {/* Living Essentials */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4 text-black">Living Essentials</h3>
+                <div className="space-y-3">
+                  {livingAmenities.map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
                         formData.amenities.includes(amenity.code)
                           ? 'border-black bg-gray-50'
                           : 'border-gray-300'
@@ -1052,15 +1070,42 @@ export default function BecomeHost() {
                 </div>
               </div>
 
-              {/* Extra - Column 2 */}
-              <div>
-                <h3 className="text-xl font-bold mb-4 text-black">&nbsp;</h3>
+              {/* College Essentials */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4 text-black">College Essentials</h3>
                 <div className="space-y-3">
-                  {extraCol2.map(amenity => (
+                  {collegeAmenities.map(amenity => (
                     <div
                       key={amenity.code}
                       onClick={() => handleAmenityToggle(amenity.code)}
-                      className={`flex items-center justify-between p-3 border border-gray-400 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
+                        formData.amenities.includes(amenity.code)
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <span className="text-sm text-black">{amenity.name}</span>
+                      <span className="w-5 h-5 flex items-center justify-center border-2 rounded border-gray-400 bg-white">
+                        {formData.amenities.includes(amenity.code) && (
+                          <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4 text-black">Extra</h3>
+                <div className="space-y-3">
+                  {extraAmenities.map(amenity => (
+                    <div
+                      key={amenity.code}
+                      onClick={() => handleAmenityToggle(amenity.code)}
+                      className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer hover:border-gray-500 transition-colors ${
                         formData.amenities.includes(amenity.code)
                           ? 'border-black bg-gray-50'
                           : 'border-gray-300'
@@ -1116,7 +1161,7 @@ export default function BecomeHost() {
 
       case 9:
         return (
-          <div className="max-w-2xl mx-auto mt-30 text-center">
+          <div className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
             <p className="text-lg text-gray-600 mb-8">Tell guests what makes your place special.</p>
             <div className="relative flex justify-center mb-2" style={{ maxWidth: 600, margin: '0 auto' }}>

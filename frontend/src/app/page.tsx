@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import MobileNavbar from '../components/MobileNavbar';
 import SearchBar from '../components/Searchbar';
+import Footer from '../components/Footer';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabaseClient';
 import { useAuth } from '../hooks/useAuth';
@@ -80,11 +81,11 @@ export default function Page() {
   };
 
   return (
-    <div className="relative bg-white h-screen overflow-hidden w-full">
+    <div className="relative bg-white w-full">
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
       `}</style>
-      <div className="relative z-10 h-full">
+      <div className="relative z-10">
         {/* Desktop Navbar */}
         {!isMobile && (
           <Navbar>
@@ -120,6 +121,9 @@ export default function Page() {
             <TypewriterText text="for students, by students" speed={150} />
           </p>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Mobile Footer - Only show on mobile and when user is logged in */}
         {authUser && isMobile && (

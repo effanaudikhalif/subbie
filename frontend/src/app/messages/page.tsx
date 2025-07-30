@@ -5,7 +5,6 @@ import ChatBox from "../../components/ChatBox";
 import Navbar from "../../components/Navbar";
 import PrivacyMap from "../../components/PrivacyMap";
 import { useSearchParams, useRouter } from "next/navigation";
-import ProfileModal from "../../components/ProfileModal";
 import Link from "next/link";
 import MobileNavbar from "../../components/MobileNavbar";
 
@@ -56,7 +55,6 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedRange, setSelectedRange] = useState<{ start: Date | null, end: Date | null }>({ start: null, end: null });
-  const [profileModalUserId, setProfileModalUserId] = useState<string | null>(null);
 
   // Mobile detection and view states
   const [isMobile, setIsMobile] = useState(false);
@@ -100,7 +98,7 @@ export default function MessagesPage() {
     );
   };
 
-  // Draggable column state
+  // Draggable column state - responsive to viewport width
   const [columnWidths, setColumnWidths] = useState({
     inbox: 320,
     chat: 600,
@@ -128,7 +126,8 @@ export default function MessagesPage() {
     
     if (isDragging === 'details') {
       const newDetailsWidth = Math.max(250, Math.min(500, dragStartWidths.details - deltaX));
-      const newChatWidth = Math.max(300, containerWidth - dragStartWidths.inbox - newDetailsWidth);
+      const remainingWidth = containerWidth - dragStartWidths.inbox - newDetailsWidth;
+      const newChatWidth = Math.max(300, remainingWidth);
       setColumnWidths({
         inbox: dragStartWidths.inbox,
         chat: newChatWidth,
@@ -140,6 +139,22 @@ export default function MessagesPage() {
   const handleMouseUp = () => {
     setIsDragging(null);
   };
+
+  // Initialize column widths based on viewport
+  useEffect(() => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const inboxWidth = 320;
+      const detailsWidth = 384;
+      const chatWidth = Math.max(300, containerWidth - inboxWidth - detailsWidth);
+      
+      setColumnWidths({
+        inbox: inboxWidth,
+        chat: chatWidth,
+        details: detailsWidth
+      });
+    }
+  }, []);
 
   // Add global mouse event listeners
   useEffect(() => {
@@ -339,10 +354,20 @@ export default function MessagesPage() {
                             <img
                               src={guestProfiles[getOtherUserId(c)].avatar_url}
                               alt={guestProfiles[getOtherUserId(c)].name}
-                              className="w-12 h-12 rounded-full object-cover"
+                              className="w-12 h-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/profile?userId=${getOtherUserId(c)}`);
+                              }}
                             />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                            <div 
+                              className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/profile?userId=${getOtherUserId(c)}`);
+                              }}
+                            >
                               {guestProfiles[getOtherUserId(c)]?.name ? guestProfiles[getOtherUserId(c)].name[0] : 'U'}
                             </div>
                           )}
@@ -373,7 +398,7 @@ export default function MessagesPage() {
                 
                 <Link 
                   href="/messages" 
-                  className="flex flex-col items-center text-blue-600 transition-colors"
+                  className="flex flex-col items-center text-teal-600 transition-colors"
                 >
                   <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -420,10 +445,18 @@ export default function MessagesPage() {
                     <img
                       src={guestProfiles[getOtherUserId(selected)].avatar_url}
                       alt={guestProfiles[getOtherUserId(selected)].name}
-                      className="w-10 h-10 rounded-full object-cover"
+                      className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        router.push(`/profile?userId=${getOtherUserId(selected)}`);
+                      }}
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700">
+                    <div 
+                      className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        router.push(`/profile?userId=${getOtherUserId(selected)}`);
+                      }}
+                    >
                       {guestProfiles[getOtherUserId(selected)]?.name ? guestProfiles[getOtherUserId(selected)].name[0] : 'U'}
                     </div>
                   )}
@@ -587,7 +620,8 @@ export default function MessagesPage() {
           <div 
             style={{ 
               width: `${columnWidths.inbox}px`,
-              minWidth: '200px'
+              minWidth: '200px',
+              flexShrink: 0
             }}
             className="border-r border-gray-200 bg-white p-6 flex flex-col overflow-hidden"
           >
@@ -610,13 +644,19 @@ export default function MessagesPage() {
                         <img
                           src={guestProfiles[getOtherUserId(c)].avatar_url}
                           alt={guestProfiles[getOtherUserId(c)].name}
-                          className="w-8 h-8 rounded-full object-cover cursor-pointer"
-                          onClick={e => { e.stopPropagation(); setProfileModalUserId(getOtherUserId(c)); }}
+                          className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/profile?userId=${getOtherUserId(c)}`);
+                          }}
                         />
                       ) : (
                         <div
-                          className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold text-gray-700 cursor-pointer"
-                          onClick={e => { e.stopPropagation(); setProfileModalUserId(getOtherUserId(c)); }}
+                          className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-base font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/profile?userId=${getOtherUserId(c)}`);
+                          }}
                         >
                           {guestProfiles[getOtherUserId(c)]?.name ? guestProfiles[getOtherUserId(c)].name[0] : 'U'}
                         </div>
@@ -638,7 +678,8 @@ export default function MessagesPage() {
           <div 
             style={{ 
               width: `${columnWidths.chat}px`,
-              minWidth: '300px'
+              minWidth: '300px',
+              flex: 1
             }}
             className="flex flex-col border-r border-gray-200 overflow-hidden"
           >
@@ -651,13 +692,17 @@ export default function MessagesPage() {
                       <img
                         src={guestProfiles[getOtherUserId(selected)].avatar_url}
                         alt={guestProfiles[getOtherUserId(selected)].name}
-                        className="w-12 h-12 rounded-full object-cover cursor-pointer"
-                        onClick={() => setProfileModalUserId(getOtherUserId(selected))}
+                        className="w-12 h-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => {
+                          router.push(`/profile?userId=${getOtherUserId(selected)}`);
+                        }}
                       />
                     ) : (
                       <div
-                        className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-700 cursor-pointer"
-                        onClick={() => setProfileModalUserId(getOtherUserId(selected))}
+                        className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => {
+                          router.push(`/profile?userId=${getOtherUserId(selected)}`);
+                        }}
                       >
                         {guestProfiles[getOtherUserId(selected)]?.name ? guestProfiles[getOtherUserId(selected)].name[0] : 'U'}
                       </div>
@@ -709,7 +754,8 @@ export default function MessagesPage() {
             style={{ 
               width: `${columnWidths.details}px`,
               minWidth: '250px',
-              maxWidth: '500px'
+              maxWidth: '500px',
+              flexShrink: 0
             }}
             className="border-l border-gray-200 bg-white p-6 flex flex-col overflow-hidden"
           >
@@ -830,12 +876,6 @@ export default function MessagesPage() {
           </div>
         </div>
       )}
-      {/* Profile Modal for any user */}
-      <ProfileModal
-        isOpen={!!profileModalUserId}
-        userId={profileModalUserId}
-        onClose={() => setProfileModalUserId(null)}
-      />
     </div>
   );
 } 

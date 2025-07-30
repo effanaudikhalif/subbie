@@ -19,11 +19,12 @@ interface MobileNavbarProps {
   isListingDetailsPage?: boolean;
   isAddListingPage?: boolean;
   isEditListingPage?: boolean;
+  isProfilePage?: boolean;
   listingId?: string;
   isOwner?: boolean;
 }
 
-export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, isListingDetailsPage = false, isAddListingPage = false, isEditListingPage = false, listingId, isOwner }: MobileNavbarProps) {
+export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, isListingDetailsPage = false, isAddListingPage = false, isEditListingPage = false, isProfilePage = false, listingId, isOwner }: MobileNavbarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -210,6 +211,11 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
             /* Wishlist Page - Show Wishlist */
             <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
               <span className="text-gray-700 text-base font-medium">Wishlist</span>
+            </div>
+          ) : isProfilePage ? (
+            /* Profile Page - Show Profile Page */
+            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
+              <span className="text-gray-700 text-base font-medium">Profile Page</span>
             </div>
           ) : !isExpanded ? (
             /* Collapsed State - Cylinder */

@@ -240,7 +240,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     );
   };
 
-  const ReviewCard = ({ review, truncate, reviewerId }: { review: Review; truncate?: boolean; reviewerId?: string }) => {
+  const ReviewCard = ({ review, truncate, reviewerId, onClick }: { review: Review; truncate?: boolean; reviewerId?: string; onClick?: () => void }) => {
     // Calculate average rating for this review
     const averageRating = (
       review.cleanliness_rating + 
@@ -251,7 +251,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     ) / 5;
 
     return (
-      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full relative">
+      <div 
+        className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full relative ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+        onClick={onClick}
+      >
         <div className="flex items-start space-x-3">
           <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
             {review.reviewer_avatar ? (
@@ -417,7 +420,13 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
           <div className="space-y-6">
             <div className="flex flex-col space-y-6 max-w-2xl">
               {reviews.slice(0, 3).map((review) => (
-                <ReviewCard key={review.id} review={review} truncate reviewerId={reviewerId} />
+                <ReviewCard 
+                  key={review.id} 
+                  review={review} 
+                  truncate 
+                  reviewerId={reviewerId}
+                  onClick={reviews.length <= 3 ? () => setShowAllReviews(true) : undefined}
+                />
               ))}
             </div>
             {/* Show all reviews button */}
@@ -455,7 +464,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
             <div className="p-6">
               <div className="grid grid-cols-1 gap-6">
                 {reviews.map((review) => (
-                  <ReviewCard key={review.id} review={review} reviewerId={reviewerId} />
+                  <ReviewCard key={review.id} review={review} reviewerId={reviewerId} onClick={undefined} />
                 ))}
               </div>
             </div>

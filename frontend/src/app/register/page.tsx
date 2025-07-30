@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [domainWarning, setDomainWarning] = useState("");
   const router = useRouter();
 
   // Fetch universities on component mount
@@ -37,6 +38,28 @@ export default function RegisterPage() {
     };
     fetchUniversities();
   }, []);
+
+  // Validate email domain when email or university changes
+  useEffect(() => {
+    validateEmailDomain();
+  }, [email, universityId, universities]);
+
+  // Validate email domain against selected university
+  const validateEmailDomain = () => {
+    if (!email || !universityId) {
+      setDomainWarning("");
+      return;
+    }
+
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    const selectedUniversity = universities.find(u => u.id === universityId);
+    
+    if (selectedUniversity && emailDomain && emailDomain !== selectedUniversity.domain.toLowerCase()) {
+      setDomainWarning(`Warning: Your email domain (${emailDomain}) doesn't match the selected university's domain (${selectedUniversity.domain}). Please use your university email address.`);
+    } else {
+      setDomainWarning("");
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,13 +161,13 @@ export default function RegisterPage() {
           Create your account
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Join Subly to find and list places to sublet
+          Join Subly to start subletting
         </p>
         <form onSubmit={handleRegister} className="space-y-6 mt-8">
           {/* Full Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-              Full Name
+              Full Name <span className="text-red-500">*</span>
             </label>
             <input
               id="name"
@@ -152,7 +175,7 @@ export default function RegisterPage() {
               required
               value={name}
               onChange={e => setName(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your full name"
             />
           </div>
@@ -160,7 +183,7 @@ export default function RegisterPage() {
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email Address
+              Email Address <span className="text-red-500">*</span>
             </label>
             <input
               id="email"
@@ -168,15 +191,20 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your email address"
             />
+            {domainWarning && (
+              <div className="mt-2 text-amber-600 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
+                {domainWarning}
+              </div>
+            )}
           </div>
 
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
+              Password <span className="text-red-500">*</span>
             </label>
             <input
               id="password"
@@ -184,7 +212,7 @@ export default function RegisterPage() {
               required
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your password"
             />
           </div>
@@ -192,14 +220,14 @@ export default function RegisterPage() {
           {/* University Selection */}
           <div>
             <label htmlFor="university" className="block text-sm font-medium text-gray-700">
-              University
+              University <span className="text-red-500">*</span>
             </label>
             <select
               id="university"
               required
               value={universityId}
               onChange={e => setUniversityId(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
             >
               <option value="">Select your university</option>
               {universities.map(university => (
@@ -213,7 +241,7 @@ export default function RegisterPage() {
           {/* Major Field */}
           <div>
             <label htmlFor="major" className="block text-sm font-medium text-gray-700">
-              Major
+              Major <span className="text-red-500">*</span>
             </label>
             <input
               id="major"
@@ -221,7 +249,7 @@ export default function RegisterPage() {
               required
               value={major}
               onChange={e => setMajor(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
               placeholder="Enter your major"
             />
           </div>
@@ -229,14 +257,14 @@ export default function RegisterPage() {
           {/* Education Level */}
           <div>
             <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700">
-              Education Level
+              Education Level <span className="text-red-500">*</span>
             </label>
             <select
               id="educationLevel"
               required
               value={educationLevel}
               onChange={e => setEducationLevel(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
             >
               <option value="">Select your education level</option>
               <option value="undergraduate">Undergraduate</option>
@@ -248,21 +276,22 @@ export default function RegisterPage() {
           {/* Graduation Year */}
           <div>
             <label htmlFor="year" className="block text-sm font-medium text-gray-700">
-              Graduation Year
+              Graduation Year <span className="text-red-500">*</span>
             </label>
             <select
               id="year"
               required
               value={year}
               onChange={e => setYear(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 focus:z-10 sm:text-sm"
+              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
             >
               <option value="">Select your graduation year</option>
-              <option value="2025">Class of 2025</option>
-              <option value="2026">Class of 2026</option>
-              <option value="2027">Class of 2027</option>
-              <option value="2028">Class of 2028</option>
-              <option value="2029">Class of 2029</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+              <option value="2030">2030</option>
             </select>
           </div>
 

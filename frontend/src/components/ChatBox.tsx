@@ -202,10 +202,14 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
         />
         <button
           type="submit"
-          className="bg-teal-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-teal-800 transition"
+          className="bg-teal-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-teal-800 transition flex items-center justify-center"
           disabled={sending || !input.trim()}
         >
-          Send
+          <img 
+            src="/icons/icons8-send-50 (1).png" 
+            alt="Send" 
+            className="w-4 h-4"
+          />
         </button>
       </form>
     </div>

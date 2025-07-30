@@ -88,13 +88,69 @@ module.exports = (pool) => {
     try {
       const { id } = req.params;
       const { university_id, name, email, major, graduation_year, education_level, about_me, stripe_account } = req.body;
-      const { rows } = await pool.query(
-        'UPDATE users SET university_id = $1, name = $2, email = $3, major = $4, graduation_year = $5, education_level = $6, about_me = $7, stripe_account = $8 WHERE id = $9 RETURNING *',
-        [university_id, name, email, major, graduation_year, education_level, about_me, stripe_account, id]
-      );
+      
+      // Build dynamic update query based on provided fields
+      const updateFields = [];
+      const updateValues = [];
+      let paramCount = 1;
+      
+      if (university_id !== undefined) {
+        updateFields.push(`university_id = $${paramCount}`);
+        updateValues.push(university_id);
+        paramCount++;
+      }
+      if (name !== undefined) {
+        updateFields.push(`name = $${paramCount}`);
+        updateValues.push(name);
+        paramCount++;
+      }
+      if (email !== undefined) {
+        updateFields.push(`email = $${paramCount}`);
+        updateValues.push(email);
+        paramCount++;
+      }
+      if (major !== undefined) {
+        updateFields.push(`major = $${paramCount}`);
+        updateValues.push(major);
+        paramCount++;
+      }
+      if (graduation_year !== undefined) {
+        updateFields.push(`graduation_year = $${paramCount}`);
+        updateValues.push(graduation_year);
+        paramCount++;
+      }
+      if (education_level !== undefined) {
+        updateFields.push(`education_level = $${paramCount}`);
+        updateValues.push(education_level);
+        paramCount++;
+      }
+      if (about_me !== undefined) {
+        updateFields.push(`about_me = $${paramCount}`);
+        updateValues.push(about_me);
+        paramCount++;
+      }
+      if (stripe_account !== undefined) {
+        updateFields.push(`stripe_account = $${paramCount}`);
+        updateValues.push(stripe_account);
+        paramCount++;
+      }
+      
+      if (updateFields.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+      
+      // Add the WHERE clause parameter
+      updateValues.push(id);
+      
+      const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+      console.log('Update query:', query);
+      console.log('Update values:', updateValues);
+      
+      const { rows } = await pool.query(query, updateValues);
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
       res.json(rows[0]);
     } catch (err) {
+      console.error('Error updating user:', err);
       res.status(500).json({ error: err.message });
     }
   });

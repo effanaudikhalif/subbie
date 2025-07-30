@@ -9,7 +9,6 @@ import SearchBar from "../../../components/Searchbar";
 import PrivacyMap from "../../../components/PrivacyMap";
 import BookingForm from "../../../components/BookingForm";
 import ReviewsSection from "../../../components/ReviewsSection";
-import ProfileModal from "../../../components/ProfileModal";
 import { DateRange } from 'react-date-range';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
@@ -74,7 +73,6 @@ export default function ListingDetails() {
   ]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [guests, setGuests] = useState("");
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const handleSearch = () => {
     // Implement navigation or search logic if needed
   };
@@ -306,182 +304,90 @@ export default function ListingDetails() {
   // Function to get icon for amenity
   const getAmenityIcon = (amenityName: string) => {
     const name = amenityName.toLowerCase();
+    console.log('Amenity name:', amenityName, 'Lowercase:', name); // Debug log
     
-    // WiFi/Internet
-    if (name.includes('wifi') || name.includes('internet')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
-        </svg>
-      );
+    // Living Essentials
+    if (name.includes('wi-fi') || name.includes('wifi') || name.includes('wi fi')) {
+      return <img src="/icons/icons8-wifi-30.png" alt="Wi-Fi" className="w-5 h-5 mr-3 flex-shrink-0" />;
     }
-    
-    // Parking
-    if (name.includes('parking')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-        </svg>
-      );
-    }
-    
-    // Kitchen
-    if (name.includes('kitchen')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a3 3 0 106 0l-3-9zm9 0a3 3 0 11-6 0l3 9a3 3 0 006 0l3-9zm-3 1m0 0l3 9a3 3 0 11-6 0l3-9z" />
-        </svg>
-      );
-    }
-    
-    // Washer
-    if (name.includes('washer')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      );
-    }
-    
-    // Dryer
-    if (name.includes('dryer')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      );
-    }
-    
-    // Air Conditioning
-    if (name.includes('ac') || name.includes('air conditioning')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      );
-    }
-    
-    // Heating
     if (name.includes('heating')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-        </svg>
-      );
+      return <img src="/icons/icons8-heater-30.png" alt="Heating" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('air conditioning')) {
+      return <img src="/icons/icons8-air-conditioner-30.png" alt="Air Conditioning" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('kitchen')) {
+      return <img src="/icons/icons8-kitchen-30.png" alt="Kitchen" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('cutlery')) {
+      return <img src="/icons/icons8-cutlery-30.png" alt="Cutlery" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('washer')) {
+      return <img src="/icons/icons8-washer-50.png" alt="Washer" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('dryer')) {
+      return <img src="/icons/icons8-dryer-50.png" alt="Dryer" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('cleaning supplies')) {
+      return <img src="/icons/icons8-cleaning-supplies-64.png" alt="Cleaning Supplies" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('safe locks')) {
+      return <img src="/icons/icons8-safe-50.png" alt="Safe Locks" className="w-5 h-5 mr-3 flex-shrink-0" />;
     }
     
-    // TV
-    if (name.includes('tv') || name.includes('television')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      );
+    // College Essentials
+    if (name.includes('dedicated workspace')) {
+      return <img src="/icons/icons8-workspace-50.png" alt="Dedicated Workspace" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('printer')) {
+      return <img src="/icons/icons8-printer-50.png" alt="Printer" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('outlets')) {
+      return <img src="/icons/icons8-outlets-30.png" alt="Outlets" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('storage')) {
+      return <img src="/icons/icons8-storage-50.png" alt="Storage" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('whiteboard')) {
+      return <img src="/icons/icons8-whiteboard-50.png" alt="Whiteboard" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('bike storage')) {
+      return <img src="/icons/icons8-bike-50.png" alt="Bike Storage" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('coffee maker')) {
+      return <img src="/icons/icons8-coffee-maker-50.png" alt="Coffee Maker" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('monitor')) {
+      return <img src="/icons/icons8-monitor-50.png" alt="Monitor" className="w-5 h-5 mr-3 flex-shrink-0" />;
     }
     
-    // Gym
+    // Extra
+    if (name.includes('tv')) {
+      return <img src="/icons/icons8-tv-50.png" alt="TV" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('outdoor space')) {
+      return <img src="/icons/icons8-outdoor-50.png" alt="Outdoor Space" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('parking')) {
+      return <img src="/icons/icons8-parking-50.png" alt="Parking" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
     if (name.includes('gym')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m-9 0h10m-10 0a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V6a2 2 0 00-2-2" />
-        </svg>
-      );
+      return <img src="/icons/icons8-gym-50.png" alt="Gym" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('games')) {
+      return <img src="/icons/icons8-games-50.png" alt="Games" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('dishwasher')) {
+      return <img src="/icons/icons8-dishwasher-50.png" alt="Dishwasher" className="w-5 h-5 mr-3 flex-shrink-0" />;
+    }
+    if (name.includes('speaker')) {
+      return <img src="/icons/icons8-speaker-30.png" alt="Speaker" className="w-5 h-5 mr-3 flex-shrink-0" />;
     }
     
-    // Fitness
-    if (name.includes('fitness')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 6v6m0 0v6m0-6h6m-6 0H3" />
-        </svg>
-      );
-    }
-    
-    // Pool
-    if (name.includes('pool')) {
-        return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-      );
-    }
-    
-    // Swimming
-    if (name.includes('swimming')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-        </svg>
-      );
-    }
-    
-    // Balcony
-    if (name.includes('balcony')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      );
-    }
-    
-    // Terrace
-    if (name.includes('terrace')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-      );
-    }
-    
-    // Patio
-    if (name.includes('patio')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-        </svg>
-      );
-    }
-    
-    // Elevator
-    if (name.includes('elevator')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-        </svg>
-      );
-    }
-    
-    // Doorman
-    if (name.includes('doorman')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      );
-    }
-    
-    // Security
-    if (name.includes('security')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      );
-    }
-    
-    // Workspace
-    if (name.includes('workspace') || name.includes('desk')) {
-      return (
-        <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      );
-    }
-    
-    // Default icon for other amenities
+    // Default icon for any unmatched amenities
     return (
       <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
     );
   };
@@ -1135,12 +1041,12 @@ export default function ListingDetails() {
                               src={host.avatar_url} 
                               alt={host.name || 'Host'} 
                               className="w-25 h-25 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => setShowProfileModal(true)}
+                              onClick={() => {}}
                             />
                           ) : (
                             <div 
                               className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => setShowProfileModal(true)}
+                              onClick={() => {}}
                             >
                               <span className="text-gray-600 text-5xl font-medium">
                                 {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
@@ -1187,42 +1093,80 @@ export default function ListingDetails() {
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3">
                         {listing.property_type && (
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {(() => {
+                              const propertyType = listing.property_type.toLowerCase();
+                              if (propertyType === 'apartment') {
+                                return <img src="/icons/icons8-apartment-50.png" alt="Apartment" className="w-5 h-5 mr-3 flex-shrink-0" />;
+                              } else if (propertyType === 'house') {
+                                return <img src="/icons/icons8-house-30.png" alt="House" className="w-5 h-5 mr-3 flex-shrink-0" />;
+                              } else {
+                                return <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
+                                </svg>;
+                              }
+                            })()}
                             <span className="text-gray-700">{formatPropertyText(listing.property_type)}</span>
                           </div>
                         )}
                         {listing.bedrooms && (
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                            </svg>
+                            <img src="/icons/bed.png" alt="Bedroom" className="w-5 h-5 mr-3 flex-shrink-0" />
                             <span className="text-gray-700">{listing.bedrooms} bedroom{listing.bedrooms !== 1 ? 's' : ''}</span>
                           </div>
                         )}
                         {listing.bathrooms && (
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                            </svg>
+                            <img src="/icons/bath-tub.png" alt="Bathroom" className="w-5 h-5 mr-3 flex-shrink-0" />
                             <span className="text-gray-700">{listing.bathrooms} bathroom{listing.bathrooms !== 1 ? 's' : ''}</span>
                           </div>
                         )}
                         {listing.max_occupancy && (
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                            </svg>
+                            <img src="/icons/icons8-group-30.png" alt="Guests" className="w-5 h-5 mr-3 flex-shrink-0" />
                             <span className="text-gray-700">{listing.max_occupancy} guest{listing.max_occupancy !== 1 ? 's' : ''}</span>
                           </div>
                         )}
                         {listing.guest_space && (
                           <div className="flex items-center">
-                            <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {(() => {
+                              const guestSpace = listing.guest_space.toLowerCase();
+                              if (guestSpace === 'entire_place') {
+                                return <img src="/icons/icons8-home-50.png" alt="Entire Place" className="w-5 h-5 mr-3 flex-shrink-0" />;
+                              } else if (guestSpace === 'room') {
+                                return <img src="/icons/icons8-room-64.png" alt="Room" className="w-5 h-5 mr-3 flex-shrink-0" />;
+                              } else if (guestSpace === 'shared_room') {
+                                return <img src="/icons/icons8-group-30.png" alt="Shared Room" className="w-5 h-5 mr-3 flex-shrink-0" />;
+                              } else {
+                                return <svg className="w-5 h-5 text-gray-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
+                                </svg>;
+                              }
+                            })()}
                             <span className="text-gray-700">{formatPropertyText(listing.guest_space)}</span>
+                          </div>
+                        )}
+                        {listing.occupants && listing.occupants.includes('me') && (
+                          <div className="flex items-center">
+                            <img src="/icons/icons8-host-50.png" alt="Host present" className="w-5 h-5 mr-3 flex-shrink-0" />
+                            <span className="text-gray-700">Host present</span>
+                          </div>
+                        )}
+                        {listing.occupants && listing.occupants.includes('family') && (
+                          <div className="flex items-center">
+                            <img src="/icons/icons8-host-50.png" alt="Family present" className="w-5 h-5 mr-3 flex-shrink-0" />
+                            <span className="text-gray-700">Family present</span>
+                          </div>
+                        )}
+                        {listing.occupants && listing.occupants.includes('other_guests') && (
+                          <div className="flex items-center">
+                            <img src="/icons/icons8-host-50.png" alt="Guests present" className="w-5 h-5 mr-3 flex-shrink-0" />
+                            <span className="text-gray-700">Guests present</span>
+                          </div>
+                        )}
+                        {listing.occupants && listing.occupants.includes('roommate') && (
+                          <div className="flex items-center">
+                            <img src="/icons/icons8-host-50.png" alt="Roommate present" className="w-5 h-5 mr-3 flex-shrink-0" />
+                            <span className="text-gray-700">Roommate present</span>
                           </div>
                         )}
                       </div>
@@ -1438,22 +1382,22 @@ export default function ListingDetails() {
                           <>
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               {/* Car icon */}
-                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13l2-5a2 2 0 012-2h10a2 2 0 012 2l2 5M5 13h14M7 16a2 2 0 104 0 2 2 0 00-4 0zm6 0a2 2 0 104 0 2 2 0 00-4 0z" /></svg>
+                              <img src="/icons/icons8-car.gif" alt="Car" className="w-5 h-5" />
                               <span>Car: <span className="font-medium">{commuteTimes.car || '--'}</span></span>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               {/* Transit icon (train) */}
-                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 19v1a1 1 0 001 1h6a1 1 0 001-1v-1M8 19h8M8 19a4 4 0 018 0M8 19a4 4 0 01-8 0M16 19a4 4 0 018 0M12 3v10m0 0l-3-3m3 3l3-3" /></svg>
+                              <img src="/icons/icons8-train-50.png" alt="Transit" className="w-5 h-5" />
                               <span>Transit: <span className="font-medium">{commuteTimes.transit || '--'}</span></span>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               {/* Bike icon */}
-                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17.5V14h-3l-2-5h-2" /></svg>
+                              <img src="/icons/icons8-bike-50.png" alt="Bike" className="w-5 h-5" />
                               <span>Bike: <span className="font-medium">{commuteTimes.bike || '--'}</span></span>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               {/* Walk icon */}
-                              <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.5 5.5a2 2 0 11-4 0 2 2 0 014 0zM12 7.5v2.5l-2 2.5m2-2.5l2 2.5m-2-2.5v6m0 0l-2 2.5m2-2.5l2 2.5" /></svg>
+                              <img src="/icons/icons8-walk-50.png" alt="Walk" className="w-5 h-5" />
                               <span>Walk: <span className="font-medium">{commuteTimes.walk || '--'}</span></span>
                             </div>
                           </>
@@ -1616,6 +1560,12 @@ export default function ListingDetails() {
                               totalReviews={otherListing.totalReviews}
                               amenities={otherListing.amenities}
                               cardMargin="mx-0"
+                              onAvatarClick={() => {
+                                // Navigate to the host's profile page
+                                if (otherListing.user_id) {
+                                  router.push(`/profile?userId=${otherListing.user_id}`);
+                                }
+                              }}
                             />
                           </div>
                         ))}

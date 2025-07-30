@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
-import ProfileModal from "./ProfileModal";
 
 interface NavbarProps {
   children?: ReactNode;
@@ -18,7 +17,6 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [isExtraExtraSmallSize, setIsExtraExtraSmallSize] = useState(false);
   const profileBtnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -99,7 +97,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
             ) : (
               <button 
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="text-black focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                className="text-black focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-white flex items-center justify-center hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
                 aria-label="Menu"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -111,15 +109,13 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
             {/* Mobile dropdown - Small rectangle on right */}
             {menuOpen && user && (
               <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] flex flex-col overflow-hidden">
-                <button
+                <Link
+                  href="/profile"
                   className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setProfileModalOpen(true);
-                  }}
+                  onClick={() => setMenuOpen(false)}
                 >
                   Profile
-                </button>
+                </Link>
                 <Link
                   href="/my-listings"
                   className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
@@ -160,7 +156,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
               <button
                 ref={profileBtnRef}
                 onClick={() => setProfileDropdownOpen((o) => !o)}
-                className="text-black focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                className="text-black focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-gray-50 flex items-center justify-center hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
                 aria-haspopup="true"
                 aria-expanded={profileDropdownOpen}
                 aria-label="Profile menu"
@@ -174,15 +170,13 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   ref={dropdownRef}
                   className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] flex flex-col overflow-hidden"
                 >
-                  <button
+                  <Link
+                    href="/profile"
                     className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
-                    onClick={() => {
-                      setProfileDropdownOpen(false);
-                      setProfileModalOpen(true);
-                    }}
+                    onClick={() => setProfileDropdownOpen(false)}
                   >
                     Profile
-                  </button>
+                  </Link>
                   <Link
                     href="/my-listings"
                     className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
@@ -220,11 +214,6 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
         </div>
       </header>
       
-      {/* Profile Modal */}
-      <ProfileModal 
-        isOpen={profileModalOpen} 
-        onClose={() => setProfileModalOpen(false)} 
-      />
     </>
   );
 } 
