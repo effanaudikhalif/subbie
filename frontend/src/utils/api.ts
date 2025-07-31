@@ -4,6 +4,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 // Debug: Log the API URL being used
 console.log('API_BASE_URL:', API_BASE_URL);
 console.log('NEXT_PUBLIC_API_URL env var:', process.env.NEXT_PUBLIC_API_URL);
+console.log('Current environment:', process.env.NODE_ENV);
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
@@ -38,7 +39,8 @@ export const buildAvatarUrl = (avatarUrl: string | null | undefined): string | n
     // Extract the filename from the local URL
     const filename = avatarUrl.split('/uploads/')[1];
     if (filename) {
-      return `https://subly-backend.onrender.com/uploads/${filename}`;
+      // Use the configured API_BASE_URL instead of hardcoded URL
+      return `${API_BASE_URL}/uploads/${filename}`;
     }
   }
   

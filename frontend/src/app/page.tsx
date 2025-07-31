@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import Link from 'next/link';
 import MobileFooter from '../components/MobileFooter';
 import LoadingPage from '../components/LoadingPage';
+import HealthCheck from '../components/HealthCheck';
 
 export default function Page() {
   const [where, setWhere] = useState('');
@@ -286,6 +287,13 @@ export default function Page() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Temporary Health Check */}
+        <section className="w-full py-10 bg-white">
+          <div className="max-w-4xl mx-auto px-4">
+            <HealthCheck />
           </div>
         </section>
 
