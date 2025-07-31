@@ -9,7 +9,6 @@ import { useAuth } from '../hooks/useAuth';
 import Link from 'next/link';
 import MobileFooter from '../components/MobileFooter';
 import LoadingPage from '../components/LoadingPage';
-import HealthCheck from '../components/HealthCheck';
 
 export default function Page() {
   const [where, setWhere] = useState('');
@@ -68,6 +67,55 @@ export default function Page() {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Amaranth:ital,wght@0,400;0,700;1,400;1,700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&display=swap');
+        
+        /* Medium breakpoint: 480px to 699px */
+        @media (min-width: 480px) and (max-width: 699px) {
+          .hero-title {
+            font-size: 3rem !important;
+            margin-bottom: 20px !important;
+            line-height: 1.1 !important;
+          }
+          .hero-title span {
+            display: block !important;
+          }
+          .hero-subtitle {
+            font-size: 2rem !important;
+            margin-bottom: 40px !important;
+          }
+          .hero-buttons {
+            gap: 0.75rem !important;
+          }
+          .hero-buttons button {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.875rem !important;
+          }
+        }
+
+        /* Small breakpoint: 479px and below */
+        @media (max-width: 479px) {
+          .hero-title {
+            font-size: 3rem !important;
+            margin-bottom: 20px !important;
+            line-height: 1.1 !important;
+          }
+          .hero-title span {
+            display: block !important;
+          }
+          .hero-subtitle {
+            font-size: 2rem !important;
+            margin-bottom: 40px !important;
+          }
+          .hero-buttons {
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+            align-items: center !important;
+          }
+          .hero-buttons button {
+            padding: 0.5rem 1rem !important;
+            font-size: 0.875rem !important;
+            width: fit-content !important;
+          }
+        }
         
         .stars {
           width: 1px;
@@ -188,16 +236,19 @@ export default function Page() {
             Your browser does not support the video tag.
           </video>
           
+          {/* Dark Overlay */}
+          <div className="absolute inset-0 bg-black/20"></div>
+          
           {/* Overlay Text */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-white text-center">
-              <h1 className="text-6xl md:text-9xl font-bold" style={{ fontSize: '6rem', marginBottom: '40px' }}>
-                Your Sublet Buddy
+              <h1 className="text-6xl md:text-9xl font-bold hero-title" style={{ fontSize: '5rem', marginBottom: '40px' }}>
+                <span>Your</span> <span>Sublet</span> <span>Buddy</span>
               </h1>
-              <p className="text-4xl md:text-5xl font-medium" style={{ fontSize: '3rem', marginBottom: '100px' }}>
+              <p className="text-4xl md:text-5xl font-medium hero-subtitle" style={{ fontSize: '3rem', marginBottom: '60px' }}>
                 College Sublets
               </p>
-              <div className="flex gap-4 justify-center">
+              <div className="flex gap-4 justify-center hero-buttons">
                 <button 
                   onClick={() => router.push('/listings?where=Boston')}
                   className="px-6 py-3 bg-white hover:bg-gray-200 text-gray-600 hover:text-gray-800 font-medium rounded-full border border-gray-600 transition-colors" 
@@ -290,12 +341,7 @@ export default function Page() {
           </div>
         </section>
 
-        {/* Temporary Health Check */}
-        <section className="w-full py-10 bg-white">
-          <div className="max-w-4xl mx-auto px-4">
-            <HealthCheck />
-          </div>
-        </section>
+
 
       </div>
     </div>
