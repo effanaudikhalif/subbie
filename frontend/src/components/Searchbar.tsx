@@ -127,7 +127,7 @@ export default function SearchBar({
     : 'Add dates';
 
   return (
-    <div className={`w-full bg-white rounded-2xl shadow flex items-center px-1 py-0 relative ${isExtraExtraSmallSize ? 'max-w-lg' : 'max-w-lg'}`}>
+    <div className={`w-full bg-white rounded-2xl shadow flex items-center px-1 py-0 relative border border-gray-200 ${isExtraExtraSmallSize ? 'max-w-lg' : 'max-w-lg'}`}>
       {/* Where */}
       <div className={`py-1 flex flex-col items-start justify-center relative ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1.5]'}`}>
                     <div className="text-black mb-0.5 text-sm">Where</div>

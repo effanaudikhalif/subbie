@@ -1,4 +1,4 @@
-function commuteTimesRouter() {
+module.exports = (pool) => {
   const express = require('express');
   const router = express.Router();
   // Using built-in fetch (available in Node.js 18+)
@@ -44,6 +44,4 @@ function commuteTimesRouter() {
   });
 
   return router;
-}
-
-module.exports = commuteTimesRouter; 
+}; 

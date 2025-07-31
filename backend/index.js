@@ -176,7 +176,7 @@ app.use('/api/host-reviews', hostReviewsRouterInstance);
 const renterReviewsRouterInstance = renterReviewsRouter(pool);
 app.use('/api/renter-reviews', renterReviewsRouterInstance);
 
-const commuteTimesRouterInstance = commuteTimesRouter();
+const commuteTimesRouterInstance = commuteTimesRouter(pool);
 app.use('/api/commute-times', commuteTimesRouterInstance);
 
 app.use('/api/openai', openaiRouter);

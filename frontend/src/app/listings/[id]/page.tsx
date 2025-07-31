@@ -1073,13 +1073,13 @@ export default function ListingDetails() {
                               <img 
                                 src={host.avatar_url} 
                                 alt={host.name || 'Host'} 
-                                className="w-20 h-20 sm:w-25 sm:h-25 md:w-20 lg:w-24 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => {}}
+                                className="w-20 h-20 sm:w-24 sm:h-24 md:w-20 lg:w-24 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => host && router.push(`/profile/${host.id}`)}
                               />
                             ) : (
                               <div 
-                                className="w-20 h-20 sm:w-25 sm:h-25 md:w-20 lg:w-24 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => {}}
+                                className="w-20 h-20 sm:w-24 sm:h-24 md:w-20 lg:w-24 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => host && router.push(`/profile/${host.id}`)}
                               >
                                 <span className="text-gray-600 text-4xl sm:text-5xl md:text-3xl lg:text-4xl font-medium">
                                   {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
