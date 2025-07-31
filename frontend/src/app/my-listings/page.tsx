@@ -11,6 +11,8 @@ import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { buildApiUrl, buildImageUrl } from '../../utils/api';
 import Link from "next/link";
+import MobileFooter from '../../components/MobileFooter';
+import LoadingPage from '../../components/LoadingPage';
 
 interface ListingImage {
   url: string;
@@ -68,6 +70,7 @@ function MyListingsPageContent() {
   const [activeTab, setActiveTab] = useState<'all' | 'bookings' | 'messages'>('all');
   const [bookingFilter, setBookingFilter] = useState<'pending' | 'approved' | 'completed'>('pending');
   const [deletingListing, setDeletingListing] = useState<string | null>(null);
+  const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
   
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -505,6 +508,19 @@ function MyListingsPageContent() {
       });
   }, [userId]);
 
+  // Fetch average ratings for listings
+  useEffect(() => {
+    fetch(buildApiUrl('/api/listings/average-ratings'))
+      .then(res => res.json())
+      .then(data => {
+        setAverageRatings(data);
+      })
+      .catch((error) => {
+        console.error('Error fetching average ratings:', error);
+        setAverageRatings({});
+      });
+  }, []);
+
   // Load tab data when tab changes
   useEffect(() => {
     if (activeTab && !loadedTabs.has(activeTab)) {
@@ -730,6 +746,11 @@ function MyListingsPageContent() {
     }
   };
 
+  // Show loading state while loading data
+  if (loading) {
+    return <LoadingPage />;
+  }
+
   return (
     <div className="fixed inset-0 flex flex-col bg-gray-50 overflow-hidden">
       {isMobile ? (
@@ -759,7 +780,7 @@ function MyListingsPageContent() {
                   {conversations.map((c) => (
                     <li
                       key={c.id}
-                      className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedConvo?.id === c.id ? "bg-blue-50 border-blue-400" : ""}`}
+                      className={`mb-2 rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedConvo?.id === c.id ? "bg-[#368a98]/20 border-[#368a98]" : ""}`}
                       onClick={() => setSelectedConvo(c)}
                     >
                       <div className="font-semibold text-black">
@@ -892,7 +913,7 @@ function MyListingsPageContent() {
                           {filteredBookings.map((booking: Booking) => (
                             <li
                               key={booking.id}
-                              className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-blue-50 border-blue-400" : ""}`}
+                              className={`rounded-lg p-3 cursor-pointer transition border border-gray-100 hover:bg-gray-100 ${selectedBooking?.id === booking.id ? "bg-[#368a98]/20 border-[#368a98]" : ""}`}
                               onClick={() => { setSelectedBooking(booking); setSelectedListing(null); }}
                             >
                               <ApprovedBookingSidebarItem booking={booking} guest={guestProfiles[booking.guest_id]} listing={listings.find(l => l.id === booking.listing_id) || null} />
@@ -907,7 +928,7 @@ function MyListingsPageContent() {
                               )}
                               {booking.status === 'ended' && (
                                 <button
-                                  className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded shadow"
+                                  className="mt-2 px-4 py-1 bg-[#368a98] hover:bg-[#2d6f7a] text-white text-xs font-semibold rounded shadow"
                                   onClick={e => { e.stopPropagation(); openRenterReviewPopup(booking); }}
                                 >
                                   {reviewedBookingIds.includes(booking.id) ? 'Edit Review' : 'Write Review'}
@@ -991,13 +1012,13 @@ function MyListingsPageContent() {
                   <div className={`flex gap-4 items-center mb-8 ${isMobile ? 'justify-center w-full' : 'justify-center w-full'}`}>
                     <button
                       onClick={() => setShowActive(true)}
-                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
+                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${showActive ? 'bg-[#368a98] hover:bg-[#2d6f7a] text-white border-[#368a98]' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
                     >
                       Active
                     </button>
                     <button
                       onClick={() => setShowActive(false)}
-                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${!showActive ? 'bg-teal-600 hover:bg-teal-700 text-white border-teal-600' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
+                      className={`border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors ${!showActive ? 'bg-[#368a98] hover:bg-[#2d6f7a] text-white border-[#368a98]' : 'bg-white text-black border-gray-200 hover:bg-gray-50'}`}
                     >
                       Inactive
                     </button>
@@ -1045,6 +1066,8 @@ function MyListingsPageContent() {
                           isDeleting={deletingListing === listing.id}
                           cardHeight="h-[350px]"
                           cardMargin="mx-4 my-4"
+                          averageRating={averageRatings[listing.id]?.average_rating}
+                          totalReviews={averageRatings[listing.id]?.total_reviews}
                         />
                       ))}
                       </div>
@@ -1067,8 +1090,8 @@ function MyListingsPageContent() {
           <div className="absolute inset-0 z-30 flex">
             <div className="w-80" />
             <div className="flex-1 flex">
-              <div className="flex-1 backdrop-blur-sm bg-white/40" />
-              <div className="w-96 backdrop-blur-sm bg-white/40" />
+              <div className="flex-1 backdrop-blur-sm bg-black/20" />
+              <div className="w-96 backdrop-blur-sm bg-black/20" />
             </div>
           </div>
           {/* Popup */}
@@ -1116,7 +1139,7 @@ function MyListingsPageContent() {
                       Back
                     </button>
                     <button
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow"
+                      className="px-4 py-2 bg-[#368a98] hover:bg-[#2d6f7a] text-white font-semibold rounded-lg shadow"
                       onClick={handleSubmitRenterReview}
                     >
                       {isEditingRenterReview ? 'Update Review' : 'Submit Review'}
@@ -1139,7 +1162,7 @@ function MyListingsPageContent() {
 
       {/* Amenities Modal */}
       {showAmenitiesModal && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -1175,49 +1198,7 @@ function MyListingsPageContent() {
       )}
 
       {/* Mobile Footer - Only show on mobile */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-around z-50 shadow-lg">
-          <Link 
-            href="/my-listings" 
-            className="flex flex-col items-center text-teal-600 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span className="text-xs">Listings</span>
-          </Link>
-          
-          <Link 
-            href="/messages" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span className="text-xs">Messages</span>
-          </Link>
-          
-          <Link 
-            href="/wishlist" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span className="text-xs">Wishlist</span>
-          </Link>
-          
-          <Link 
-            href="/profile" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs">Profile</span>
-          </Link>
-        </div>
-      )}
+      {isMobile && <MobileFooter />}
     </div>
   );
 }
@@ -1265,7 +1246,7 @@ function ListingDetailsView({
           <div className="flex gap-3">
             <button
               onClick={() => onEdit(listing.id)}
-              className="px-4 py-2 rounded-lg font-semibold transition-colors bg-blue-600 hover:bg-blue-700 text-white"
+              className="px-4 py-2 rounded-lg font-semibold transition-colors bg-[#368a98] hover:bg-[#2d6f7a] text-white"
             >
               Edit Listing
             </button>
@@ -1596,6 +1577,7 @@ function MessagesReservationPanel({ conversation, guest, listingId }: { conversa
 } 
 
 function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: { booking: any, guest: any, listingId: string, showApproveButton?: boolean }) {
+  const { user } = useAuth();
   const [listing, setListing] = React.useState<any | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const router = useRouter();
@@ -1660,7 +1642,14 @@ function BookingDetailsPanel({ booking, guest, listingId, showApproveButton }: {
     <div className="overflow-y-auto scrollbar-hide">
       <button 
         className="bg-white border border-black text-black px-3 py-1 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm mb-4 w-fit"
-        onClick={() => router.push(`/listings/${listingId}`)}
+        onClick={() => {
+          // Check if user is logged in
+          if (!user) {
+            router.push('/login');
+            return;
+          }
+          router.push(`/listings/${listingId}`);
+        }}
       >
         Listing Page
       </button>

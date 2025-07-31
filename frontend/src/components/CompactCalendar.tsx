@@ -138,15 +138,15 @@ export default function CompactCalendar({ value, onChange, className = "" }: Com
               <div className={
                 `w-6 h-6 rounded-full flex items-center justify-center mx-auto
                 ${dayData.isStartDate
-                  ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                  ? 'text-white font-semibold'
                   : dayData.isEndDate
-                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    ? 'text-white font-semibold'
                     : dayData.isSelected
-                      ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                      ? 'text-[#368a98] border border-[#368a98]'
                       : dayData.isAvailable
                         ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
                         : 'text-gray-400'}
-                `
+                ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''}`
               }>
                 {dayData.day}
               </div>
@@ -157,7 +157,7 @@ export default function CompactCalendar({ value, onChange, className = "" }: Com
         ))}
       </div>
       <div className="mt-2 text-xs text-gray-600 text-center">
-        <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-4 mr-1"></span>
+        <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-4 mr-1"></span>
         Selected
       </div>
     </div>

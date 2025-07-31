@@ -48,11 +48,22 @@ app.use('/uploads', (req, res, next) => {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 // Initialize and start the expiration service
 const expirationService = new ExpirationService(pool);
-expirationService.startScheduledExpiration();
+
+// Test database connection on startup
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err.message);
+    console.log('Make sure your DATABASE_URL is correct and the database is accessible');
+  } else {
+    console.log('Database connected successfully');
+    expirationService.startScheduledExpiration();
+  }
+});
 
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);

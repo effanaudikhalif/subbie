@@ -167,23 +167,43 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
         ) : messages.length === 0 ? (
           <div className="text-gray-400 text-center my-auto">No messages yet. Say hello!</div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, index) => {
             const isUser = userId && msg.sender_id === userId;
+            const msgDate = new Date(msg.sent_at);
+            const prevMsgDate = index > 0 ? new Date(messages[index - 1].sent_at) : null;
+            
+            // Check if this is the first message of a new day using local timezone
+            const isFirstMessageOfDay = !prevMsgDate || 
+              msgDate.toDateString() !== prevMsgDate.toDateString();
+            
             return (
-              <div
-                key={msg.id + msg.sent_at}
-                className={`mb-2 flex ${isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`px-4 py-2 rounded-2xl max-w-xs break-words shadow text-sm ${
-                    isUser
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-gray-200 text-black'
-                  }`}
-                >
-                  {msg.body}
-                  <div className={`text-xs mt-1 text-right ${isUser ? 'text-white' : 'text-black'}`}>
-                    {new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div key={msg.id + msg.sent_at}>
+                {isFirstMessageOfDay && (
+                  <div className="flex justify-center mb-3">
+                    <div className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                      {msgDate.toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className={`mb-2 flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`px-4 py-2 rounded-2xl max-w-xs break-words shadow text-sm ${
+                      isUser
+                        ? 'text-white'
+                        : 'bg-gray-200 text-black'
+                    }`}
+                    style={isUser ? { backgroundColor: '#368a98' } : undefined}
+                  >
+                    {msg.body}
+                    <div className={`text-xs mt-1 text-right ${isUser ? 'text-white' : 'text-black'}`}>
+                      {msgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -192,18 +212,20 @@ export default function ChatBox({ listingId, hostId, allowHostChat, conversation
         )}
         <div ref={messagesEndRef} />
       </div>
-      <form onSubmit={handleSend} className="flex gap-2 flex-shrink-0">
+      <form onSubmit={handleSend} className={`flex gap-2 flex-shrink-0 ${fullWidth ? 'pb-2.5 pr-4 pl-4' : ''}`}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="flex-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-gray-300"
-          placeholder="Type your message..."
+          className="flex-1 rounded-full border border-gray-300 px-3 py-1.5 text-sm text-black bg-white focus:outline-none focus:ring-black focus:border-black focus:z-10"
           disabled={sending}
         />
         <button
           type="submit"
-          className="bg-teal-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-teal-800 transition flex items-center justify-center"
+          className="text-white px-4 py-1.5 rounded-full text-sm font-semibold transition flex items-center justify-center"
+          style={{ backgroundColor: '#368a98' }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2d6f7a'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#368a98'}
           disabled={sending || !input.trim()}
         >
           <img 

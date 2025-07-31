@@ -9,6 +9,7 @@ import MapPreview from '../../../components/MapPreview';
 import PhotoUpload from '../../../components/PhotoUpload';
 import CompactCalendar from '../../../components/CompactCalendar';
 import { buildApiUrl } from '../../../utils/api';
+import LoadingPage from '../../../components/LoadingPage';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -38,7 +39,7 @@ interface FormData {
 export default function EditListing() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -516,34 +517,15 @@ export default function EditListing() {
     }
   };
 
+  // Redirect to login if user is not authenticated (and not loading)
+  useEffect(() => {
+    if (!authLoading && user === null) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
   if (!user) {
-    return (
-      <div className="bg-white min-h-screen">
-        {isMobile ? (
-          <MobileNavbar
-            where={where}
-            setWhere={setWhere}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            onSearch={handleMobileSearch}
-            isEditListingPage={true}
-          />
-        ) : (
-          <Navbar />
-        )}
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-black">Please log in to edit a listing</h1>
-            <button
-              onClick={() => router.push('/login')}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Log In
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (loading) {
@@ -561,11 +543,7 @@ export default function EditListing() {
         ) : (
           <Navbar />
         )}
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-black">Loading...</h1>
-          </div>
-        </div>
+        <LoadingPage />
       </div>
     );
   }
@@ -574,7 +552,7 @@ export default function EditListing() {
     switch (currentStep) {
       case 1:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Which of these best describes your place?</h2>
             <div className="space-y-4">
               {[
@@ -609,7 +587,7 @@ export default function EditListing() {
 
       case 2:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">What type of place will guests have?</h2>
             <div className="space-y-4">
               {[
@@ -650,134 +628,259 @@ export default function EditListing() {
 
       case 3:
         return (
-          <div className="max-w-6xl mx-auto mt-5">
+          <div className="max-w-6xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Where's your place located?</h2>
-            <div className="flex gap-8">
-              {/* Left Column - Address Form */}
-              <div className="w-[55%] space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
-                  <GoogleMapsAutocomplete
-                    onAddressSelect={handleAddressSelect}
-                    className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
-                    placeholder="Start typing your address..."
-                  />
-                  <p className="text-xs text-gray-600 mt-1">Type your address and select from the suggestions</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
+            
+            {!isMobile ? (
+              /* Desktop Layout */
+              <div className="flex gap-8">
+                {/* Left Column - Address Form */}
+                <div className="w-[55%] space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-black">Street address</label>
+                    <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
+                    <GoogleMapsAutocomplete
+                      onAddressSelect={handleAddressSelect}
+                      className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
+                      placeholder="Start typing your address..."
+                    />
+                    <p className="text-xs text-gray-600 mt-1">Type your address and select from the suggestions</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Street address</label>
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.address ? 'border-red-500' : 'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm'
+                        }`}
+                        placeholder="123 Main St"
+                      />
+                      {renderError('address')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Apt, unit, suite</label>
+                      <input
+                        type="text"
+                        value={formData.unit}
+                        onChange={(e) => handleInputChange('unit', e.target.value)}
+                        className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
+                        placeholder="Apt 3B"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Neighborhood</label>
+                      <input
+                        type="text"
+                      value={formData.neighborhood}
+                        onChange={(e) => handleInputChange('neighborhood', e.target.value)}
+                        className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
+                        placeholder="Allston"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">City</label>
+                      <input
+                        type="text"
+                      value={formData.city}
+                        onChange={(e) => handleInputChange('city', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.city ? 'border-red-500' : 'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm'
+                        }`}
+                        placeholder="Boston"
+                      />
+                    {renderError('city')}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">State</label>
+                      <input
+                        type="text"
+                      value={formData.state}
+                        onChange={(e) => handleInputChange('state', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.state ? 'border-red-500' : 'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm'
+                        }`}
+                        placeholder="MA"
+                      />
+                    {renderError('state')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Zip code</label>
+                      <input
+                        type="text"
+                      value={formData.zip}
+                        onChange={(e) => handleInputChange('zip', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.zip ? 'border-red-500' : 'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm'
+                        }`}
+                        placeholder="02115"
+                      />
+                    {renderError('zip')}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-black">Country</label>
                     <input
                       type="text"
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
+                      value={formData.country}
+                      onChange={(e) => handleInputChange('country', e.target.value)}
                       className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
-                        errors.address ? 'border-red-500' : 'border-gray-400'
+                        errors.country ? 'border-red-500' : 'mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm'
                       }`}
-                      placeholder="123 Main St"
+                      placeholder="Country"
                     />
-                    {renderError('address')}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-black">Apt, unit, suite</label>
-                    <input
-                      type="text"
-                      value={formData.unit}
-                      onChange={(e) => handleInputChange('unit', e.target.value)}
-                      className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
-                      placeholder="Apt 3B"
-                    />
+                    {renderError('country')}
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-black">Neighborhood</label>
-                    <input
-                      type="text"
-                    value={formData.neighborhood}
-                      onChange={(e) => handleInputChange('neighborhood', e.target.value)}
-                      className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
-                      placeholder="Allston"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-black">City</label>
-                    <input
-                      type="text"
-                    value={formData.city}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
-                        errors.city ? 'border-red-500' : 'border-gray-400'
-                      }`}
-                      placeholder="Boston"
-                    />
-                  {renderError('city')}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-black">State</label>
-                    <input
-                      type="text"
-                    value={formData.state}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
-                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
-                        errors.state ? 'border-red-500' : 'border-gray-400'
-                      }`}
-                      placeholder="MA"
-                    />
-                  {renderError('state')}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-black">Zip code</label>
-                    <input
-                      type="text"
-                    value={formData.zip}
-                      onChange={(e) => handleInputChange('zip', e.target.value)}
-                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
-                        errors.zip ? 'border-red-500' : 'border-gray-400'
-                      }`}
-                      placeholder="02115"
-                    />
-                  {renderError('zip')}
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-black">Country</label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
-                    className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
-                      errors.country ? 'border-red-500' : 'border-gray-400'
-                    }`}
-                    placeholder="Country"
-                  />
-                  {renderError('country')}
-                </div>
-              </div>
 
-              {/* Right Column - Map Preview */}
-              <div className="w-[45%] flex-shrink-0">
-                <label className="block text-sm font-medium mb-2 text-black">Map Preview</label>
-                <MapPreview
-                  latitude={formData.latitude}
-                  longitude={formData.longitude}
-                  address={`${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`}
-                  height="calc(100vh - 300px)"
-                />
+                {/* Right Column - Map Preview */}
+                <div className="w-[45%] flex-shrink-0">
+                  <label className="block text-sm font-medium mb-2 text-black">Map Preview</label>
+                  <MapPreview
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    address={`${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`}
+                    height="calc(100vh - 300px)"
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Mobile Layout - Map above, form below */
+              <div className="flex flex-col gap-6">
+                {/* Map Preview - Top */}
+                <div className="w-full">
+                  <MapPreview
+                    latitude={formData.latitude}
+                    longitude={formData.longitude}
+                    address={`${formData.address}, ${formData.city}, ${formData.state} ${formData.zip}`}
+                    height="300px"
+                  />
+                </div>
+
+                {/* Address Form - Bottom */}
+                <div className="w-full space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-black">Search for your address</label>
+                    <GoogleMapsAutocomplete
+                      onAddressSelect={handleAddressSelect}
+                      className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
+                      placeholder="Start typing your address..."
+                    />
+                    <p className="text-xs text-gray-600 mt-1">Type your address and select from the suggestions</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Street address</label>
+                      <input
+                        type="text"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.address ? 'border-red-500' : 'border-gray-400'
+                        }`}
+                        placeholder="123 Main St"
+                      />
+                      {renderError('address')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Apt, unit, suite</label>
+                      <input
+                        type="text"
+                        value={formData.unit}
+                        onChange={(e) => handleInputChange('unit', e.target.value)}
+                        className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
+                        placeholder="Apt 3B"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Neighborhood</label>
+                      <input
+                        type="text"
+                      value={formData.neighborhood}
+                        onChange={(e) => handleInputChange('neighborhood', e.target.value)}
+                        className="w-full p-2 border border-gray-400 rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black"
+                        placeholder="Allston"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">City</label>
+                      <input
+                        type="text"
+                      value={formData.city}
+                        onChange={(e) => handleInputChange('city', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.city ? 'border-red-500' : 'border-gray-400'
+                        }`}
+                        placeholder="Boston"
+                      />
+                    {renderError('city')}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">State</label>
+                      <input
+                        type="text"
+                      value={formData.state}
+                        onChange={(e) => handleInputChange('state', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.state ? 'border-red-500' : 'border-gray-400'
+                        }`}
+                        placeholder="MA"
+                      />
+                    {renderError('state')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-black">Zip code</label>
+                      <input
+                        type="text"
+                      value={formData.zip}
+                        onChange={(e) => handleInputChange('zip', e.target.value)}
+                        className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                          errors.zip ? 'border-red-500' : 'border-gray-400'
+                        }`}
+                        placeholder="02115"
+                      />
+                    {renderError('zip')}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-black">Country</label>
+                    <input
+                      type="text"
+                      value={formData.country}
+                      onChange={(e) => handleInputChange('country', e.target.value)}
+                      className={`w-full p-2 border rounded-lg text-black text-sm focus:outline-none focus:ring-1s:ring-black focus:border-black ${
+                        errors.country ? 'border-red-500' : 'border-gray-400'
+                      }`}
+                      placeholder="Country"
+                    />
+                    {renderError('country')}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
 
       case 4:
         return (
-          <div className="max-w-2xl mx-auto mt-5">
+          <div className="max-w-2xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">How many people can stay here?</h2>
             <div className="space-y-6">
               {/* Guests */}
@@ -851,7 +954,7 @@ export default function EditListing() {
 
       case 5:
         return (
-          <div className="max-w-4xl mx-auto mt-5 text-center">
+          <div className="max-w-4xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Who else might be there?</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Column */}
@@ -912,7 +1015,7 @@ export default function EditListing() {
         const extraAmenities = amenities.filter(a => a.category === 'extra');
         
         return (
-          <div className="max-w-6xl mx-auto mt-5">
+          <div className="max-w-6xl mx-auto mt-30">
             <h2 className="text-3xl font-bold mb-8 text-center text-black">Amenities</h2>
             
             {/* Desktop Layout - 3 columns side by side */}
@@ -1107,8 +1210,8 @@ export default function EditListing() {
               type="text"
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
-              className={`w-full p-6 border rounded-lg text-black text-lg text-center focus:outline-none focus:ring-1 focus:ring-black ${
-                errors.title ? 'border-red-500' : 'border-gray-600'
+              className={`w-full p-6 border text-center border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm ${
+                errors.title ? 'border-red-500' : ''
               }`}
               placeholder="Room near campus"
               maxLength={30}
@@ -1122,15 +1225,15 @@ export default function EditListing() {
 
       case 9:
         return (
-          <div className="max-w-2xl mx-auto text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Write a description</h2>
             <p className="text-lg text-gray-600 mb-8">Tell guests what makes your place special.</p>
             <div className="relative flex justify-center mb-2" style={{ maxWidth: 600, margin: '0 auto' }}>
               <textarea
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                className={`w-full p-6 pb-16 border rounded-lg h-80 resize-none focus:outline-none focus:ring-1 focus:ring-black focus:ring-offset-0 focus:border-black text-black text-lg ${
-                  errors.description ? 'border-red-500' : 'border-gray-600'
+                className={`w-full p-6 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm h-80 resize-none ${
+                  errors.description ? 'border-red-500' : ''
                 }`}
                 placeholder="Describe your place..."
                 maxLength={500}
@@ -1221,12 +1324,12 @@ export default function EditListing() {
 
       case 11:
         return (
-          <div className="max-w-2xl mx-auto mt-5 text-center">
+          <div className="max-w-2xl mx-auto mt-30 text-center">
             <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
             <div className="space-y-6">
               <div className="relative">
                 <div 
-                  className="w-full p-4 border border-gray-400 rounded-lg text-black cursor-pointer hover:border-gray-600 focus-within:ring-2 focus-within:ring-black"
+                  className="w-full p-4 border border-gray-300 rounded-lg text-black cursor-pointer hover:border-gray-600 focus-within:ring-1 focus-within:ring-black focus-within:border-black"
                   onClick={() => setShowCalendar(!showCalendar)}
                 >
                   <div className="flex justify-between items-center">
@@ -1296,7 +1399,7 @@ export default function EditListing() {
       <div className="flex-1 flex flex-col">
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-32 relative">
+        <div className="flex-1 flex items-center justify-center px-6 py-8 pt-4 relative">
           <div className="w-full max-w-4xl">
             {renderStep()}
           </div>

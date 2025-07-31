@@ -32,9 +32,23 @@ export default function RegisterPage() {
         if (response.ok) {
           const data = await response.json();
           setUniversities(data);
+        } else {
+          console.error('Failed to fetch universities:', response.status);
+          // Set some default universities
+          setUniversities([
+            { id: '1', name: 'Boston University', domain: 'bu.edu' },
+            { id: '2', name: 'Harvard University', domain: 'harvard.edu' },
+            { id: '3', name: 'MIT', domain: 'mit.edu' }
+          ]);
         }
       } catch (err) {
         console.error('Error fetching universities:', err);
+        // Set some default universities
+        setUniversities([
+          { id: '1', name: 'Boston University', domain: 'bu.edu' },
+          { id: '2', name: 'Harvard University', domain: 'harvard.edu' },
+          { id: '3', name: 'MIT', domain: 'mit.edu' }
+        ]);
       }
     };
     fetchUniversities();
@@ -100,6 +114,15 @@ export default function RegisterPage() {
       return;
     }
 
+    // Validate email domain matches selected university
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    const selectedUniversity = universities.find(u => u.id === universityId);
+    
+    if (selectedUniversity && emailDomain && emailDomain !== selectedUniversity.domain.toLowerCase()) {
+      setError(`Please use your university email address. Your email domain (${emailDomain}) doesn't match ${selectedUniversity.name}'s domain (${selectedUniversity.domain}).`);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -161,9 +184,6 @@ export default function RegisterPage() {
         <h2 className="text-center text-3xl font-extrabold text-gray-900">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Join Subly to start subletting
-        </p>
         <form onSubmit={handleRegister} className="space-y-6 mt-8">
           {/* Full Name */}
           <div>

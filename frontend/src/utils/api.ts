@@ -18,4 +18,29 @@ export const buildImageUrl = (imagePath: string): string => {
     return `${API_BASE_URL}${imagePath}`;
   }
   return imagePath;
+};
+
+// Enhanced function to handle avatar URLs for both local and production environments
+export const buildAvatarUrl = (avatarUrl: string | null | undefined): string | null => {
+  if (!avatarUrl) return null;
+  
+  // If we're in development and the URL points to production, convert it to local
+  if (API_BASE_URL.includes('localhost') && avatarUrl.includes('onrender.com')) {
+    // Extract the filename from the production URL
+    const filename = avatarUrl.split('/uploads/')[1];
+    if (filename) {
+      return `${API_BASE_URL}/uploads/${filename}`;
+    }
+  }
+  
+  // If we're in production and the URL points to localhost, convert it to production
+  if (!API_BASE_URL.includes('localhost') && avatarUrl.includes('localhost')) {
+    // Extract the filename from the local URL
+    const filename = avatarUrl.split('/uploads/')[1];
+    if (filename) {
+      return `https://subly-backend.onrender.com/uploads/${filename}`;
+    }
+  }
+  
+  return avatarUrl;
 }; 

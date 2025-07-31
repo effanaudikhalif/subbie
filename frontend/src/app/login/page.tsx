@@ -45,9 +45,6 @@ function LoginForm() {
         <h2 className="mt-12 text-center text-3xl font-extrabold text-gray-900">
           Sign in
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Welcome back to Subly
-        </p>
         <form onSubmit={handleLogin} className="space-y-6 mt-8">
           {/* Success Message */}
           {successMessage && (

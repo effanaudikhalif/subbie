@@ -20,15 +20,18 @@ interface MobileNavbarProps {
   isAddListingPage?: boolean;
   isEditListingPage?: boolean;
   isProfilePage?: boolean;
+  isHomePage?: boolean;
   listingId?: string;
   isOwner?: boolean;
+  isMessagesChatView?: boolean;
 }
 
-export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, isListingDetailsPage = false, isAddListingPage = false, isEditListingPage = false, isProfilePage = false, listingId, isOwner }: MobileNavbarProps) {
+export default function MobileNavbar({ where, setWhere, dateRange, setDateRange, onSearch, isMessagesPage = false, isMyListingsPage = false, isWishlistPage = false, isListingDetailsPage = false, isAddListingPage = false, isEditListingPage = false, isProfilePage = false, isHomePage = false, listingId, isOwner, isMessagesChatView = false }: MobileNavbarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -162,15 +165,40 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm" style={{ height: '80px' }}>
       {/* Logo and Search Bar Row */}
-      <div className="pl-0 pr-4 py-1 flex items-center gap-0 h-full">
-        {/* Logo */}
-        <div className="flex-shrink-0" style={{ marginLeft: '-24px' }}>
-          <Logo className="hover:opacity-80 transition-opacity" />
-        </div>
+      <div className="px-4 py-1 flex items-center gap-0 h-full">
+        {/* Logo - Hide for listings page (when no specific page is active) */}
+        {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? (
+          <div className="flex-shrink-0" style={{ marginLeft: '-10px' }}>
+            <Logo className="hover:opacity-80 transition-opacity" />
+          </div>
+        ) : null}
         
         {/* Expandable Search Cylinder or Inbox Title */}
-        <div className="flex-1 flex justify-center">
-          {isAddListingPage || isEditListingPage ? (
+        <div className={`flex justify-center ${isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? 'flex-1' : 'w-full'}`}>
+          {isHomePage ? (
+            /* Home Page - Show Login/Signup or nothing if logged in */
+            <div className="flex-1 flex justify-end items-center gap-3 pr-4">
+              {!user ? (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-600 hover:text-gray-800 font-medium rounded-full border border-gray-600 transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              ) : (
+                /* Show nothing when logged in on home page */
+                <div></div>
+              )}
+            </div>
+          ) : isAddListingPage || isEditListingPage ? (
             /* Add/Edit Listing Page - Show X Button */
             <div className="flex-1 flex justify-end pr-4">
               <button
@@ -184,39 +212,132 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
               </button>
             </div>
           ) : isListingDetailsPage ? (
-            /* Listing Details Page - Show Listing Title */
-            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
-              <span className="text-gray-700 text-base font-medium">Listing Details</span>
-            </div>
+            /* Listing Details Page - Show Search Bar */
+            !isExpanded ? (
+              /* Collapsed State - Cylinder */
+              <div 
+                className="w-full bg-gray-100 rounded-full pl-6 pr-2 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-all duration-300"
+                onClick={handleExpand}
+              >
+                <span className="text-gray-500 text-base">Search</span>
+                <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                  <FaSearch className="text-white text-sm" />
+                </div>
+              </div>
+            ) : (
+              /* Expanded State - Full Search Form */
+              <div className="mobile-search-form border border-gray-200 rounded-2xl p-4 shadow-lg transition-all duration-300 absolute top-0 left-0 w-full z-50" style={{ backgroundColor: '#ffffff' }}>
+                {/* Location Input with Google Autocomplete */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Where</label>
+                  <div className="relative">
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={where}
+                      onChange={e => setWhere(e.target.value)}
+                      onFocus={() => setShowCalendar(false)}
+                      placeholder="Search destination"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder-gray-500 text-gray-900"
+                      disabled={isLoading}
+                    />
+                    {isLoading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></div>
+                      </div>
+                    )}
+                  </div>
+                  {error && (
+                    <div className="text-red-500 text-xs mt-1">{error}</div>
+                  )}
+                </div>
+
+                {/* Date Inputs */}
+                <div className="grid grid-cols-2 gap-3 mb-4 relative">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Check in</label>
+                    <div
+                      className="px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-teal-500 transition-colors"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                    >
+                      <span className={checkIn === 'Add dates' ? 'text-gray-500' : 'text-gray-900'}>
+                        {checkIn}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Check out</label>
+                    <div
+                      className="px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-teal-500 transition-colors"
+                      onClick={() => setShowCalendar(!showCalendar)}
+                    >
+                      <span className={checkOut === 'Add dates' ? 'text-gray-500' : 'text-gray-900'}>
+                        {checkOut}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Calendar Dropdown */}
+                  {showCalendar && (
+                    <div ref={calendarRef} className="absolute left-1/2 transform -translate-x-1/2 top-full mt-1 z-50">
+                      <CompactCalendar
+                        value={{
+                          startDate: dateRange[0]?.startDate ? new Date(dateRange[0].startDate) : null,
+                          endDate: dateRange[0]?.endDate ? new Date(dateRange[0].endDate) : null
+                        }}
+                        onChange={({ startDate, endDate }) => {
+                          if (startDate && endDate) {
+                            const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                            const localEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+                            setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
+                            // Close calendar when both dates are selected
+                            setShowCalendar(false);
+                          } else {
+                            setDateRange([{ startDate, endDate, key: 'selection' }]);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Search Button */}
+                <button 
+                  onClick={handleSearchClick}
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  <span>Search</span>
+                </button>
+              </div>
+            )
           ) : isMessagesPage ? (
             /* Messages Page - Show Listing Info or Messages */
-            <div 
-              className={`w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center ${listingId ? 'cursor-pointer hover:bg-gray-200 transition-colors' : ''}`}
-              onClick={() => {
-                if (listingId) {
-                  router.push(`/listings/${listingId}`);
-                }
-              }}
-            >
-              <span className="text-gray-700 text-base font-medium">
-                {listingId ? (isOwner ? 'Your Listing' : 'View Listing') : 'Messages'}
-              </span>
-            </div>
-          ) : isMyListingsPage ? (
-            /* My Listings Page - Show My Listings */
-            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
-              <span className="text-gray-700 text-base font-medium">My Listings</span>
-            </div>
+            listingId ? (
+              <div className="flex-1 flex justify-end pr-6">
+                <div 
+                  className="bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                  style={{ marginRight: '-10px' }}
+                  onClick={() => {
+                    router.push(`/listings/${listingId}`);
+                  }}
+                >
+                  <span className="text-gray-700 text-base font-medium">
+                    Listing
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full"></div>
+            )
           ) : isWishlistPage ? (
-            /* Wishlist Page - Show Wishlist */
-            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
-              <span className="text-gray-700 text-base font-medium">Wishlist</span>
-            </div>
+            /* Wishlist Page - Show nothing (no search bar) */
+            <div className="w-full"></div>
           ) : isProfilePage ? (
-            /* Profile Page - Show Profile Page */
-            <div className="w-full bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center">
-              <span className="text-gray-700 text-base font-medium">Profile Page</span>
-            </div>
+            /* Profile Page - Show nothing (no search bar) */
+            <div className="w-full"></div>
+          ) : isMyListingsPage ? (
+            /* My Listings Page - Show nothing (no search bar) */
+            <div className="w-full"></div>
           ) : !isExpanded ? (
             /* Collapsed State - Cylinder */
             <div 
@@ -308,15 +429,16 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
             {/* Search Button */}
             <button 
               onClick={handleSearchClick}
-              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
             >
-              <FaSearch className="text-white" />
               <span>Search</span>
             </button>
           </div>
         )}
         </div>
       </div>
+      
+      {/* Mobile dropdown menu - removed for home page when logged in */}
     </header>
   );
 }
@@ -441,15 +563,15 @@ function CompactCalendar({ value, onChange }: {
               <div className={
                 `w-7 h-7 rounded-full flex items-center justify-center mx-auto text-sm
                 ${dayData.isStartDate
-                  ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                  ? 'text-white font-semibold'
                   : dayData.isEndDate
-                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    ? 'text-white font-semibold'
                     : dayData.isSelected
-                      ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                      ? 'text-[#368a98] border border-[#368a98]'
                       : dayData.isAvailable
                         ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
                         : 'text-gray-400'}
-                `
+                ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''}`
               }>
                 {dayData.day}
               </div>
@@ -460,7 +582,7 @@ function CompactCalendar({ value, onChange }: {
         ))}
       </div>
       <div className="mt-2 text-xs text-gray-600 text-center">
-        <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-3 mr-1"></span>
+        <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-3 mr-1"></span>
         Selected
       </div>
     </div>

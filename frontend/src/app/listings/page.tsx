@@ -11,6 +11,8 @@ import DraggableMapContainer from '../../components/DraggableMapContainer';
 import ListingCard from '../../components/ListingCard';
 import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
+import MobileFooter from '../../components/MobileFooter';
+import LoadingPage from '../../components/LoadingPage';
 
 function ResultsContent() {
   const searchParams = useSearchParams();
@@ -50,6 +52,7 @@ function ResultsContent() {
   const [guests, setGuests] = useState(searchParams?.get('guests') || '');
   const [listings, setListings] = useState<any[]>([]);
   const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
+  const [loading, setLoading] = useState(true);
   // State for map bounds
   const [visibleBounds, setVisibleBounds] = useState<{ sw: { lat: number, lng: number }, ne: { lat: number, lng: number } } | null>(null);
   // Add a key to force map refresh
@@ -92,21 +95,31 @@ function ResultsContent() {
   }, []);
 
   useEffect(() => {
-          fetch(buildApiUrl('/api/listings'))
+    setLoading(true);
+    fetch(buildApiUrl('/api/listings'))
       .then(res => res.json())
       .then(data => {
         setListings(Array.isArray(data) ? data : []);
       })
-      .catch(() => setListings([]));
+      .catch(() => setListings([]))
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-          fetch(buildApiUrl('/api/listings/average-ratings'))
-      .then(res => res.json())
+    console.log('Fetching average ratings...');
+    fetch(buildApiUrl('/api/listings/average-ratings'))
+      .then(res => {
+        console.log('Average ratings response status:', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('Average ratings data:', data);
         setAverageRatings(data);
       })
-      .catch(() => setAverageRatings({}));
+      .catch((error) => {
+        console.error('Error fetching average ratings:', error);
+        setAverageRatings({});
+      });
   }, []);
 
   // Update draft state when search params change (e.g. on page load or navigation)
@@ -247,7 +260,9 @@ function ResultsContent() {
       
       // Desktop grid adjustments (only for non-mobile)
       if (!isMobile) {
-        if (width >= 1200) {
+        if (width >= 1600) {
+          setGridColumns('repeat(4, 1fr)');
+        } else if (width >= 1200) {
           setGridColumns('repeat(3, 1fr)');
         } else if (width >= 800) {
           setGridColumns('repeat(2, 1fr)');
@@ -284,6 +299,13 @@ function ResultsContent() {
     averageRating: averageRatings[listing.id]?.average_rating,
     totalReviews: averageRatings[listing.id]?.total_reviews
   }));
+
+  console.log('Average ratings state:', averageRatings);
+  console.log('Listings with ratings:', listingsWithRatings.map(l => ({
+    id: l.id,
+    averageRating: l.averageRating,
+    totalReviews: l.totalReviews
+  })));
 
   // Pagination logic
   const totalPages = Math.ceil(listingsWithRatings.length / listingsPerPage);
@@ -337,6 +359,11 @@ function ResultsContent() {
     setMapRefreshKey(prev => prev + 1); // Force map to refresh
   };
 
+  // Show loading state while fetching listings
+  if (loading) {
+    return <LoadingPage />;
+  }
+
   return (
     <div className="bg-white min-h-screen pt-12">
       {/* Desktop Navbar */}
@@ -389,7 +416,9 @@ function ResultsContent() {
                 {paginatedListings.map(listing => {
                   console.log(`Listing ${listing.id} amenities:`, listing.amenities);
                   return (
-                    <div key={listing.id}>
+                    <div key={listing.id} onClick={(e) => {
+                      console.log('Parent div clicked for listing:', listing.id);
+                    }}>
                       <ListingCard
                         id={listing.id}
                         title={listing.title}
@@ -647,49 +676,7 @@ function ResultsContent() {
       </div>
 
       {/* Mobile Footer - Only show on mobile and when user is logged in */}
-      {user && isMobile && (
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-around z-50 shadow-lg">
-          <Link 
-            href="/my-listings" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span className="text-xs">Listings</span>
-          </Link>
-          
-          <Link 
-            href="/messages" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span className="text-xs">Messages</span>
-          </Link>
-          
-          <Link 
-            href="/wishlist" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span className="text-xs">Wishlist</span>
-          </Link>
-          
-          <Link 
-            href="/profile" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs">Profile</span>
-          </Link>
-        </div>
-      )}
+      {user && isMobile && <MobileFooter />}
     </div>
   );
 }

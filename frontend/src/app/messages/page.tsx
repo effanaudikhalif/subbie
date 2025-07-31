@@ -5,9 +5,11 @@ import ChatBox from "../../components/ChatBox";
 import Navbar from "../../components/Navbar";
 import PrivacyMap from "../../components/PrivacyMap";
 import { useSearchParams, useRouter } from "next/navigation";
-import { buildApiUrl } from "../../utils/api";
+import { buildApiUrl, buildAvatarUrl } from "../../utils/api";
 import Link from "next/link";
 import MobileNavbar from "../../components/MobileNavbar";
+import MobileFooter from "../../components/MobileFooter";
+import LoadingPage from "../../components/LoadingPage";
 
 interface Conversation {
   id: string;
@@ -44,7 +46,7 @@ function formatPrice(price: number) {
 }
 
 function MessagesPageContent() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const userId = typeof user?.id === 'string' ? user.id : null;
@@ -64,6 +66,13 @@ function MessagesPageContent() {
   // MobileNavbar state
   const [where, setWhere] = useState('');
   const [dateRange, setDateRange] = useState([{ startDate: null, endDate: null, key: 'selection' }]);
+
+  // Authentication check - redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
             const checkMobile = () => {
@@ -305,8 +314,14 @@ function MessagesPageContent() {
     return convo.guest_id === userId ? convo.host_id : convo.guest_id;
   }
 
+  // Show loading state while auth is being checked or while loading data
+  if (authLoading || loading) {
+    return <LoadingPage />;
+  }
+
+  // If not authenticated, don't render anything (will redirect to login)
   if (!user) {
-    return <div className="p-8 text-center text-gray-600">Log in to view your messages.</div>;
+    return null;
   }
 
   const currentListing = selected && listingDetails[selected.listing_id];
@@ -326,8 +341,8 @@ function MessagesPageContent() {
           setDateRange={setDateRange}
           onSearch={handleSearch}
           isMessagesPage={true}
-          listingId={mobileView === 'chat' && selected ? selected.listing_id : undefined}
-          isOwner={mobileView === 'chat' && selected && currentListing ? userId === currentListing.user_id : false}
+          listingId={selected ? selected.listing_id : undefined}
+          isOwner={selected && currentListing ? userId === currentListing.user_id : false}
         />
       ) : (
         <Navbar />
@@ -353,7 +368,7 @@ function MessagesPageContent() {
                         <div className="flex items-center gap-3">
                           {guestProfiles[getOtherUserId(c)]?.avatar_url ? (
                             <img
-                              src={guestProfiles[getOtherUserId(c)].avatar_url}
+                              src={buildAvatarUrl(guestProfiles[getOtherUserId(c)].avatar_url) || ''}
                               alt={guestProfiles[getOtherUserId(c)].name}
                               className="w-12 h-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={(e) => {
@@ -374,7 +389,7 @@ function MessagesPageContent() {
                           )}
                           <div className="flex-1">
                             <div className="font-semibold text-black">
-                              {guestProfiles[getOtherUserId(c)]?.name || "User"}
+                              {guestProfiles[getOtherUserId(c)]?.name ? guestProfiles[getOtherUserId(c)].name.split(' ')[0] : "User"}
                             </div>
                             <div className="text-sm text-gray-500">{listingTitles[c.listing_id] || "Listing"}</div>
                           </div>
@@ -385,48 +400,8 @@ function MessagesPageContent() {
                 )}
               </div>
               
-              {/* Mobile Footer - Only show in inbox view */}
-              <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-around shadow-lg">
-                <Link 
-                  href="/my-listings" 
-                  className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  <span className="text-xs">Listings</span>
-                </Link>
-                
-                <Link 
-                  href="/messages" 
-                  className="flex flex-col items-center text-teal-600 transition-colors"
-                >
-                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <span className="text-xs">Messages</span>
-                </Link>
-                
-                <Link 
-                  href="/wishlist" 
-                  className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <span className="text-xs">Wishlist</span>
-                </Link>
-                
-                <Link 
-                  href="/profile" 
-                  className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-                  <span className="text-xs">Profile</span>
-                </Link>
-              </div>
+                            {/* Mobile Footer - Only show in inbox view */}
+              <MobileFooter />
             </div>
           )}
 
@@ -444,7 +419,7 @@ function MessagesPageContent() {
                   </button>
                   {guestProfiles[getOtherUserId(selected)]?.avatar_url ? (
                     <img
-                      src={guestProfiles[getOtherUserId(selected)].avatar_url}
+                      src={buildAvatarUrl(guestProfiles[getOtherUserId(selected)].avatar_url) || ''}
                       alt={guestProfiles[getOtherUserId(selected)].name}
                       className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => {
@@ -463,7 +438,7 @@ function MessagesPageContent() {
                   )}
                   <div className="flex-1">
                     <div className="font-bold text-black">
-                      {guestProfiles[getOtherUserId(selected)]?.name || "User"}
+                      {guestProfiles[getOtherUserId(selected)]?.name ? guestProfiles[getOtherUserId(selected)].name.split(' ')[0] : "User"}
                     </div>
                     <div className="text-xs text-gray-500">{listingTitles[selected.listing_id] || "Listing"}</div>
                   </div>
@@ -554,11 +529,7 @@ function MessagesPageContent() {
                       alt={currentListing.title}
                       className="w-full h-full object-cover"
                     />
-                    {images.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                        {currentImageIndex + 1} / {images.length}
-                      </div>
-                    )}
+
                   </div>
                 </div>
 
@@ -597,7 +568,14 @@ function MessagesPageContent() {
 
                 <button 
                   className="w-full bg-blue-600 text-white rounded-lg px-4 py-3 font-medium hover:bg-blue-700 transition-colors"
-                  onClick={() => router.push(`/listings/${selected.listing_id}`)}
+                  onClick={() => {
+                    // Check if user is logged in
+                    if (!user) {
+                      router.push('/login');
+                      return;
+                    }
+                    router.push(`/listings/${selected.listing_id}`);
+                  }}
                 >
                   {userId === currentListing.user_id ? 'View Your Listing' : 'View Full Details'}
                 </button>
@@ -643,7 +621,7 @@ function MessagesPageContent() {
                       {/* Avatar clickable */}
                       {guestProfiles[getOtherUserId(c)]?.avatar_url ? (
                         <img
-                          src={guestProfiles[getOtherUserId(c)].avatar_url}
+                          src={buildAvatarUrl(guestProfiles[getOtherUserId(c)].avatar_url) || ''}
                           alt={guestProfiles[getOtherUserId(c)].name}
                           className="w-8 h-8 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={(e) => {
@@ -664,7 +642,7 @@ function MessagesPageContent() {
                       )}
                       <div>
                         <div className="font-semibold text-black">
-                          {guestProfiles[getOtherUserId(c)]?.name || "User"}
+                          {guestProfiles[getOtherUserId(c)]?.name ? guestProfiles[getOtherUserId(c)].name.split(' ')[0] : "User"}
                         </div>
                         <div className="text-xs text-gray-500 truncate">{listingTitles[c.listing_id] || "Listing"}</div>
                       </div>
@@ -691,7 +669,7 @@ function MessagesPageContent() {
                     {/* Avatar clickable in chat header */}
                     {guestProfiles[getOtherUserId(selected)]?.avatar_url ? (
                       <img
-                        src={guestProfiles[getOtherUserId(selected)].avatar_url}
+                        src={buildAvatarUrl(guestProfiles[getOtherUserId(selected)].avatar_url) || ''}
                         alt={guestProfiles[getOtherUserId(selected)].name}
                         className="w-12 h-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => {
@@ -710,7 +688,7 @@ function MessagesPageContent() {
                     )}
                     <div>
                       <div className="font-bold text-lg text-black">
-                        {guestProfiles[getOtherUserId(selected)]?.name || "User"}
+                        {guestProfiles[getOtherUserId(selected)]?.name ? guestProfiles[getOtherUserId(selected)].name.split(' ')[0] : "User"}
                       </div>
                       <div className="text-xs text-gray-500">Boston University student</div>
                     </div>
@@ -764,7 +742,14 @@ function MessagesPageContent() {
               <div className="overflow-y-auto scrollbar-hide">
                 <button 
                   className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
-                  onClick={() => router.push(`/listings/${selected.listing_id}`)}
+                  onClick={() => {
+                    // Check if user is logged in
+                    if (!user) {
+                      router.push('/login');
+                      return;
+                    }
+                    router.push(`/listings/${selected.listing_id}`);
+                  }}
                 >
                   {userId === currentListing.user_id ? 'Your Listing' : 'View Listing'}
                 </button>
@@ -796,12 +781,7 @@ function MessagesPageContent() {
                       </svg>
                     </button>
                   )}
-                  {/* Image counter */}
-                  {images.length > 1 && (
-                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                      {currentImageIndex + 1} / {images.length}
-                    </div>
-                  )}
+
                 </div>
                 {/* Price (now the section title above the calendar) */}
                 {currentListing.price_per_night && (
@@ -1027,15 +1007,15 @@ function CompactCalendar({ startDate, endDate, selectedRange, setSelectedRange }
               <div className={
                 `w-6 h-6 rounded-full flex items-center justify-center mx-auto
                 ${dayData.isStartDate
-                  ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                  ? 'text-white font-semibold'
                   : dayData.isEndDate
-                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    ? 'text-white font-semibold'
                     : dayData.isSelected
-                      ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                      ? 'text-[#368a98] border border-[#368a98]'
                       : dayData.isAvailable
                         ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
                         : 'text-gray-400'}
-                `
+                ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''}`
               }>
                 {dayData.day}
               </div>
@@ -1046,7 +1026,7 @@ function CompactCalendar({ startDate, endDate, selectedRange, setSelectedRange }
         ))}
       </div>
       <div className="mt-2 text-xs text-gray-600 text-center">
-        <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-4 mr-1"></span>
+        <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-4 mr-1"></span>
         Selected
       </div>
     </div>

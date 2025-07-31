@@ -73,7 +73,9 @@ const PrivacyMap: React.FC<PrivacyMapProps> = ({
 
         const map = new google.maps.Map(mapRef.current, {
           center: exactLocation,
-          zoom: 16, // Closer zoom to show the exact point
+          zoom: 14, // Slightly further zoom for privacy - shows general area
+          minZoom: 13, // Prevent zooming in too close
+          maxZoom: 15, // Prevent zooming in too close for privacy
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
@@ -92,22 +94,16 @@ const PrivacyMap: React.FC<PrivacyMapProps> = ({
           ]
         });
 
-        // Add a marker at the exact location
-        const marker = new google.maps.Marker({
-          position: exactLocation,
+        // Add a translucent green circle for privacy - covers the area
+        const circle = new google.maps.Circle({
+          strokeColor: '#368a98',
+          strokeOpacity: 0.3,
+          strokeWeight: 2,
+          fillColor: '#368a98',
+          fillOpacity: 0.2,
           map: map,
-          title: city && state ? `${city}, ${state}` : 'Location',
-          animation: google.maps.Animation.DROP,
-          icon: {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="8" fill="#3B82F6" opacity="0.8"/>
-                <circle cx="12" cy="12" r="4" fill="#1E40AF"/>
-              </svg>
-            `),
-            scaledSize: new google.maps.Size(24, 24),
-            anchor: new google.maps.Point(12, 12)
-          }
+          center: exactLocation,
+          radius: 200, // 200 meters radius for privacy
         });
 
       } catch (err) {

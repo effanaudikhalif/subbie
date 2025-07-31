@@ -5,8 +5,10 @@ import Navbar from "../../components/Navbar";
 import MobileNavbar from "../../components/MobileNavbar";
 import ListingCard from "../../components/ListingCard";
 import { useRouter, useSearchParams } from "next/navigation";
-import { buildApiUrl } from "../../utils/api";
+import { buildApiUrl, buildAvatarUrl } from "../../utils/api";
 import Link from "next/link";
+import MobileFooter from "../../components/MobileFooter";
+import LoadingPage from "../../components/LoadingPage";
 
 interface UserProfile {
   id: string;
@@ -35,7 +37,7 @@ interface HostReview {
 }
 
 function ProfilePageContent() {
-  const { user, signOut, profile: authProfile } = useAuth();
+  const { user, signOut, profile: authProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -50,6 +52,12 @@ function ProfilePageContent() {
     major: '',
     graduation_year: '',
     education_level: ''
+  });
+  const [editFormErrors, setEditFormErrors] = useState({
+    name: '',
+    major: '',
+    education_level: '',
+    graduation_year: ''
   });
   const [editProfilePicture, setEditProfilePicture] = useState<File | null>(null);
   const [editProfilePicturePreview, setEditProfilePicturePreview] = useState<string>("");
@@ -69,6 +77,13 @@ function ProfilePageContent() {
   const handleSearch = () => {
     // Implement navigation or search logic if needed
   };
+
+  // Authentication check - redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -185,6 +200,48 @@ function ProfilePageContent() {
   const handleSaveProfile = async () => {
     if (!user?.id) return;
     
+    // Clear previous errors
+    setEditFormErrors({
+      name: '',
+      major: '',
+      education_level: '',
+      graduation_year: ''
+    });
+    
+    // Validate required fields
+    let hasErrors = false;
+    const newErrors = {
+      name: '',
+      major: '',
+      education_level: '',
+      graduation_year: ''
+    };
+    
+    if (!editForm.name.trim()) {
+      newErrors.name = 'Please enter your full name';
+      hasErrors = true;
+    }
+    
+    if (!editForm.major.trim()) {
+      newErrors.major = 'Please enter your major';
+      hasErrors = true;
+    }
+    
+    if (!editForm.education_level) {
+      newErrors.education_level = 'Please select your education level';
+      hasErrors = true;
+    }
+    
+    if (!editForm.graduation_year) {
+      newErrors.graduation_year = 'Please select your graduation year';
+      hasErrors = true;
+    }
+    
+    if (hasErrors) {
+      setEditFormErrors(newErrors);
+      return;
+    }
+    
     try {
       // Update profile data
               const response = await fetch(buildApiUrl(`/api/users/${user.id}`), {
@@ -248,15 +305,14 @@ function ProfilePageContent() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white pt-16">
-        <Navbar />
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-gray-600">Loading...</div>
-        </div>
-      </div>
-    );
+  // Show loading state while auth is being checked or while loading profile data
+  if (authLoading || loading) {
+    return <LoadingPage />;
+  }
+
+  // If not authenticated, don't render anything (will redirect to login)
+  if (!user) {
+    return null;
   }
 
   return (
@@ -273,15 +329,15 @@ function ProfilePageContent() {
       ) : (
         <Navbar />
       )}
-      <div className="flex items-start justify-center min-h-screen pt-8">
-        <div className={`flex items-start gap-6 lg:gap-12 pb-20 ${isMobile ? 'flex-col pb-40' : 'flex-row'}`}>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm w-full max-w-sm sm:max-w-md">
-            <div className="flex items-center gap-4 sm:gap-6">
+              <div className="flex items-start justify-center min-h-screen pt-8">
+          <div className={`flex items-start gap-6 lg:gap-12 pb-20 ${isMobile ? 'flex-col pb-40' : 'flex-row'}`}>
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm w-80 sm:w-96">
+            <div className="flex flex-col items-center">
               {/* Avatar */}
               <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gray-200 flex items-center justify-center">
                 {profile?.avatar_url ? (
                   <img
-                    src={profile.avatar_url}
+                    src={buildAvatarUrl(profile.avatar_url) || ''}
                     alt="Profile"
                     className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full object-cover"
                   />
@@ -293,18 +349,18 @@ function ProfilePageContent() {
               </div>
               
               {/* Name and Email */}
-              <div className="flex flex-col justify-center gap-0">
-                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-black">
+              <div className="flex flex-col items-center -mt-4">
+                <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-black text-center">
                   {profile?.name || 'User'}
                 </h1>
-                <p className="text-sm sm:text-base text-gray-600 -mt-2">
+                <p className="text-sm sm:text-base text-gray-600 text-center -mt-4">
                   {profile?.email || user?.email || 'No email provided'}
                 </p>
               </div>
             </div>
             
             {/* Metrics Section */}
-            <div className="flex justify-between items-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+            <div className="flex justify-center items-center mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 gap-12">
               <div className="text-center">
                 <div className="text-lg sm:text-xl lg:text-2xl font-bold text-black">{hostReviews.length}</div>
                 <div className="text-xs sm:text-sm text-gray-600">Host Reviews</div>
@@ -321,19 +377,6 @@ function ProfilePageContent() {
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Host Rating</div>
               </div>
-              <div className="text-center">
-                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-black">
-                  {profile?.created_at 
-                    ? new Date(profile.created_at).toLocaleDateString('en-US', {
-                        month: '2-digit',
-                        day: '2-digit',
-                        year: '2-digit'
-                      })
-                    : 'N/A'
-                  }
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">Member since</div>
-              </div>
             </div>
             
             {/* Log out button - only show when viewing own profile */}
@@ -346,14 +389,14 @@ function ProfilePageContent() {
                   }}
                   className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
                 >
-                  Log out
+                  Log Out
                 </button>
               </div>
             )}
           </div>
           
           {/* Personal Information - Outside container */}
-          <div className="w-full max-w-sm sm:max-w-md bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+          <div className="w-80 sm:w-96 bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
             <div className="space-y-4 sm:space-y-6 pt-2">
                               {/* Edit Button - only show when viewing own profile */}
                 {viewingOwnProfile && (
@@ -463,53 +506,11 @@ function ProfilePageContent() {
       </div>
 
       {/* Mobile Footer */}
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-around shadow-lg">
-          <Link 
-            href="/my-listings" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span className="text-xs">Listings</span>
-          </Link>
-          
-          <Link 
-            href="/messages" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span className="text-xs">Messages</span>
-          </Link>
-          
-          <Link 
-            href="/wishlist" 
-            className="flex flex-col items-center text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-            </svg>
-            <span className="text-xs">Wishlist</span>
-          </Link>
-          
-          <Link 
-            href="/profile" 
-            className="flex flex-col items-center text-teal-600"
-          >
-            <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="text-xs">Profile</span>
-          </Link>
-        </div>
-      )}
+      {isMobile && <MobileFooter />}
 
       {/* Edit Profile Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50" onClick={() => setIsEditModalOpen(false)}>
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50" onClick={() => setIsEditModalOpen(false)}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">Edit Profile</h3>
@@ -540,7 +541,7 @@ function ProfilePageContent() {
                       />
                     ) : profile?.avatar_url ? (
                       <img
-                        src={profile.avatar_url}
+                        src={buildAvatarUrl(profile.avatar_url) || ''}
                         alt="Current profile"
                         className="w-full h-full object-cover"
                         style={{ borderRadius: '50%' }}
@@ -571,9 +572,16 @@ function ProfilePageContent() {
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-black focus:border-black placeholder-gray-500 text-gray-900"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-black focus:border-black placeholder-gray-500 text-gray-900 ${
+                    editFormErrors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your full name"
                 />
+                {editFormErrors.name && (
+                  <div className="text-red-600 text-sm mt-1">
+                    {editFormErrors.name}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -597,9 +605,16 @@ function ProfilePageContent() {
                   type="text"
                   value={editForm.major}
                   onChange={(e) => setEditForm({...editForm, major: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-black focus:border-black placeholder-gray-500 text-gray-900"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-black focus:border-black placeholder-gray-500 text-gray-900 ${
+                    editFormErrors.major ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   placeholder="Enter your major"
                 />
+                {editFormErrors.major && (
+                  <div className="text-red-600 text-sm mt-1">
+                    {editFormErrors.major}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -609,7 +624,9 @@ function ProfilePageContent() {
                 <select
                   value={editForm.education_level}
                   onChange={(e) => setEditForm({...editForm, education_level: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-black focus:border-black text-gray-900"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-black focus:border-black text-gray-900 ${
+                    editFormErrors.education_level ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 >
                   <option value="">Select your education level</option>
                   <option value="Undergraduate">Undergraduate</option>
@@ -617,6 +634,11 @@ function ProfilePageContent() {
                   <option value="PhD">PhD</option>
                   <option value="Other">Other</option>
                 </select>
+                {editFormErrors.education_level && (
+                  <div className="text-red-600 text-sm mt-1">
+                    {editFormErrors.education_level}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -626,7 +648,9 @@ function ProfilePageContent() {
                 <select
                   value={editForm.graduation_year}
                   onChange={(e) => setEditForm({...editForm, graduation_year: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-black focus:border-black text-gray-900"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-black focus:border-black text-gray-900 ${
+                    editFormErrors.graduation_year ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 >
                   <option value="">Select your graduation year</option>
                   <option value="2025">2025</option>
@@ -635,9 +659,16 @@ function ProfilePageContent() {
                   <option value="2028">2028</option>
                   <option value="2029">2029</option>
                 </select>
+                {editFormErrors.graduation_year && (
+                  <div className="text-red-600 text-sm mt-1">
+                    {editFormErrors.graduation_year}
+                  </div>
+                )}
               </div>
             </div>
 
+
+            
             <div className="mt-6">
               <button
                 onClick={handleSaveProfile}

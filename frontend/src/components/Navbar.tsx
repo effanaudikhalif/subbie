@@ -2,24 +2,61 @@
 import React, { useState, ReactNode, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../hooks/useAuth";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Logo from "./Logo";
+import SearchBar from "./Searchbar";
 
 interface NavbarProps {
   children?: ReactNode;
   fixed?: boolean;
   activeTab?: 'all' | 'bookings' | 'messages' | 'stripe';
   setActiveTab?: (tab: 'all' | 'bookings' | 'messages' | 'stripe') => void;
+  isHomePage?: boolean;
 }
 
-export default function Navbar({ children, fixed = true, activeTab, setActiveTab }: NavbarProps) {
+export default function Navbar({ children, fixed = true, activeTab, setActiveTab, isHomePage = false }: NavbarProps) {
   const { user, profile, userListings, loading, signOut } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [isExtraExtraSmallSize, setIsExtraExtraSmallSize] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const profileBtnRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Search state
+  const [where, setWhere] = useState("");
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: null,
+      endDate: null,
+      key: "selection",
+    },
+  ]);
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  // Handle search
+  const handleSearch = () => {
+    let startDate: Date | null = null;
+    let endDate: Date | null = null;
+    if (dateRange[0]?.startDate) {
+      startDate = new Date(dateRange[0].startDate);
+    }
+    if (dateRange[0]?.endDate) {
+      endDate = new Date(dateRange[0].endDate);
+    }
+    const checkin = startDate ? startDate.toISOString().slice(0, 10) : '';
+    let checkout = '';
+    if (endDate) {
+      checkout = endDate.toISOString().slice(0, 10);
+    }
+    const params = [];
+    if (where) params.push(`where=${encodeURIComponent(where)}`);
+    if (checkin) params.push(`checkin=${checkin}`);
+    if (checkout) params.push(`checkout=${checkout}`);
+    router.push(`/listings?${params.join('&')}`);
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -43,6 +80,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
     const handleResize = () => {
       const width = window.innerWidth;
       setIsExtraExtraSmallSize(width >= 750 && width < 925);
+      setIsDesktop(width >= 768);
     };
     
     handleResize();
@@ -54,7 +92,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
     <>
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between pl-2 pr-13 py-6 bg-gray-50 shadow-sm backdrop-blur-md h-25">
         {/* Left: Logo */}
-        <div className={`flex items-center ${isExtraExtraSmallSize ? 'pr-8' : ''}`}>
+        <div className={`flex items-center  ml-2`}>
           <Logo className="hover:opacity-80 transition-opacity" />
         </div>
         
@@ -75,7 +113,20 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
               <div />
             ) : (
               <div className="pointer-events-auto w-full flex justify-center max-w-2xl">
-                {children}
+                {children || (
+                  // Desktop search bar using SearchBar component
+                  <div className="w-full max-w-lg">
+                    <SearchBar
+                      where={where}
+                      setWhere={setWhere}
+                      dateRange={dateRange}
+                      setDateRange={setDateRange}
+                      showCalendar={showCalendar}
+                      setShowCalendar={setShowCalendar}
+                      onSearch={handleSearch}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -83,18 +134,31 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
         
         {/* Right: Login button and hamburger */}
         <div className="flex items-center gap-4">
-          {/* Desktop: Login button */}
-          {!user && (
-            <Link href="/login" className="hidden sm:block text-gray-700 text-base merriweather-medium">Log in</Link>
+          {/* Desktop: Login and Sign up buttons */}
+          {!user && isDesktop && (
+            <div className="flex items-center gap-3" style={{ zIndex: 50, position: 'relative' }}>
+              <Link 
+                href="/login" 
+                className="text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/register"
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-600 hover:text-gray-800 font-medium rounded-full border border-gray-600 transition-colors"
+              >
+                Sign up
+              </Link>
+            </div>
           )}
           
           {/* Mobile hamburger or login button */}
           <div className="block sm:hidden relative">
-            {!user ? (
-              <Link href="/login" className="text-gray-700 text-base merriweather-medium px-3 py-2">
+            {!user && !isDesktop ? (
+              <Link href="/login" className="text-gray-700 text-base px-3 py-2">
                 Log In
               </Link>
-            ) : (
+            ) : user && (
               <button 
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="text-black focus:outline-none w-10 h-10 rounded-full border border-gray-300 bg-white flex items-center justify-center hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-sm"
@@ -111,14 +175,17 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
               <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-[60] flex flex-col overflow-hidden">
                 <Link
                   href="/profile"
-                  className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
+                  className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => setMenuOpen(false)}
                 >
                   Profile
                 </Link>
                 <Link
                   href="/my-listings"
-                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -128,7 +195,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 </Link>
                 <Link
                   href="/messages"
-                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -138,7 +205,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 </Link>
                 <Link
                   href="/wishlist"
-                  className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                  className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -172,14 +239,14 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                 >
                   <Link
                     href="/profile"
-                    className="w-full px-4 py-3 text-left text-black merriweather-regular hover:bg-gray-100 transition-colors duration-200"
+                    className="w-full px-4 py-3 text-left text-black hover:bg-gray-100 transition-colors duration-200"
                     onClick={() => setProfileDropdownOpen(false)}
                   >
                     Profile
                   </Link>
                   <Link
                     href="/my-listings"
-                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                     style={{ cursor: 'pointer' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -189,7 +256,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   </Link>
                   <Link
                     href="/messages"
-                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                     style={{ cursor: 'pointer' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -199,7 +266,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
                   </Link>
                   <Link
                     href="/wishlist"
-                    className="w-full px-4 py-3 text-left text-black merriweather-regular transition-colors duration-200"
+                    className="w-full px-4 py-3 text-left text-black transition-colors duration-200"
                     style={{ cursor: 'pointer' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}

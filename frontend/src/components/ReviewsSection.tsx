@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from 'react';
-import { buildApiUrl } from '../utils/api';
+import { buildApiUrl, buildAvatarUrl } from '../utils/api';
 import type { User } from '../types/User';
 
 interface Review {
@@ -218,25 +218,36 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
     
     return (
       <div className="flex text-lg">
-        {[1, 2, 3, 4, 5].map((star) => {
-          if (star <= fullStars) {
-            return <span key={star} className="text-black">★</span>;
-          } else if (star === fullStars + 1 && hasPartialStar) {
-            return (
-              <span key={star} className="relative">
-                <span className="text-gray-300">★</span>
-                <span 
-                  className="absolute top-0 left-0 text-black overflow-hidden"
-                  style={{ width: `${partialStarPercentage}%` }}
-                >
-                  ★
+        {/* Mobile: Show only 1 star */}
+        <div className="block sm:hidden">
+          {rating >= 1 ? (
+            <span className="text-black">★</span>
+          ) : (
+            <span className="text-gray-300">★</span>
+          )}
+        </div>
+        {/* Desktop: Show all 5 stars */}
+        <div className="hidden sm:flex">
+          {[1, 2, 3, 4, 5].map((star) => {
+            if (star <= fullStars) {
+              return <span key={star} className="text-black">★</span>;
+            } else if (star === fullStars + 1 && hasPartialStar) {
+              return (
+                <span key={star} className="relative">
+                  <span className="text-gray-300">★</span>
+                  <span 
+                    className="absolute top-0 left-0 text-black overflow-hidden"
+                    style={{ width: `${partialStarPercentage}%` }}
+                  >
+                    ★
+                  </span>
                 </span>
-              </span>
-            );
-          } else {
-            return <span key={star} className="text-gray-300">★</span>;
-          }
-        })}
+              );
+            } else {
+              return <span key={star} className="text-gray-300">★</span>;
+            }
+          })}
+        </div>
       </div>
     );
   };
@@ -257,17 +268,44 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
         onClick={onClick}
       >
         <div className="flex items-start space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-            {review.reviewer_avatar ? (
-              <img 
-                src={review.reviewer_avatar} 
-                alt={review.reviewer_name || 'Reviewer'} 
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <span className="text-gray-600 font-medium">
-                {(review.reviewer_name || 'R')[0].toUpperCase()}
-              </span>
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+              {review.reviewer_avatar ? (
+                <img 
+                  src={buildAvatarUrl(review.reviewer_avatar) || ''} 
+                  alt={review.reviewer_name || 'Reviewer'} 
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-gray-600 font-medium">
+                  {(review.reviewer_name || 'R')[0].toUpperCase()}
+                </span>
+              )}
+            </div>
+            {/* Edit icon under avatar on mobile */}
+            {reviewerId && review.reviewer_id === reviewerId && (
+              <button
+                className="sm:hidden absolute -bottom-1 -right-1 bg-white hover:bg-gray-100 text-black p-1 rounded-full border border-gray-300 transition-colors"
+                title="Edit review"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAllReviews(false); // Close All reviews modal
+                  setReviewForm({
+                    cleanliness_rating: review.cleanliness_rating,
+                    accuracy_rating: review.accuracy_rating,
+                    communication_rating: review.communication_rating,
+                    location_rating: review.location_rating,
+                    value_rating: review.value_rating,
+                    comment: review.comment,
+                  });
+                  setEditingReviewId(review.id);
+                  setShowReviewModal(true);
+                }}
+              >
+                <svg className="w-3 h-3" fill="none" stroke="black" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
             )}
           </div>
           <div className="flex-1">
@@ -275,6 +313,38 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
               <h5 className="font-medium text-gray-900">
                 {review.reviewer_name || 'Anonymous'}
               </h5>
+              {/* Rating aligned with name on all screen sizes */}
+              <div className="flex items-center">
+                <span className="mr-1 font-medium text-gray-900 text-sm sm:text-base">{averageRating.toFixed(1)}</span>
+                <div className="pr-4">
+                  {renderStars(averageRating)}
+                </div>
+                {/* Edit icon on desktop only */}
+                {reviewerId && review.reviewer_id === reviewerId && (
+                  <button
+                    className="hidden sm:block bg-white hover:bg-gray-100 text-black p-2 rounded-full border border-gray-300 ml-2 transition-colors"
+                    title="Edit review"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAllReviews(false); // Close All reviews modal
+                      setReviewForm({
+                        cleanliness_rating: review.cleanliness_rating,
+                        accuracy_rating: review.accuracy_rating,
+                        communication_rating: review.communication_rating,
+                        location_rating: review.location_rating,
+                        value_rating: review.value_rating,
+                        comment: review.comment,
+                      });
+                      setEditingReviewId(review.id);
+                      setShowReviewModal(true);
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
             <p className="text-sm text-gray-600 mb-2">
               {formatDate(review.created_at)}
@@ -282,33 +352,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
             <p className={truncate ? "text-gray-700 text-sm line-clamp-2 overflow-hidden" : "text-gray-700 text-sm"}>{review.comment}</p>
           </div>
         </div>
-        {/* Top right: stars, average, edit icon */}
-        <div className="absolute top-4 right-4 flex items-center">
-          <span className="mr-1 font-medium text-gray-900">{averageRating.toFixed(1)}</span>
-          {renderStars(averageRating)}
-          {reviewerId && review.reviewer_id === reviewerId && (
-            <button
-              className="bg-white hover:bg-gray-100 text-black p-2 rounded-full border border-gray-300 ml-2 transition-colors"
-              title="Edit review"
-              onClick={() => {
-                setReviewForm({
-                  cleanliness_rating: review.cleanliness_rating,
-                  accuracy_rating: review.accuracy_rating,
-                  communication_rating: review.communication_rating,
-                  location_rating: review.location_rating,
-                  value_rating: review.value_rating,
-                  comment: review.comment,
-                });
-                setEditingReviewId(review.id);
-                setShowReviewModal(true);
-              }}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="black" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-          )}
-        </div>
+
       </div>
     );
   };
@@ -355,10 +399,10 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
 
         {/* Write a Review Popup */}
         {showReviewModal && (
-          <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900">Write a Review</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Write a review</h3>
                 <button
                   onClick={() => setShowReviewModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -406,9 +450,9 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
                 <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="ml-2 bg-white border border-black text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    className="ml-2 bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                   >
-                    Submit Review
+                    Submit
                   </button>
                 </div>
               </form>
@@ -447,7 +491,7 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
 
       {/* All Reviews Popup */}
       {showAllReviews && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">

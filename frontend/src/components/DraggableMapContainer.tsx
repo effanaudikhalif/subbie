@@ -46,7 +46,7 @@ const DraggableMapContainer: React.FC<DraggableMapContainerProps> = ({
     if (!isDragging || (!isMobileSmall && !isMobileMedium && !isMobileLarge)) return;
     
     const currentY = e.touches[0].clientY;
-    const deltaY = startY - currentY;
+    const deltaY = currentY - startY;
     const newHeight = Math.max(200, Math.min(600, startHeight + deltaY));
     setMapHeight(newHeight);
     onMapHeightChange?.(newHeight);
@@ -68,7 +68,7 @@ const DraggableMapContainer: React.FC<DraggableMapContainerProps> = ({
     if (!isDragging || (!isMobileSmall && !isMobileMedium && !isMobileLarge)) return;
     
     const currentY = e.clientY;
-    const deltaY = startY - currentY;
+    const deltaY = currentY - startY;
     const newHeight = Math.max(200, Math.min(600, startHeight + deltaY));
     setMapHeight(newHeight);
     onMapHeightChange?.(newHeight);

@@ -6,6 +6,7 @@ import ChatBox from "../../components/ChatBox";
 import GuestCancellationForm from "../../components/GuestCancellationForm";
 import PrivacyMap from "../../components/PrivacyMap";
 import { useRouter } from "next/navigation";
+import LoadingPage from "../../components/LoadingPage";
 
 interface Booking {
   id: string;
@@ -335,8 +336,8 @@ export default function BookingsPage() {
             <div className="absolute inset-0 z-30 flex">
               <div className="w-80" />
               <div className="flex-1 flex">
-                <div className="flex-1 backdrop-blur-sm bg-white/40" />
-                <div className="w-96 backdrop-blur-sm bg-white/40" />
+                <div className="flex-1 backdrop-blur-sm bg-black/20" />
+                <div className="w-96 backdrop-blur-sm bg-black/20" />
               </div>
             </div>
             {/* Popup */}
@@ -530,7 +531,14 @@ export default function BookingsPage() {
             <div className="overflow-y-auto scrollbar-hide">
               <button 
                 className="bg-white border border-black text-black px-3 py-1 rounded-lg font-medium hover:bg-gray-50 transition-colors text-sm mb-4 w-fit"
-                onClick={() => router.push(`/listings/${listing.id}`)}
+                onClick={() => {
+                  // Check if user is logged in
+                  if (!user) {
+                    router.push('/login');
+                    return;
+                  }
+                  router.push(`/listings/${listing.id}`);
+                }}
               >
                 Listing Page
               </button>

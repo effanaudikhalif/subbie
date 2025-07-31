@@ -215,7 +215,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
         if (!this.div) return;
 
         this.div.innerHTML = `
-          <div class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300" style="width: 210px; background-color: #ffffff;">
+          <div class="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300" style="width: 210px; background-color: #ffffff; font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
             <div class="relative overflow-hidden">
               <img 
                 src="${(() => {
@@ -228,14 +228,10 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                 class="w-full h-40 object-cover hover:scale-105 transition-transform duration-300" 
               />
               
-              ${this.listing.images && this.listing.images.length > 1 ? `
-                <div class="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full z-10">
-                  ${this.currentImageIndex + 1} / ${this.listing.images.length}
-                </div>
-              ` : ''}
+
               
               ${this.user && this.listing.user_id && this.user.id === this.listing.user_id ? `
-                <div class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700">
+                <div class="absolute top-2 left-2 bg-white bg-opacity-90 rounded-full px-3 py-1 text-xs font-medium text-gray-700" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
                   Your Listing
                 </div>
               ` : `
@@ -292,28 +288,28 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
               ` : ''}
             </div>
             
-            <div class="p-4 flex flex-col flex-1 justify-between min-h-[100px]" style="background-color: #ffffff;">
+            <div class="p-4 flex flex-col flex-1 justify-between min-h-[100px]" style="background-color: #ffffff; font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
               <div class="flex justify-between items-start mb-2">
-                <h3 class="text-sm font-semibold text-gray-700 truncate w-full">${this.listing.title}</h3>
+                <h3 class="text-sm font-semibold text-gray-700 truncate w-full" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">${this.listing.title}</h3>
               </div>
               
               ${this.listing.name ? `
                 <div class="flex items-center mb-3">
-                  <span class="text-sm font-medium text-gray-700 truncate w-full">
+                  <span class="text-sm font-medium text-gray-700 truncate w-full" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
                     Hosted by ${this.getUniversityDisplay(this.listing.university_name)} student
                   </span>
                 </div>
               ` : ''}
               
-              <div class="flex items-center text-sm text-gray-700 mb-3">
+              <div class="flex items-center text-sm text-gray-700 mb-3" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
                 <div class="flex items-center space-x-2">
                   <div class="flex items-center">
-                    <span class="text-sm font-medium text-gray-700">${this.listing.bedrooms}</span>
+                    <span class="text-sm font-medium text-gray-700" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">${this.listing.bedrooms}</span>
                     <img src="/icons/bed.png" alt="bed" class="w-4 h-4 ml-1" />
                   </div>
                   <span>•</span>
                   <div class="flex items-center">
-                    <span class="text-sm font-medium text-gray-700">${this.listing.bathrooms}</span>
+                    <span class="text-sm font-medium text-gray-700" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">${this.listing.bathrooms}</span>
                     <img src="/icons/bath-tub.png" alt="bathroom" class="w-4 h-4 ml-1" />
                   </div>
                   ${this.listing.totalReviews && this.listing.totalReviews > 0 ? `
@@ -322,22 +318,22 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
                       <svg class="w-4 h-4 text-black fill-current mr-1" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
-                      <span class="text-sm font-medium text-gray-700">${this.listing.averageRating?.toFixed(1) || '0.0'}</span>
+                      <span class="text-sm font-medium text-gray-700" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">${this.listing.averageRating?.toFixed(1) || '0.0'}</span>
                     </span>
                   ` : `
                     <span>•</span>
-                    <span class="text-gray-500">No reviews</span>
+                    <span class="text-gray-500" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">No reviews</span>
                   `}
                 </div>
               </div>
               
               <div class="flex items-center justify-between">
-                <div class="text-sm font-semibold text-black">
+                <div class="text-sm font-semibold text-black" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">
                   ${(() => {
                     // This would need to be calculated based on dateRange prop
                     return `
                       ${this.listing.price_per_night ? `$${Math.round(this.listing.price_per_night)}` : 'N/A'}
-                      <span class="text-sm font-normal text-gray-500 ml-1">per night</span>
+                      <span class="text-sm font-normal text-gray-500 ml-1" style="font-family: var(--font-amaranth), 'Amaranth', sans-serif;">per night</span>
                     `;
                   })()}
                 </div>
@@ -350,6 +346,11 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
         this.div.addEventListener('click', (e) => {
           const target = e.target as HTMLElement;
           if (target && !target.closest('button')) {
+            // Check if user is logged in
+            if (!this.user) {
+              window.open('/login', '_blank');
+              return;
+            }
             window.open(`/listings/${this.listing.id}`, '_blank');
           }
         });
@@ -626,6 +627,8 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
             const mapInstance = new google.maps.Map(mapRef.current!, {
               center,
               zoom: 12,
+              minZoom: 10, // Prevent zooming in too close for privacy
+              maxZoom: 15, // Prevent zooming in too close for privacy
               mapTypeControl: false,
               streetViewControl: false,
               fullscreenControl: false,

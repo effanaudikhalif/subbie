@@ -8,15 +8,15 @@ interface LogoProps {
   width?: number;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "", height = 48, width = 200 }) => {
+const Logo: React.FC<LogoProps> = ({ className = "", height = 42, width = 175 }) => {
   return (
     <Link href="/" className={`flex items-center ${className}`}>
       <Image
-        src="/subly_logo.png"
-        alt="Subly Logo"
+        src="/icons/subby-newlogo.png"
+        alt="Subby Logo"
         width={width}
         height={height}
-        className="object-contain h-30"
+        className="object-contain h-10"
         priority
       />
     </Link>

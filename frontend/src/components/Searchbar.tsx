@@ -130,7 +130,7 @@ export default function SearchBar({
     <div className={`w-full bg-white rounded-2xl shadow flex items-center px-1 py-0 relative ${isExtraExtraSmallSize ? 'max-w-lg' : 'max-w-lg'}`}>
       {/* Where */}
       <div className={`py-1 flex flex-col items-start justify-center relative ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1.5]'}`}>
-        <div className="merriweather-medium text-black mb-0.5 text-sm">Where</div>
+                    <div className="text-black mb-0.5 text-sm">Where</div>
         <input
           ref={inputRef}
           type="text"
@@ -138,8 +138,8 @@ export default function SearchBar({
           onChange={e => setWhere(e.target.value)}
           onFocus={() => setShowCalendar(false)}
           placeholder="Search destinations"
-          className="w-full bg-transparent outline-none border-none text-black placeholder-gray-400 text-sm merriweather-medium"
-          style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}
+          className="w-full bg-transparent outline-none border-none text-black placeholder-gray-400 text-sm"
+                      style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}
           disabled={isLoading}
         />
         {isLoading && (
@@ -157,16 +157,16 @@ export default function SearchBar({
         className={`py-1 flex flex-col items-start justify-center cursor-pointer ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1]'}`}
         onClick={() => setShowCalendar(!showCalendar)}
       >
-        <div className="merriweather-medium text-black mb-0.5 text-sm">Check in</div>
+                    <div className="text-black mb-0.5 text-sm">Check in</div>
         <input
           type="text"
           value={checkIn}
           readOnly
-          className="w-full bg-transparent outline-none border-none text-black text-sm merriweather-medium"
+          className="w-full bg-transparent outline-none border-none text-black text-sm"
           style={{ 
             color: checkIn === 'Add dates' ? '#9CA3AF' : '#000000',
             fontSize: '0.875rem', 
-            lineHeight: '1.25rem' 
+            lineHeight: '1.25rem'
           }}
         />
       </div>
@@ -176,23 +176,33 @@ export default function SearchBar({
         className={`py-1 flex flex-col items-start justify-center cursor-pointer ${isExtraExtraSmallSize ? 'px-2 flex-1' : 'px-4 flex-[1]'}`}
         onClick={() => setShowCalendar(!showCalendar)}
       >
-        <div className="merriweather-medium text-black mb-0.5 text-sm">Check out</div>
+        <div className="text-black mb-0.5 text-sm">Check out</div>
         <input
           type="text"
           value={checkOut}
           readOnly
-          className="w-full bg-transparent outline-none border-none text-black text-sm merriweather-medium"
+          className="w-full bg-transparent outline-none border-none text-black text-sm"
           style={{ 
             color: checkOut === 'Add dates' ? '#9CA3AF' : '#000000',
             fontSize: '0.875rem', 
-            lineHeight: '1.25rem' 
+            lineHeight: '1.25rem'
           }}
         />
       </div>
       {/* Search Button */}
       <button 
-        className="ml-2 bg-teal-600 hover:bg-teal-700 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" 
-        style={{ marginRight: isExtraExtraSmallSize ? '2px' : '10px' }}
+        className="ml-2 transition-colors w-8 h-8 rounded-lg flex items-center justify-center shadow" 
+        style={{ 
+          marginRight: isExtraExtraSmallSize ? '2px' : '10px',
+          backgroundColor: '#368a98',
+          color: 'white'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = '#2d7a87';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = '#368a98';
+        }}
         onClick={onSearch}
       >
         <FaSearch className="text-white text-lg" />
@@ -361,15 +371,15 @@ function CompactCalendar({ value, onChange }: {
               <div className={
                 `w-6 h-6 rounded-full flex items-center justify-center mx-auto
                 ${dayData.isStartDate
-                  ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                  ? 'text-white font-semibold'
                   : dayData.isEndDate
-                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    ? 'text-white font-semibold'
                     : dayData.isSelected
-                      ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                      ? 'text-[#368a98] border border-[#368a98]'
                       : dayData.isAvailable
                         ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
                         : 'text-gray-400'}
-                `
+                ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''}`
               }>
                 {dayData.day}
               </div>
@@ -380,7 +390,7 @@ function CompactCalendar({ value, onChange }: {
         ))}
       </div>
       <div className="mt-2 text-xs text-gray-600 text-center">
-        <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-4 mr-1"></span>
+        <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-4 mr-1"></span>
         Selected
       </div>
     </div>

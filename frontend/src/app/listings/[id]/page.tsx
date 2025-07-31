@@ -17,6 +17,8 @@ import { useAuth } from "../../../hooks/useAuth";
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { getCommuteTimes, CommuteTimes } from '../../../utils/getCommuteTimes';
 import ListingCard from '../../../components/ListingCard';
+import MobileFooter from '../../../components/MobileFooter';
+import LoadingPage from '../../../components/LoadingPage';
 
 interface ListingImage {
   url: string;
@@ -75,7 +77,11 @@ export default function ListingDetails() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [guests, setGuests] = useState("");
   const handleSearch = () => {
-    // Implement navigation or search logic if needed
+    const checkin = dateRange[0].startDate ? new Date(dateRange[0].startDate).toISOString().slice(0,10) : '';
+    const checkout = dateRange[0].endDate ? new Date(dateRange[0].endDate).toISOString().slice(0,10) : '';
+    router.push(
+      `/listings?where=${encodeURIComponent(where)}&checkin=${checkin}&checkout=${checkout}`
+    );
   };
 
   const handleMessageHost = async () => {
@@ -276,15 +282,15 @@ export default function ListingDetails() {
                 <div className={
                   `w-6 h-6 rounded-full flex items-center justify-center mx-auto
                   ${dayData.isStartDate
-                    ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                    ? 'text-white font-semibold'
                     : dayData.isEndDate
-                      ? 'bg-blue-600 text-white border-blue-700 font-semibold'
+                      ? 'text-white font-semibold'
                       : dayData.isSelected
-                        ? 'bg-blue-200 text-blue-800 border border-blue-300'
+                        ? 'text-[#368a98] border border-[#368a98]'
                         : dayData.isAvailable
                           ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
                           : 'text-gray-400'}
-                  ${dayData.isToday && !dayData.isSelected ? 'ring-2 ring-blue-400' : ''}`
+                  ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''} ${dayData.isToday && !dayData.isSelected ? 'ring-2 ring-[#368a98]' : ''}`
                 }>
                   {dayData.day}
                 </div>
@@ -295,7 +301,7 @@ export default function ListingDetails() {
           ))}
         </div>
         <div className="mt-2 text-xs text-gray-600 text-center">
-          <span className="inline-block w-3 h-3 bg-blue-500 border border-blue-600 rounded-full ml-4 mr-1"></span>
+          <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-4 mr-1"></span>
           Selected
         </div>
       </div>
@@ -397,7 +403,7 @@ export default function ListingDetails() {
   useEffect(() => {
     const checkMobile = () => {
       const width = window.innerWidth;
-      const mobile = width <= 900;
+      const mobile = width <= 1024;
       const smallScreen = width < 700;
       console.log('Screen width:', width, 'isMobile:', mobile, 'isSmallScreen:', smallScreen);
       setIsMobile(mobile);
@@ -728,6 +734,13 @@ export default function ListingDetails() {
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   
+  // Add state for swipe functionality
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  
+  // Add state for calendar modal
+  const [showCalendarInline, setShowCalendarInline] = useState(false);
+  
   // Wishlist state
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -765,6 +778,30 @@ export default function ListingDetails() {
       window.removeEventListener('wishlistChanged', handleWishlistChange as EventListener);
     };
   }, [listing?.id]);
+
+  // Swipe handlers for photo modal
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe && currentPhotoIndex < images.length - 1) {
+      setCurrentPhotoIndex(prev => prev + 1);
+    }
+    if (isRightSwipe && currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(prev => prev - 1);
+    }
+  };
 
   const toggleWishlist = async () => {
     if (!user) {
@@ -815,12 +852,7 @@ export default function ListingDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white pt-16">
-        <Navbar />
-        <div className="max-w-6xl mx-auto mt-16 text-center text-gray-500">Loading...</div>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (!listing) {
@@ -877,11 +909,11 @@ export default function ListingDetails() {
               <Navbar fixed={false} />
             ) : (
               <MobileNavbar
-                where=""
-                setWhere={() => {}}
+                where={where}
+                setWhere={setWhere}
                 dateRange={dateRange}
                 setDateRange={setDateRange}
-                onSearch={() => {}}
+                onSearch={handleSearch}
                 isListingDetailsPage={true}
               />
             )}
@@ -1035,47 +1067,47 @@ export default function ListingDetails() {
                     {/* Meet your host Section (moved above About this place) */}
                     <div className="mb-8">
                       <h3 className="text-black font-semibold text-xl mb-6">Meet your host</h3>
-                      <div className="flex items-center">
-                        <div className="mr-6">
-                          {host?.avatar_url ? (
-                            <img 
-                              src={host.avatar_url} 
-                              alt={host.name || 'Host'} 
-                              className="w-25 h-25 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => {}}
-                            />
-                          ) : (
-                            <div 
-                              className="w-25 h-25 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => {}}
-                            >
-                              <span className="text-gray-600 text-5xl font-medium">
-                                {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-start">
-                            <div>
-                              <div className="flex items-center mb-4">
-                                <p className="text-black font-semibold text-lg mr-3">
-                                  {host?.name || 'Host'}
+                      <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm w-fit">
+                        <div className="flex flex-row items-center gap-4">
+                          <div className="flex-shrink-0">
+                            {host?.avatar_url ? (
+                              <img 
+                                src={host.avatar_url} 
+                                alt={host.name || 'Host'} 
+                                className="w-20 h-20 sm:w-25 sm:h-25 md:w-20 lg:w-24 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {}}
+                              />
+                            ) : (
+                              <div 
+                                className="w-20 h-20 sm:w-25 sm:h-25 md:w-20 lg:w-24 rounded-2xl bg-gray-300 flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => {}}
+                              >
+                                <span className="text-gray-600 text-4xl sm:text-5xl md:text-3xl lg:text-4xl font-medium">
+                                  {host?.name ? host.name.charAt(0).toUpperCase() : 'H'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-black font-semibold text-lg md:text-base lg:text-lg">
+                                  {host?.name ? host.name.split(' ')[0] : 'Host'}
                                 </p>
                                 {hostReviewStats && (
                                   <div className="flex items-center">
-                                    <span className="text-black mr-1">★</span>
-                                    <span className="text-black font-semibold text-base mr-1">{hostReviewStats.avg.toFixed(1)}</span>
-                                    <span className="text-gray-700 text-sm">({hostReviewStats.count})</span>
+                                    <span className="text-black mr-1 md:text-sm">★</span>
+                                    <span className="text-black font-semibold text-base md:text-sm lg:text-base mr-1">{hostReviewStats.avg.toFixed(1)}</span>
+                                    <span className="text-gray-700 text-sm md:text-xs lg:text-sm">({hostReviewStats.count})</span>
                                   </div>
                                 )}
                               </div>
-                              <div>
-                                <p className="text-gray-700 mb-1">
-                                  {university?.name || 'University'}, Undergraduate
+                              <div className="space-y-1">
+                                <p className="text-gray-700 text-sm sm:text-base md:text-sm lg:text-base">
+                                  {university?.name || 'University'}
                                 </p>
-                                <p className="text-gray-700 mb-1">
-                                  {host?.major || 'Student'}, Class of {host?.graduation_year || '2025'}
+                                <p className="text-gray-700 text-sm sm:text-base md:text-sm lg:text-base">
+                                  {host?.major || 'Student'}
                                 </p>
                               </div>
                             </div>
@@ -1083,10 +1115,13 @@ export default function ListingDetails() {
                         </div>
                       </div>
                     </div>
+                    
+                    
+                    
                     {/* About this place Section */}
                     <div className="mb-8">
                       <h3 className="text-black font-semibold text-xl mb-2">About this place</h3>
-                      <p className="text-gray-700 whitespace-pre-line">{listing.description}</p>
+                      <p className="text-gray-700 whitespace-pre-line leading-relaxed">{listing.description}</p>
                     </div>
                     {/* Property details */}
                     <div className="mt-8">
@@ -1224,7 +1259,7 @@ export default function ListingDetails() {
                   </div>
                   
                   {/* Right: Price and Booking Container - Now positioned to scroll from Meet your host to Show all amenities */}
-                  <div className={`${!isMobile ? 'lg:col-span-1' : 'order-2'}`}>
+                  <div className={`${!isMobile ? 'lg:col-span-1' : 'order-2'} ${isMobile ? 'hidden' : ''}`}>
                     <div className="lg:sticky lg:top-28" style={{ 
                       position: 'sticky',
                       top: '7rem',
@@ -1358,7 +1393,7 @@ export default function ListingDetails() {
                     transform: 'translateZ(0)'
                   }}>
                     {/* Commute Time Container */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full" style={{ width: '384px', minWidth: '384px', maxWidth: '384px' }}>
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full max-w-sm">
                       <div className="text-black text-lg font-semibold mb-2">
                         Estimate Commute Time
                       </div>
@@ -1374,7 +1409,7 @@ export default function ListingDetails() {
                       {/* Commute results UI */}
                       <div className="space-y-2 min-h-[100px]">
                         {commuteLoading && (
-                          <div className="text-sm text-blue-600 flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></span> Calculating commute times...</div>
+                          <div className="text-sm text-black flex items-center gap-2"><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></span> Calculating commute times...</div>
                         )}
                         {commuteError && (
                           <div className="text-sm text-red-600">{commuteError}</div>
@@ -1417,9 +1452,9 @@ export default function ListingDetails() {
                 <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
                 {listingRatings && listingRatings.totalReviews === 0 ? (
                   /* No Reviews Layout - Rating Card on Left */
-                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`}>
+                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`} style={!isMobile ? { display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '1.5rem' } : {}}>
                     {/* Rating Card - Left Side */}
-                    <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${!isMobile ? 'w-96' : 'w-96'}`}>
+                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full max-w-md lg:max-w-none">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center">
                           <span className="text-2xl font-bold text-black mr-2">★</span>
@@ -1439,7 +1474,7 @@ export default function ListingDetails() {
                             <div key={category.name} className="flex items-center justify-between">
                               <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
                               <div className="flex-1 mx-4">
-                                <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                                <div className={`h-2 bg-gray-200 rounded-full relative ${isMobile ? 'max-w-32 mx-auto' : 'w-full'}`}>
                                   <div
                                     className="h-2 rounded-full bg-black transition-all"
                                     style={{ width: `${percent * 100}%` }}
@@ -1468,11 +1503,11 @@ export default function ListingDetails() {
                   </div>
                 ) : (
                   /* Has Reviews Layout - Rating Card on Left, Reviews on Right */
-                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`}>
+                  <div className={`${!isMobile ? 'flex gap-6 items-start' : 'flex flex-col gap-6'}`} style={!isMobile ? { display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '1.5rem' } : {}}>
                     {/* Rating Card - Left Side */}
                     {listingRatings && (
                       <div className={`${!isMobile ? 'sticky top-28' : ''}`}>
-                        <div className={`bg-white border border-gray-200 rounded-2xl p-6 shadow-sm ${!isMobile ? 'w-96' : 'w-96'}`}>
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full max-w-md lg:max-w-none">
                           <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center">
                               <span className="text-2xl font-bold text-black mr-2">★</span>
@@ -1492,7 +1527,7 @@ export default function ListingDetails() {
                                 <div key={category.name} className="flex items-center justify-between">
                                   <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{category.name}</span>
                                   <div className="flex-1 mx-4">
-                                    <div className="h-2 bg-gray-200 rounded-full relative max-w-32 mx-auto">
+                                    <div className={`h-2 bg-gray-200 rounded-full relative ${isMobile ? 'max-w-32 mx-auto' : 'w-full'}`}>
                                       <div
                                         className="h-2 rounded-full bg-black transition-all"
                                         style={{ width: `${percent * 100}%` }}
@@ -1546,7 +1581,14 @@ export default function ListingDetails() {
                       {/* Sliding Gallery Container */}
                       <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
                         {otherListings.map((otherListing) => (
-                          <div key={otherListing.id} className="cursor-pointer flex-shrink-0" onClick={() => router.push(`/listings/${otherListing.id}`)}>
+                          <div key={otherListing.id} className="cursor-pointer flex-shrink-0" onClick={() => {
+                            // Check if user is logged in
+                            if (!user) {
+                              router.push('/login');
+                              return;
+                            }
+                            router.push(`/listings/${otherListing.id}`);
+                          }}>
                             <ListingCard 
                               id={otherListing.id}
                               title={otherListing.title}
@@ -1614,7 +1656,7 @@ export default function ListingDetails() {
             
             {/* Photo Gallery Modal */}
             {showPhotoModal && images.length > 0 && (
-              <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
+              <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-[9999]" onClick={() => setShowPhotoModal(false)}>
                 <div className="relative max-w-4xl max-h-[90vh] w-full mx-4" onClick={(e) => e.stopPropagation()}>
                   {/* Close button */}
                   <button
@@ -1627,21 +1669,23 @@ export default function ListingDetails() {
                   </button>
 
                   {/* Main photo */}
-                  <div className="relative">
+                  <div 
+                    className="relative"
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                  >
                     <img
                       src={images[currentPhotoIndex]?.url}
                       alt={`${listing.title} - Photo ${currentPhotoIndex + 1}`}
                       className="w-full h-full object-contain max-h-[70vh] rounded-lg"
                     />
                     
-                    {/* Photo counter */}
-                    <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                      {currentPhotoIndex + 1} of {images.length}
-                    </div>
+
                   </div>
 
-                  {/* Navigation buttons */}
-                  {images.length > 1 && (
+                  {/* Navigation buttons - only show on desktop */}
+                  {images.length > 1 && !isMobile && (
                     <>
                       {currentPhotoIndex > 0 && (
                         <button
@@ -1691,7 +1735,7 @@ export default function ListingDetails() {
             
             {/* Amenities Modal */}
             {showAmenitiesModal && listing.amenities && (
-              <div className="fixed inset-0 backdrop-blur-sm bg-white/40 flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
                   <div className="p-6 border-b border-gray-200 flex items-center justify-between">
                     <h3 className="text-xl font-semibold text-gray-900">All Amenities</h3>
@@ -1716,43 +1760,84 @@ export default function ListingDetails() {
               </div>
             )}
             
-            {/* Mobile Footer */}
-            {user && isMobile && (
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-50">
-                <div className="flex justify-around items-center">
-                  <Link href="/listings" className="flex flex-col items-center text-gray-600 hover:text-black">
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                    </svg>
-                    <span className="text-xs">Listings</span>
-                  </Link>
-                  <Link href="/wishlist" className="flex flex-col items-center text-gray-600 hover:text-black">
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span className="text-xs">Wishlist</span>
-                  </Link>
-                  <Link href="/bookings" className="flex flex-col items-center text-gray-600 hover:text-black">
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <span className="text-xs">Bookings</span>
-                  </Link>
-                  <Link href="/messages" className="flex flex-col items-center text-gray-600 hover:text-black">
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="text-xs">Messages</span>
-                  </Link>
-                  <Link href="/profile" className="flex flex-col items-center text-gray-600 hover:text-black">
-                    <svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    <span className="text-xs">Profile</span>
-                  </Link>
+            {/* Inline Calendar for Mobile */}
+            {showCalendarInline && listing.start_date && listing.end_date && isMobile && (
+              <div 
+                className="fixed inset-0 bg-black/20 z-40"
+                onClick={() => setShowCalendarInline(false)}
+              >
+                <div 
+                  className="fixed bottom-16 left-4 right-4"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <CompactCalendar 
+                    startDate={listing.start_date} 
+                    endDate={listing.end_date} 
+                    selectedRange={selectedRange}
+                    setSelectedRange={(range) => {
+                      setSelectedRange(range);
+                      // Auto-hide calendar when both start and end dates are selected
+                      if (range.start && range.end) {
+                        setShowCalendarInline(false);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             )}
+            
+            {/* Mobile Footer */}
+            {user && isMobile && (
+              <MobileFooter 
+                isListingPage={true}
+                price={(() => {
+                  const { start, end } = selectedRange;
+                  let nights = 1;
+                  if (start && end) {
+                    const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                    nights = diff === 0 ? 1 : diff;
+                  }
+                  if (!selectedRange.start || !selectedRange.end) {
+                    return formatPrice(Number(listing?.price_per_night ?? 0));
+                  }
+                  if (nights === 1) {
+                    return formatPrice(Number(listing?.price_per_night ?? 0));
+                  }
+                  return formatPrice(Math.round(Number(listing?.price_per_night ?? 0) * nights));
+                })()}
+                priceLabel={(() => {
+                  const { start, end } = selectedRange;
+                  if (!start || !end) return '/night';
+                  const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                  const nights = diff === 0 ? 1 : diff;
+                  return nights === 1 ? '/night' : ` for ${nights} nights`;
+                })()}
+                availableDatesLabel={(() => {
+                  const { start, end } = selectedRange;
+                  if (!start || !end) return "Available dates";
+                  
+                  const formatDate = (date: Date) => {
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    return `${month}/${day}`;
+                  };
+                  
+                  if (start && end) {
+                    return `${formatDate(start)} - ${formatDate(end)}`;
+                  } else if (start) {
+                    return formatDate(start);
+                  }
+                  
+                  return "Available dates";
+                })()}
+                onAvailableDatesClick={() => {
+                  setShowCalendarInline(!showCalendarInline);
+                }}
+                onMessageClick={handleMessageHost}
+              />
+            )}
+            
+            
           </div>
         );
 }

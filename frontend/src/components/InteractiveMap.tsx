@@ -85,6 +85,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         const mapInstance = new google.maps.Map(mapRef.current, {
           center,
           zoom,
+          minZoom: 10, // Prevent zooming in too close for privacy
+          maxZoom: 15, // Prevent zooming in too close for privacy
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../hooks/useAuth';
-import { buildApiUrl, buildImageUrl } from '../utils/api';
+import { buildApiUrl, buildImageUrl, buildAvatarUrl } from '../utils/api';
 import { useRouter } from 'next/navigation';
 
 interface ListingCardProps {
@@ -410,6 +410,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
 
   // Handler for card click (for host controls)
   const handleCardClick = (e: React.MouseEvent) => {
+    console.log('ListingCard clicked - ID:', id, 'User:', user);
+    
     // Prevent navigation if the click originated from a host control button
     const target = e.target as HTMLElement;
     if (
@@ -418,18 +420,36 @@ const ListingCard: React.FC<ListingCardProps> = ({
         target.closest('[data-edit-listing]') ||
         target.closest('[data-delete-listing]'))
     ) {
+      console.log('Click prevented - button clicked');
       return;
     }
-    router.push(`/listings/${id}`);
+    
+    // Check if user is logged in
+    if (!user) {
+      console.log('User not logged in, redirecting to login');
+      router.push('/login');
+      return;
+    }
+    
+    console.log('Opening listing in new tab:', id);
+    // Open listing in new tab
+    const newWindow = window.open(`/listings/${id}`, '_blank');
+    if (!newWindow) {
+      // Fallback if popup is blocked
+      router.push(`/listings/${id}`);
+    }
   };
 
   const cardContent = (
     <div
       className={`${cardWidth || 'w-[210px]'} bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative group flex flex-col ${cardMargin || 'mx-2'} ${cardHeight || (shortCard ? SHORT_CARD_HEIGHT : CARD_HEIGHT)}`}
-      onClick={showHostControls ? handleCardClick : undefined}
-      tabIndex={showHostControls ? 0 : undefined}
-      role={showHostControls ? 'button' : undefined}
-      aria-label={showHostControls ? `View listing ${title}` : undefined}
+      onClick={(e) => {
+        console.log('Card div clicked - ID:', id, 'Target:', e.target);
+        handleCardClick(e);
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`View listing ${title}`}
     >
         {/* Image Container */}
         <div className={`relative w-full bg-gray-200 overflow-hidden ${IMAGE_HEIGHT} group/image-area rounded-t-lg`}>
@@ -476,12 +496,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
             </>
           )}
           
-          {/* Image Counter - bottom right */}
-          {images.length > 1 && (
-            <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded-full z-10">
-              {currentImageIndex + 1} / {images.length}
-            </div>
-          )}
+
           
           {/* Wishlist Button or Own Listing Badge */}
           {!hideWishlist && (
@@ -526,30 +541,6 @@ const ListingCard: React.FC<ListingCardProps> = ({
           {/* Host Info - only if not shortCard */}
           {!shortCard && name && (
             <div className="flex items-center gap-2">
-              {/* Host Avatar */}
-              {avatar_url ? (
-                <img
-                  src={avatar_url}
-                  alt={name}
-                  className="w-6 h-6 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAvatarClick?.();
-                  }}
-                />
-              ) : (
-                <div 
-                  className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onAvatarClick?.();
-                  }}
-                >
-                  {name ? name.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
               <span className={`${textSize || 'text-sm'} font-medium text-gray-700 truncate flex-1`}>
                 Hosted by {getUniversityDisplay(university_name)} student
               </span>
@@ -631,14 +622,18 @@ const ListingCard: React.FC<ListingCardProps> = ({
                 e.stopPropagation();
                 onToggleStatus?.(id, listingStatus || '');
               }}
-              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+              className={`relative w-12 h-6 rounded-full transition-all duration-200 ease-in-out ${
                 listingStatus === 'active' || listingStatus === 'approved' || !listingStatus
-                  ? 'bg-green-100 text-green-700 border border-green-200 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-200'
-                  : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-green-100 hover:text-green-700 hover:border-green-200'
+                  ? 'bg-green-500' 
+                  : 'bg-red-500'
               }`}
               title={listingStatus === 'active' || listingStatus === 'approved' || !listingStatus ? 'Click to set as Inactive' : 'Click to set as Active'}
             >
-              {listingStatus === 'active' || listingStatus === 'approved' || !listingStatus ? 'Active' : 'Inactive'}
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-200 ease-in-out ${
+                listingStatus === 'active' || listingStatus === 'approved' || !listingStatus
+                  ? 'right-0.5' 
+                  : 'left-0.5'
+              }`} />
             </button>
               
               {/* Action Buttons */}
@@ -704,16 +699,8 @@ const ListingCard: React.FC<ListingCardProps> = ({
       </div>
     );
 
-  // Return the card wrapped in Link only if not showing host controls (i.e., for regular listings page)
-  if (showHostControls) {
-    return cardContent;
-  } else {
-    return (
-      <Link href={href || `/listings/${id}`} className="no-underline">
-        {cardContent}
-      </Link>
-    );
-  }
+  // Return the card content directly - the click handler is already applied to the card
+  return cardContent;
 };
 
 export default ListingCard; 
