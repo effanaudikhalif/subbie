@@ -8,7 +8,7 @@ interface LogoProps {
   width?: number;
 }
 
-const Logo: React.FC<LogoProps> = ({ className = "", height = 42, width = 175 }) => {
+const Logo: React.FC<LogoProps> = ({ className = "", height = 20, width = 70 }) => {
   return (
     <Link href="/" className={`flex items-center ${className}`}>
       <Image
@@ -16,7 +16,7 @@ const Logo: React.FC<LogoProps> = ({ className = "", height = 42, width = 175 })
         alt="Subby Logo"
         width={width}
         height={height}
-        className="object-contain h-10"
+        className="object-contain"
         priority
       />
     </Link>

@@ -92,7 +92,7 @@ export default function Navbar({ children, fixed = true, activeTab, setActiveTab
     <>
       <header className="fixed top-0 left-0 w-full z-50 flex items-center justify-between pl-2 pr-13 py-6 bg-gray-50 shadow-sm backdrop-blur-md h-25">
         {/* Left: Logo */}
-        <div className={`flex items-center  ml-2`}>
+        <div className={`flex items-center  ml-10`}>
           <Logo className="hover:opacity-80 transition-opacity" />
         </div>
         

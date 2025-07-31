@@ -75,9 +75,6 @@ export default function Page() {
             margin-bottom: 20px !important;
             line-height: 1.1 !important;
           }
-          .hero-title span {
-            display: block !important;
-          }
           .hero-subtitle {
             font-size: 2rem !important;
             margin-bottom: 40px !important;
@@ -104,6 +101,9 @@ export default function Page() {
           .hero-subtitle {
             font-size: 2rem !important;
             margin-bottom: 40px !important;
+          }
+          .hero-subtitle span {
+            display: block !important;
           }
           .hero-buttons {
             flex-direction: column !important;
@@ -246,7 +246,7 @@ export default function Page() {
                 <span>Your</span> <span>Sublet</span> <span>Buddy</span>
               </h1>
               <p className="text-4xl md:text-5xl font-medium hero-subtitle" style={{ fontSize: '3rem', marginBottom: '60px' }}>
-                College Sublets
+                <span>No strangers.</span> <span>Only students.</span>
               </p>
               <div className="flex gap-4 justify-center hero-buttons">
                 <button 
@@ -278,7 +278,7 @@ export default function Page() {
             {/* Top Section */}
                           <div className="text-center mb-16">
                 <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-                  Sublet made <span style={{ color: '#368a98' }}>easy</span> and <span style={{ color: '#368a98' }}>safe</span> for students
+                  Sublet made <span style={{ color: '#368a98' }}>easy</span> and <span style={{ color: '#368a98' }}>safe</span>
                 </h2>
               </div>
 

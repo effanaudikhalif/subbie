@@ -7,6 +7,36 @@ import Logo from './Logo';
 import { useAuth } from '../hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
+// Mobile Navbar Responsive Styles
+const mobileNavbarStyles = `
+  /* Large breakpoint: 481px and above */
+  .mobile-navbar {
+    height: 80px !important;
+  }
+  .mobile-navbar .mobile-logo {
+    width: 70px !important;
+  }
+  
+  /* Medium breakpoint: 480px and below */
+  @media (max-width: 480px) {
+    .mobile-navbar {
+      height: 60px !important;
+    }
+    .mobile-navbar .mobile-logo {
+      width: 55px !important;
+    }
+    .mobile-navbar .mobile-auth-buttons {
+      gap: 0.5rem !important;
+    }
+    .mobile-navbar .mobile-auth-buttons a {
+      font-size: 0.875rem !important;
+    }
+    .mobile-navbar .mobile-auth-buttons .signup-btn {
+      padding: 0.375rem 0.75rem !important;
+    }
+  }
+`;
+
 interface MobileNavbarProps {
   where: string;
   setWhere: (v: string) => void;
@@ -163,13 +193,15 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm" style={{ height: '80px' }}>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: mobileNavbarStyles }} />
+      <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm mobile-navbar" style={{ height: '80px' }}>
       {/* Logo and Search Bar Row */}
       <div className="px-4 py-1 flex items-center gap-0 h-full">
         {/* Logo - Hide for listings page (when no specific page is active) */}
         {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? (
-          <div className="flex-shrink-0" style={{ marginLeft: '-10px' }}>
-            <Logo className="hover:opacity-80 transition-opacity" />
+          <div className="flex-shrink-0 ml-6">
+            <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
           </div>
         ) : null}
         
@@ -177,7 +209,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
         <div className={`flex justify-center ${isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? 'flex-1' : 'w-full'}`}>
           {isHomePage ? (
             /* Home Page - Show Login/Signup or nothing if logged in */
-            <div className="flex-1 flex justify-end items-center gap-3 pr-4">
+            <div className="flex-1 flex justify-end items-center gap-3 pr-4 mobile-auth-buttons">
               {!user ? (
                 <>
                   <Link
@@ -188,7 +220,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
                   </Link>
                   <Link
                     href="/register"
-                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-600 hover:text-gray-800 font-medium rounded-full border border-gray-600 transition-colors"
+                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-600 hover:text-gray-800 font-medium rounded-full border border-gray-600 transition-colors signup-btn"
                   >
                     Sign up
                   </Link>
@@ -440,6 +472,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
       
       {/* Mobile dropdown menu - removed for home page when logged in */}
     </header>
+    </>
   );
 }
 
