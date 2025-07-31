@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import type { User } from '../../../types/User';
 import { useParams, useRouter } from "next/navigation";
-import { buildApiUrl, buildImageUrl } from '../../../utils/api';
+import { buildApiUrl, buildImageUrl, buildAvatarUrl } from '../../../utils/api';
 import Link from "next/link";
 import Navbar from "../../../components/Navbar";
 import MobileNavbar from "../../../components/MobileNavbar";
@@ -592,13 +592,16 @@ export default function ListingDetails() {
 
   // Handler for address selection from autocomplete
   const handleCommuteAddressSelect = (addressData: any) => {
+    console.log('Commute address selected:', addressData);
     setCommuteAddress(
       [addressData.street, addressData.neighborhood, addressData.city, addressData.state, addressData.zip]
         .filter(Boolean).join(', ')
     );
     if (addressData.latitude && addressData.longitude) {
+      console.log('Setting commute coords:', { lat: addressData.latitude, lng: addressData.longitude });
       setCommuteCoords({ lat: addressData.latitude, lng: addressData.longitude });
     } else {
+      console.log('No coordinates available, setting commute coords to null');
       setCommuteCoords(null);
     }
   };
@@ -606,24 +609,50 @@ export default function ListingDetails() {
   // Fetch commute times when both coordinates are available
   useEffect(() => {
     const fetchCommute = async () => {
-      if (!listing?.latitude || !listing?.longitude || !commuteCoords) return;
+      console.log('fetchCommute called with:', {
+        listingLat: listing?.latitude,
+        listingLng: listing?.longitude,
+        commuteCoords
+      });
+      
+      if (!listing?.latitude || !listing?.longitude || !commuteCoords) {
+        console.log('Missing required coordinates, returning early');
+        return;
+      }
+      
       setCommuteLoading(true);
       setCommuteError(null);
       setCommuteTimes(null);
+      
       try {
+        console.log('Calling getCommuteTimes with:', {
+          origin: commuteCoords,
+          destination: { lat: Number(listing.latitude), lng: Number(listing.longitude) }
+        });
+        
         const times = await getCommuteTimes(
           commuteCoords,
           { lat: Number(listing.latitude), lng: Number(listing.longitude) }
         );
+        console.log('Commute times received:', times);
         setCommuteTimes(times);
       } catch (e: any) {
+        console.error('Error fetching commute times:', e);
         setCommuteError(e.message || 'Failed to fetch commute times');
       } finally {
         setCommuteLoading(false);
       }
     };
+    
     if (commuteCoords && listing?.latitude && listing?.longitude) {
+      console.log('All coordinates available, calling fetchCommute');
       fetchCommute();
+    } else {
+      console.log('Not all coordinates available:', {
+        commuteCoords: !!commuteCoords,
+        listingLat: !!listing?.latitude,
+        listingLng: !!listing?.longitude
+      });
     }
   }, [commuteCoords, listing?.latitude, listing?.longitude]);
 
@@ -1071,7 +1100,7 @@ export default function ListingDetails() {
                           <div className="flex-shrink-0">
                             {host?.avatar_url ? (
                               <img 
-                                src={host.avatar_url} 
+                                src={buildAvatarUrl(host.avatar_url) || ''} 
                                 alt={host.name || 'Host'} 
                                 className="w-20 h-20 sm:w-24 sm:h-24 md:w-20 lg:w-24 rounded-2xl object-cover cursor-pointer hover:opacity-80 transition-opacity"
                                 onClick={() => host && router.push(`/profile/${host.id}`)}
