@@ -149,7 +149,7 @@ export default function WishlistPage() {
       ) : (
         <Navbar />
       )}
-              <div className={`${isMobile ? 'pt-32' : 'pt-32'} pb-8 px-4`}>
+              <div className={`${isMobile ? 'pt-25' : 'pt-32'} ${isMobile ? 'pb-25' : 'pb-8'} px-4`}>
         {!isMobile && (
           <div className="mb-8 pl-12">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Wishlist</h1>

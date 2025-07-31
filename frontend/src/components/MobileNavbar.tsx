@@ -196,22 +196,29 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
     <>
       <style dangerouslySetInnerHTML={{ __html: mobileNavbarStyles }} />
       <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm mobile-navbar" style={{ height: '80px' }}>
-      {/* Logo and Search Bar Row */}
-      <div className="px-4 py-1 flex items-center gap-0 h-full">
-        {/* Logo - Hide for listings page (when no specific page is active) */}
-        {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? (
-          <div className="flex-shrink-0 ml-6">
-            <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
-          </div>
-        ) : null}
-        
-        {/* Expandable Search Cylinder or Inbox Title */}
-        <div className={`flex justify-center ${isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? 'flex-1' : 'w-full'}`}>
-          {isHomePage ? (
-            /* Home Page - Show Login/Signup or nothing if logged in */
-            <div className="flex-1 flex justify-end items-center gap-3 pr-4 mobile-auth-buttons">
-              {!user ? (
-                <>
+                              {/* Logo and Search Bar Row */}
+        <div className="px-4 py-1 flex items-center gap-0 h-full">
+          {/* Logo - Show on left when not logged in, center when logged in */}
+          {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMyListingsPage || isWishlistPage || isProfilePage || (isMessagesPage && !listingId) ? (
+            user ? (
+              /* Logged in - Center the logo */
+              <div className="w-full flex justify-center">
+                <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
+              </div>
+            ) : (
+              /* Not logged in - Logo on left */
+              <div className="flex-shrink-0 ml-6">
+                <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
+              </div>
+            )
+          ) : null}
+          
+          {/* Expandable Search Cylinder or Inbox Title */}
+          <div className={`flex justify-center ${isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMessagesPage || isMyListingsPage || isWishlistPage || isProfilePage ? 'flex-1' : 'w-full'}`}>
+            {isHomePage ? (
+              /* Home Page - Show Login/Signup or nothing if logged in */
+              !user ? (
+                <div className="flex-1 flex justify-end items-center gap-3 pr-4 mobile-auth-buttons">
                   <Link
                     href="/login"
                     className="text-gray-600 hover:text-gray-800 font-medium transition-colors"
@@ -224,12 +231,11 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
                   >
                     Sign up
                   </Link>
-                </>
+                </div>
               ) : (
                 /* Show nothing when logged in on home page */
-                <div></div>
-              )}
-            </div>
+                <div className="flex-1"></div>
+              )
           ) : isAddListingPage || isEditListingPage ? (
             /* Add/Edit Listing Page - Show X Button */
             <div className="flex-1 flex justify-end pr-4">
@@ -243,6 +249,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
                 </svg>
               </button>
             </div>
+          
           ) : isListingDetailsPage ? (
             /* Listing Details Page - Show Search Bar */
             !isExpanded ? (
@@ -345,21 +352,21 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
           ) : isMessagesPage ? (
             /* Messages Page - Show Listing Info or Messages */
             listingId ? (
-              <div className="flex-1 flex justify-end pr-6">
+              <div className="w-full flex justify-center">
                 <div 
-                  className="bg-gray-100 rounded-full pl-6 pr-6 py-2 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                  style={{ marginRight: '-10px' }}
+                  className="border rounded-2xl px-4 py-2 font-medium shadow-sm transition-colors bg-white text-black border-gray-200 hover:bg-gray-50 cursor-pointer"
                   onClick={() => {
                     router.push(`/listings/${listingId}`);
                   }}
                 >
-                  <span className="text-gray-700 text-base font-medium">
-                    Listing
+                  <span className="text-base font-medium">
+                    {isOwner ? 'Your Listing' : 'View Listing'}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="w-full"></div>
+              /* Inbox view - Show nothing since logo is centered */
+              <div className="flex-1"></div>
             )
           ) : isWishlistPage ? (
             /* Wishlist Page - Show nothing (no search bar) */

@@ -329,8 +329,8 @@ function ProfilePageContent() {
       ) : (
         <Navbar />
       )}
-              <div className="flex items-start justify-center min-h-screen pt-8">
-          <div className={`flex items-start gap-6 lg:gap-12 pb-20 ${isMobile ? 'flex-col pb-40' : 'flex-row'}`}>
+              <div className="flex items-start justify-center min-h-screen pt-4">
+          <div className={`flex items-start gap-6 lg:gap-12 pb-20 ${isMobile ? 'flex-col pb-35' : 'flex-row'}`}>
             <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm w-80 sm:w-96">
             <div className="flex flex-col items-center">
               {/* Avatar */}

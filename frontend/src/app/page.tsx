@@ -298,7 +298,7 @@ export default function Page() {
                     </h3>
                   </div>
                   <p className="text-gray-600 relative z-10">
-                    No randos, just students. Every user is verified with .edu emails for safety.
+                    Every user is verified with .edu emails for safety.
                   </p>
                 </div>
 
@@ -333,7 +333,7 @@ export default function Page() {
                     </h3>
                   </div>
                   <p className="text-gray-600">
-                    Hear from actual students like you. Message and work things out.
+                    Hear from students and work things out.
                   </p>
                 </div>
               </div>

@@ -1006,7 +1006,7 @@ function MyListingsPageContent() {
           <>
             {/* Simple grid of listing cards */}
             <div className="flex-1 overflow-hidden">
-              <div className={`h-full overflow-y-auto scrollbar-hide pt-8 px-4 ${isMobile ? 'pb-20' : 'pb-8'}`}>
+              <div className={`h-full overflow-y-auto scrollbar-hide pt-2 px-4 ${isMobile ? 'pb-20' : 'pb-8'}`}>
                 {/* Header with Add Listings button and toggle buttons */}
                 <div className={`flex justify-between items-center mb-6 ${isMobile ? 'justify-center mt-4' : 'justify-center mt-6'}`}>
                   <div className={`flex gap-4 items-center mb-8 ${isMobile ? 'justify-center w-full' : 'justify-center w-full'}`}>

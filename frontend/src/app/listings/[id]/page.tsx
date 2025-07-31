@@ -914,7 +914,6 @@ export default function ListingDetails() {
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 onSearch={handleSearch}
-                isListingDetailsPage={true}
               />
             )}
             <div className={`max-w-6xl mx-auto px-4 sm:px-8 ${!isMobile ? 'mt-8 pt-8' : 'mt-2 pt-2'} pb-8 mb-8`}>
