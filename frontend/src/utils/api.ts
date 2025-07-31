@@ -44,5 +44,15 @@ export const buildAvatarUrl = (avatarUrl: string | null | undefined): string | n
     }
   }
   
+  // If the avatar URL is already a full URL with the correct domain, return as is
+  if (avatarUrl.startsWith('http')) {
+    return avatarUrl;
+  }
+  
+  // If it's a relative path, prepend the API base URL
+  if (avatarUrl.startsWith('/uploads/')) {
+    return `${API_BASE_URL}${avatarUrl}`;
+  }
+  
   return avatarUrl;
 }; 
