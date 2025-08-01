@@ -11,22 +11,18 @@ function ResultsContent() {
   const searchParams = useSearchParams();
   const [where, setWhere] = useState(searchParams?.get('where') || '');
   const [appliedWhere, setAppliedWhere] = useState(searchParams?.get('where') || '');
-  const [dateRange, setDateRange] = useState([
+  const [dateRange, setDateRange] = useState<any[]>([
     {
       startDate: searchParams?.get('checkin') ? (() => {
         const dateStr = searchParams.get('checkin')!;
         const [year, month, day] = dateStr.split('-').map(Number);
         return new Date(year, month - 1, day); // month is 0-indexed
-      })() : new Date(),
+      })() : null,
       endDate: searchParams?.get('checkout') ? (() => {
         const dateStr = searchParams.get('checkout')!;
         const [year, month, day] = dateStr.split('-').map(Number);
         return new Date(year, month - 1, day); // month is 0-indexed
-      })() : (() => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow;
-      })(),
+      })() : null,
       key: 'selection',
     },
   ]);
