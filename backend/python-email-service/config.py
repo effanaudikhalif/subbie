@@ -26,7 +26,7 @@ class Config:
     
     # Server Configuration
     HOST = os.getenv("EMAIL_SERVICE_HOST", "0.0.0.0")
-    PORT = int(os.getenv("EMAIL_SERVICE_PORT", "8001"))
+    PORT = int(os.getenv("PORT", "8001"))
     
     # Email Settings
     EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Subly")
@@ -36,6 +36,11 @@ class Config:
     EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "smtp")
     
     # Frontend URL (from existing backend .env)
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    FRONTEND_URL = os.getenv("FRONTEND_URL")
+    if not FRONTEND_URL:
+        # Only default to localhost in development
+        FRONTEND_URL = "http://localhost:3000" if os.getenv("NODE_ENV") != "production" else None
+        if not FRONTEND_URL:
+            raise ValueError("FRONTEND_URL environment variable must be set in production")
 
 config = Config() 

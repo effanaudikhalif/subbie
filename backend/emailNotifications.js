@@ -1,8 +1,9 @@
 // Using built-in fetch (available in Node.js 18+)
 
-class EmailNotifications {
+class EmailNotificationService {
   constructor() {
     this.emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:8001';
+    this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   }
 
   async sendNotification(endpoint, data) {
@@ -30,64 +31,83 @@ class EmailNotifications {
     }
   }
 
-  async sendListingAddedNotification(recipientEmail, hostName, listingData) {
-    const data = {
-      recipient_email: recipientEmail,
-      host_name: hostName,
-      listing_title: listingData.title,
-      listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night.toString(),
-      start_date: new Date(listingData.start_date).toLocaleDateString(),
-      end_date: new Date(listingData.end_date).toLocaleDateString(),
-      listing_url: `http://localhost:3000/listings/${listingData.id}`
-    };
+  async sendListingAddedNotification(hostEmail, hostName, listingData) {
+    try {
+      const emailData = {
+        recipient_email: hostEmail,
+        template: 'listing_added',
+        data: {
+          host_name: hostName,
+          listing_title: listingData.title,
+          listing_id: listingData.id,
+          listing_url: `${this.frontendUrl}/listings/${listingData.id}`
+        }
+      };
 
-    return this.sendNotification('/send-listing-added-notification', data);
+      return this.sendNotification('/send-listing-added-notification', emailData);
+    } catch (error) {
+      console.error('Error sending listing added notification:', error);
+      throw error;
+    }
   }
 
-  async sendListingEditedNotification(recipientEmail, hostName, listingData) {
-    const data = {
-      recipient_email: recipientEmail,
-      host_name: hostName,
-      listing_title: listingData.title,
-      listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night.toString(),
-      start_date: new Date(listingData.start_date).toLocaleDateString(),
-      end_date: new Date(listingData.end_date).toLocaleDateString(),
-      listing_url: `http://localhost:3000/listings/${listingData.id}`
-    };
+  async sendListingEditedNotification(hostEmail, hostName, listingData) {
+    try {
+      const emailData = {
+        recipient_email: hostEmail,
+        template: 'listing_edited',
+        data: {
+          host_name: hostName,
+          listing_title: listingData.title,
+          listing_id: listingData.id,
+          listing_url: `${this.frontendUrl}/listings/${listingData.id}`
+        }
+      };
 
-    return this.sendNotification('/send-listing-edited-notification', data);
+      return this.sendNotification('/send-listing-edited-notification', emailData);
+    } catch (error) {
+      console.error('Error sending listing edited notification:', error);
+      throw error;
+    }
   }
 
-  async sendListingDeletedNotification(recipientEmail, hostName, listingData) {
-    const data = {
-      recipient_email: recipientEmail,
-      host_name: hostName,
-      listing_title: listingData.title,
-      listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night.toString(),
-      removal_date: new Date().toLocaleDateString(),
-      dashboard_url: 'http://localhost:3000/my-listings'
-    };
+  async sendListingDeletedNotification(hostEmail, hostName, listingData) {
+    try {
+      const emailData = {
+        recipient_email: hostEmail,
+        template: 'listing_deleted',
+        data: {
+          host_name: hostName,
+          listing_title: listingData.title,
+          dashboard_url: `${this.frontendUrl}/my-listings`
+        }
+      };
 
-    return this.sendNotification('/send-listing-deleted-notification', data);
+      return this.sendNotification('/send-listing-deleted-notification', emailData);
+    } catch (error) {
+      console.error('Error sending listing deleted notification:', error);
+      throw error;
+    }
   }
 
-  async sendListingExpiredNotification(recipientEmail, hostName, listingData) {
-    const data = {
-      recipient_email: recipientEmail,
-      host_name: hostName,
-      listing_title: listingData.title,
-      listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night.toString(),
-      end_date: new Date(listingData.end_date).toLocaleDateString(),
-      expiration_date: new Date().toLocaleDateString(),
-      dashboard_url: 'http://localhost:3000/my-listings'
-    };
+  async sendListingExpiredNotification(hostEmail, hostName, listingData) {
+    try {
+      const emailData = {
+        recipient_email: hostEmail,
+        template: 'listing_expired',
+        data: {
+          host_name: hostName,
+          listing_title: listingData.title,
+          dashboard_url: `${this.frontendUrl}/my-listings`
+        }
+      };
 
-    return this.sendNotification('/send-listing-expired-notification', data);
+      return this.sendNotification('/send-listing-expired-notification', emailData);
+    } catch (error) {
+      console.error('Error sending listing expired notification:', error);
+      throw error;
+    }
   }
 }
 
-module.exports = EmailNotifications; 
+module.exports = EmailNotificationService; 

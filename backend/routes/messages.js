@@ -55,15 +55,11 @@ module.exports = (pool) => {
       
       const recipient = recipients[0];
       
-      // Use frontend URL from environment variables
+      // Send email notification
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:8001';
       
-      console.log(`Sending email notification to: ${recipient.email}`);
-      console.log(`From: ${sender.name || sender.first_name || 'Someone'}`);
-      console.log(`Message preview: ${messageData.body.substring(0, 50)}...`);
-      
-      // Send email notification via Python service
-      const response = await axios.post('http://localhost:8001/send-message-notification', {
+      const response = await axios.post(`${emailServiceUrl}/send-message-notification`, {
         recipient_email: recipient.email,
         sender_name: sender.name || sender.first_name || 'Someone',
         message_preview: messageData.body.substring(0, 100) + (messageData.body.length > 100 ? '...' : ''),

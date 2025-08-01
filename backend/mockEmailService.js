@@ -1,6 +1,7 @@
 class MockEmailService {
   constructor() {
     this.notifications = [];
+    this.frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   }
 
   async sendNotification(type, data) {
@@ -43,10 +44,10 @@ class MockEmailService {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       start_date: new Date(listingData.start_date).toLocaleDateString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
-      listing_url: `http://localhost:3000/listings/${listingData.id}`
+      listing_url: `${this.frontendUrl}/listings/${listingData.id}`
     };
 
     return this.sendNotification('listing_added', data);
@@ -58,10 +59,10 @@ class MockEmailService {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       start_date: new Date(listingData.start_date).toLocaleDateString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
-      listing_url: `http://localhost:3000/listings/${listingData.id}`
+      listing_url: `${this.frontendUrl}/listings/${listingData.id}`
     };
 
     return this.sendNotification('listing_edited', data);
@@ -73,9 +74,9 @@ class MockEmailService {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       removal_date: new Date().toLocaleDateString(),
-      dashboard_url: 'http://localhost:3000/my-listings'
+      dashboard_url: `${this.frontendUrl}/my-listings`
     };
 
     return this.sendNotification('listing_deleted', data);
@@ -87,10 +88,10 @@ class MockEmailService {
       host_name: hostName,
       listing_title: listingData.title,
       listing_address: `${listingData.address}, ${listingData.city}, ${listingData.state} ${listingData.zip}`,
-      listing_price: listingData.price_per_night,
+      listing_price: listingData.price_per_night.toString(),
       end_date: new Date(listingData.end_date).toLocaleDateString(),
       expiration_date: new Date().toLocaleDateString(),
-      dashboard_url: 'http://localhost:3000/my-listings'
+      dashboard_url: `${this.frontendUrl}/my-listings`
     };
 
     return this.sendNotification('listing_expired', data);

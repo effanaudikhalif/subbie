@@ -33,10 +33,13 @@ def start_api():
             "api:app",
             host=config.HOST,
             port=config.PORT,
-            reload=False  # Disable reload in production
+            reload=False,  # Disable reload in production
+            log_level="info",
+            access_log=True
         )
     except Exception as e:
         logger.error(f"Error starting API server: {e}")
+        raise
 
 def main():
     """Main function to start both API and worker"""
