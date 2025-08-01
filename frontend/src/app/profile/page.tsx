@@ -36,6 +36,12 @@ interface HostReview {
   created_at: string;
 }
 
+interface University {
+  id: string;
+  name: string;
+  domain: string;
+}
+
 function ProfilePageContent() {
   const { user, signOut, profile: authProfile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -46,12 +52,14 @@ function ProfilePageContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [viewingOwnProfile, setViewingOwnProfile] = useState(true);
+  const [universities, setUniversities] = useState<University[]>([]);
   const [editForm, setEditForm] = useState({
     name: '',
     about_me: '',
     major: '',
     graduation_year: '',
-    education_level: ''
+    education_level: '',
+    university_id: ''
   });
   const [editFormErrors, setEditFormErrors] = useState({
     name: '',
@@ -78,6 +86,21 @@ function ProfilePageContent() {
     // Implement navigation or search logic if needed
   };
 
+  // Fetch universities
+  const fetchUniversities = async () => {
+    try {
+      const response = await fetch(buildApiUrl('/api/universities'));
+      if (response.ok) {
+        const data = await response.json();
+        setUniversities(data);
+      } else {
+        console.error('Failed to fetch universities:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching universities:', error);
+    }
+  };
+
   // Authentication check - redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -94,6 +117,11 @@ function ProfilePageContent() {
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Fetch universities on component mount
+  useEffect(() => {
+    fetchUniversities();
   }, []);
 
   useEffect(() => {
@@ -117,7 +145,8 @@ function ProfilePageContent() {
         about_me: authProfile.about_me || '',
         major: authProfile.major || '',
         graduation_year: authProfile.graduation_year?.toString() || '',
-        education_level: authProfile.education_level || ''
+        education_level: authProfile.education_level || '',
+        university_id: authProfile.university_id || ''
       });
       setLoading(false);
     } else {
@@ -137,7 +166,8 @@ function ProfilePageContent() {
                 about_me: userData.about_me || '',
                 major: userData.major || '',
                 graduation_year: userData.graduation_year?.toString() || '',
-                education_level: userData.education_level || ''
+                education_level: userData.education_level || '',
+                university_id: userData.university_id || ''
               });
             }
           }
@@ -232,7 +262,7 @@ function ProfilePageContent() {
       hasErrors = true;
     }
     
-    if (!editForm.graduation_year) {
+        if (!editForm.graduation_year) {
       newErrors.graduation_year = 'Please select your graduation year';
       hasErrors = true;
     }
@@ -259,9 +289,15 @@ function ProfilePageContent() {
       });
 
       if (response.ok) {
-        const updatedProfile = await response.json();
-        setProfile(updatedProfile);
-        console.log('Profile updated successfully:', updatedProfile);
+        // Fetch the updated profile with university information
+        const profileResponse = await fetch(buildApiUrl(`/api/users/${user.id}`));
+        if (profileResponse.ok) {
+          const updatedProfile = await profileResponse.json();
+          setProfile(updatedProfile);
+          console.log('Profile updated successfully:', updatedProfile);
+        } else {
+          console.error('Failed to fetch updated profile:', profileResponse.status);
+        }
       } else {
         console.error('Failed to update profile:', response.status, response.statusText);
         const errorData = await response.text();
@@ -665,6 +701,21 @@ function ProfilePageContent() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-black focus:border-black placeholder-gray-500 text-gray-900"
                   placeholder="Tell us about yourself"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  University
+                </label>
+                <input
+                  type="text"
+                  value={profile?.university_name || 'Not specified'}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  University cannot be changed after registration
+                </p>
               </div>
 
               <div>
