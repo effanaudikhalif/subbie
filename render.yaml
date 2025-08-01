@@ -3,7 +3,7 @@ services:
     name: subly-email-service
     env: python
     rootDir: backend/python-email-service
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt
     startCommand: python main.py
     plan: free
     healthCheckPath: /health
