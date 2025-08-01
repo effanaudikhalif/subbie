@@ -231,6 +231,16 @@ export default function Page() {
             muted 
             loop 
             playsInline
+            preload="auto"
+            disablePictureInPicture
+            controlsList="nodownload"
+            onLoadedData={(e) => {
+              // Hide any play button overlay when video loads
+              const video = e.target as HTMLVideoElement;
+              if (video.readyState >= 2) {
+                video.style.opacity = '1';
+              }
+            }}
           >
             <source src="/icons/hook.mp4" type="video/mp4" />
             Your browser does not support the video tag.
