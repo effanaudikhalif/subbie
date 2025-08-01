@@ -20,7 +20,33 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
+// Error handling middleware for multer
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+    }
+    return res.status(400).json({ error: err.message });
+  } else if (err) {
+    return res.status(400).json({ error: err.message });
+  }
+  next();
+};
 
 module.exports = (pool) => {
   const emailNotifications = new EmailNotifications();
@@ -164,7 +190,17 @@ module.exports = (pool) => {
   });
 
   // Create listing
-  router.post('/', upload.array('photos', 10), async (req, res) => {
+  router.post('/', upload.array('photos', 10), handleMulterError, async (req, res) => {
+    // Log file upload information
+    if (req.files && req.files.length > 0) {
+      console.log('Files uploaded:', req.files.map(file => ({
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        filename: file.filename
+      })));
+    }
+    
     try {
       const {
         user_id, title, description, address, city, state, zip, country,
@@ -216,13 +252,26 @@ module.exports = (pool) => {
       if (req.files && req.files.length > 0) {
         for (let i = 0; i < req.files.length; i++) {
           const file = req.files[i];
+          
+          // Validate file type
+          if (!file.mimetype.startsWith('image/')) {
+            console.error('Invalid file type:', file.mimetype, 'for file:', file.originalname);
+            continue; // Skip this file
+          }
+          
           // Store the file path relative to the uploads directory
           const imageUrl = `/uploads/${file.filename}`;
           
-          await pool.query(
-            'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
-            [listing.id, imageUrl, i]
-          );
+          try {
+            await pool.query(
+              'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
+              [listing.id, imageUrl, i]
+            );
+            console.log('Successfully saved image:', imageUrl);
+          } catch (dbError) {
+            console.error('Database error saving image:', dbError);
+            // Continue with other files even if one fails
+          }
         }
       }
 
@@ -251,7 +300,7 @@ module.exports = (pool) => {
   });
 
   // Update listing
-  router.put('/:id', upload.array('photo_replacements', 10), async (req, res) => {
+  router.put('/:id', upload.array('photo_replacements', 10), handleMulterError, async (req, res) => {
     try {
       const { id } = req.params;
       const { 

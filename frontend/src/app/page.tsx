@@ -235,11 +235,12 @@ export default function Page() {
             disablePictureInPicture
             controlsList="nodownload"
             onLoadedData={(e) => {
-              // Hide any play button overlay when video loads
               const video = e.target as HTMLVideoElement;
-              if (video.readyState >= 2) {
-                video.style.opacity = '1';
-              }
+              // If video can't autoplay, pause it to freeze the first frame
+              video.play().catch(() => {
+                video.pause();
+                video.currentTime = 0; // Go to first frame
+              });
             }}
           >
             <source src="/icons/hook.mp4" type="video/mp4" />
