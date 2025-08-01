@@ -995,27 +995,30 @@ export default function ListingDetails() {
                    height: '500px', 
                    minHeight: '300px',
                    display: 'grid',
-                   gridTemplateColumns: '1fr',
-                   gridTemplateRows: 'repeat(2, 1fr)'
+                   gridTemplateColumns: '2fr 1fr 1fr',
+                   gridTemplateRows: 'repeat(2, 1fr)',
+                   aspectRatio: '16/9'
                  } as React.CSSProperties & {
                    WebkitDisplay?: string;
                    WebkitGridTemplateColumns?: string;
                    WebkitGridTemplateRows?: string;
                  }}>
                    {/* First column: one big image spanning two rows */}
-                   <div className="relative col-span-1 row-span-2 h-full w-full group" style={{
-                     gridRow: 'span 2'
+                   <div className="relative col-span-1 row-span-2 h-full w-full group overflow-hidden rounded-2xl" style={{
+                     gridRow: 'span 2',
+                     aspectRatio: '1/1'
                    } as React.CSSProperties & {
                      WebkitGridRow?: string;
                    }}>
                      <img
                        src={images[0]?.url}
                        alt={listing.title}
-                       className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                       className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
                        style={{ 
                          height: '100%', 
                          width: '100%', 
                          objectFit: 'cover',
+                         objectPosition: 'center',
                          transform: 'translateZ(0)'
                        }}
                        onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
@@ -1049,15 +1052,18 @@ export default function ListingDetails() {
                    </div>
                    {/* Second column: two stacked images */}
                    {images.slice(1, 3).map((img, i) => (
-                     <div key={i} className="relative col-span-1 h-full w-full group">
+                     <div key={i} className="relative col-span-1 h-full w-full group overflow-hidden rounded-2xl" style={{
+                       aspectRatio: '1/1'
+                     }}>
                        <img
                          src={img.url}
                          alt={listing.title}
-                         className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                         className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
                          style={{ 
                            height: '100%', 
                            width: '100%', 
                            objectFit: 'cover',
+                           objectPosition: 'center',
                            transform: 'translateZ(0)'
                          }}
                          onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 1); }}
@@ -1066,15 +1072,18 @@ export default function ListingDetails() {
                    ))}
                    {/* Third column: two stacked images */}
                    {images.slice(3, 5).map((img, i) => (
-                     <div key={i} className="relative col-span-1 h-full w-full group">
+                     <div key={i} className="relative col-span-1 h-full w-full group overflow-hidden rounded-2xl" style={{
+                       aspectRatio: '1/1'
+                     }}>
                        <img
                          src={img.url}
                          alt={listing.title}
-                         className="w-full h-full object-cover rounded-2xl cursor-pointer transition-transform duration-300 group-hover:scale-105"
+                         className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
                          style={{ 
                            height: '100%', 
                            width: '100%', 
                            objectFit: 'cover',
+                           objectPosition: 'center',
                            transform: 'translateZ(0)'
                          }}
                          onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(i + 3); }}

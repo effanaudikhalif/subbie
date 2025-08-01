@@ -12,8 +12,8 @@ const Logo: React.FC<LogoProps> = ({ className = "", height = 20, width = 70 }) 
   return (
     <Link href="/" className={`flex items-center ${className}`}>
       <Image
-        src="/icons/subby-newlogo.png"
-        alt="Subby Logo"
+        src="/icons/subbie.png"
+        alt="Subbie Logo"
         width={width}
         height={height}
         className="object-contain"
