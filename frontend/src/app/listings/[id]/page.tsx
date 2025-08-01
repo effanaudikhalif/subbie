@@ -943,13 +943,14 @@ export default function ListingDetails() {
                 dateRange={dateRange}
                 setDateRange={setDateRange}
                 onSearch={handleSearch}
+                isListingDetailsPage={true}
               />
             )}
             <div className={`max-w-6xl mx-auto ${!isMobile ? 'mt-8 pt-8' : 'mt-2 pt-2'} pb-8 mb-8`}>
               <h1 className="text-3xl font-bold mb-6 text-black px-4 sm:px-8">{listing.title}</h1>
               {isSmallScreen ? (
                 // Full-width single image for small screens
-                <div className="w-screen -mx-4 sm:-mx-8 mb-8 relative" style={{ height: '70vh', minHeight: '400px' }}>
+                <div className="w-full mb-8 relative" style={{ height: '70vh', minHeight: '400px' }}>
                   <img
                     src={images[0]?.url}
                     alt={listing.title}
@@ -958,9 +959,8 @@ export default function ListingDetails() {
                       height: '100%', 
                       width: '100%', 
                       objectFit: 'cover',
-                      transform: 'translateZ(0)',
-                      borderRadius: '16px',
-                      WebkitBorderRadius: '16px'
+                      objectPosition: 'center',
+                      transform: 'translateZ(0)'
                     }}
                     onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
                   />
