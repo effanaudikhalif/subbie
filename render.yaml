@@ -2,6 +2,7 @@ services:
   - type: web
     name: subly-email-service
     env: python
+    rootDir: backend/python-email-service
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
     plan: free
