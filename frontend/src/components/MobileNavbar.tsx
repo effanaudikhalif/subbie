@@ -200,7 +200,12 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
         <div className="px-4 py-1 flex items-center gap-0 h-full">
           {/* Logo - Show on left when not logged in, center when logged in */}
           {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMyListingsPage || isWishlistPage || isProfilePage || (isMessagesPage && !listingId) ? (
-            user ? (
+            isListingDetailsPage ? (
+              /* Listing Details Page - Always center the logo */
+              <div className="w-full flex justify-center">
+                <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
+              </div>
+            ) : user ? (
               /* Logged in - Center the logo */
               <div className="w-full flex justify-center">
                 <Logo className="hover:opacity-80 transition-opacity mobile-logo" />
@@ -251,104 +256,8 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
             </div>
           
           ) : isListingDetailsPage ? (
-            /* Listing Details Page - Show Search Bar */
-            !isExpanded ? (
-              /* Collapsed State - Cylinder */
-              <div 
-                className="w-full bg-gray-100 rounded-full pl-6 pr-2 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-200 transition-all duration-300"
-                onClick={handleExpand}
-              >
-                <span className="text-gray-500 text-base">Search</span>
-                <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
-                  <FaSearch className="text-white text-sm" />
-                </div>
-              </div>
-            ) : (
-              /* Expanded State - Full Search Form */
-              <div className="mobile-search-form border border-gray-200 rounded-2xl p-4 shadow-lg transition-all duration-300 absolute top-0 left-0 w-full z-50" style={{ backgroundColor: '#ffffff' }}>
-                {/* Location Input with Google Autocomplete */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Where</label>
-                  <div className="relative">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={where}
-                      onChange={e => setWhere(e.target.value)}
-                      onFocus={() => setShowCalendar(false)}
-                      placeholder="Search destination"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder-gray-500 text-gray-900"
-                      disabled={isLoading}
-                    />
-                    {isLoading && (
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></div>
-                      </div>
-                    )}
-                  </div>
-                  {error && (
-                    <div className="text-red-500 text-xs mt-1">{error}</div>
-                  )}
-                </div>
-
-                {/* Date Inputs */}
-                <div className="grid grid-cols-2 gap-3 mb-4 relative">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Check in</label>
-                    <div
-                      className="px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-teal-500 transition-colors"
-                      onClick={() => setShowCalendar(!showCalendar)}
-                    >
-                      <span className={checkIn === 'Add dates' ? 'text-gray-500' : 'text-gray-900'}>
-                        {checkIn}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Check out</label>
-                    <div
-                      className="px-4 py-3 border border-gray-300 rounded-lg cursor-pointer hover:border-teal-500 transition-colors"
-                      onClick={() => setShowCalendar(!showCalendar)}
-                    >
-                      <span className={checkOut === 'Add dates' ? 'text-gray-500' : 'text-gray-900'}>
-                        {checkOut}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Calendar Dropdown */}
-                  {showCalendar && (
-                    <div ref={calendarRef} className="absolute left-1/2 transform -translate-x-1/2 top-full mt-1 z-50">
-                      <CompactCalendar
-                        value={{
-                          startDate: dateRange[0]?.startDate ? new Date(dateRange[0].startDate) : null,
-                          endDate: dateRange[0]?.endDate ? new Date(dateRange[0].endDate) : null
-                        }}
-                        onChange={({ startDate, endDate }) => {
-                          if (startDate && endDate) {
-                            const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                            const localEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-                            setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
-                            // Close calendar when both dates are selected
-                            setShowCalendar(false);
-                          } else {
-                            setDateRange([{ startDate, endDate, key: 'selection' }]);
-                          }
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Search Button */}
-                <button 
-                  onClick={handleSearchClick}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
-                >
-                  <span>Search</span>
-                </button>
-              </div>
-            )
+            /* Listing Details Page - Show nothing, just logo in center */
+            <div className="w-full"></div>
           ) : isMessagesPage ? (
             /* Messages Page - Show Listing Info or Messages */
             listingId ? (

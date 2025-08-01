@@ -947,62 +947,66 @@ export default function ListingDetails() {
             )}
             <div className={`max-w-6xl mx-auto px-4 sm:px-8 ${!isMobile ? 'mt-8 pt-8' : 'mt-2 pt-2'} pb-8 mb-8`}>
               <h1 className="text-3xl font-bold mb-6 text-black">{listing.title}</h1>
-              {isSmallScreen ? (
-                // Full-width single image for small screens
-                <div className="w-screen -mx-4 sm:-mx-8 mb-8 relative" style={{ height: '70vh', minHeight: '400px' }}>
-                  <img
-                    src={images[0]?.url}
-                    alt={listing.title}
-                    className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
-                    style={{ 
-                      height: '100%', 
-                      width: '100%', 
-                      objectFit: 'cover',
-                      transform: 'translateZ(0)'
-                    }}
-                    onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
-                  />
-                  {/* Wishlist heart icon - only show if user is not the host */}
-                  {user && user.id !== listing.user_id && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleWishlist(); }}
-                      disabled={wishlistLoading}
-                      className="absolute top-4 left-4 bg-white border border-gray-200 rounded-full p-2 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
-                    >
-                      {wishlistLoading ? (
-                        <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                      ) : (
-                        <svg
-                          className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
-                          fill={isInWishlist ? 'currentColor' : 'none'}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                      )}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                                 // Original grid layout for larger screens
-                 <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] gap-4 rounded-3xl overflow-hidden" style={{ 
-                   height: '500px', 
-                   minHeight: '300px',
-                   display: 'grid',
-                   gridTemplateColumns: '2fr 1fr 1fr',
-                   gridTemplateRows: 'repeat(2, 1fr)',
-                   aspectRatio: '16/9'
-                 } as React.CSSProperties & {
-                   WebkitDisplay?: string;
-                   WebkitGridTemplateColumns?: string;
-                   WebkitGridTemplateRows?: string;
-                 }}>
+            </div>
+            
+            {/* Full-width image gallery */}
+            {isSmallScreen ? (
+              // Full-width single image for small screens
+              <div className="w-screen -mx-4 sm:-mx-8 mb-8 relative" style={{ height: '70vh', minHeight: '400px' }}>
+                <img
+                  src={images[0]?.url}
+                  alt={listing.title}
+                  className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
+                  style={{ 
+                    height: '100%', 
+                    width: '100%', 
+                    objectFit: 'cover',
+                    transform: 'translateZ(0)'
+                  }}
+                  onClick={() => { setShowPhotoModal(true); setCurrentPhotoIndex(0); }}
+                />
+                {/* Wishlist heart icon - only show if user is not the host */}
+                {user && user.id !== listing.user_id && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleWishlist(); }}
+                    disabled={wishlistLoading}
+                    className="absolute top-4 left-4 bg-white border border-gray-200 rounded-full p-2 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+                  >
+                    {wishlistLoading ? (
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <svg
+                        className={`w-4 h-4 ${isInWishlist ? 'text-red-500 fill-current' : 'text-gray-600'}`}
+                        fill={isInWishlist ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+            ) : (
+              // Full-width grid layout for larger screens
+              <div className="w-full px-4 sm:px-8 mb-8">
+                <div className="grid grid-cols-1 md:[grid-template-columns:2fr_1fr_1fr] gap-4 rounded-3xl overflow-hidden" style={{ 
+                  height: '500px', 
+                  minHeight: '300px',
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1fr 1fr',
+                  gridTemplateRows: 'repeat(2, 1fr)',
+                  aspectRatio: '16/9'
+                } as React.CSSProperties & {
+                  WebkitDisplay?: string;
+                  WebkitGridTemplateColumns?: string;
+                  WebkitGridTemplateRows?: string;
+                }}>
                    {/* First column: one big image spanning two rows */}
                    <div className="relative col-span-1 row-span-2 h-full w-full group overflow-hidden rounded-2xl" style={{
                      gridRow: 'span 2',
@@ -1091,9 +1095,12 @@ export default function ListingDetails() {
                      </div>
                    ))}
                  </div>
-               )}
-              {/* Optionally, add more details below */}
-              <div className="mt-12 relative">
+               </div>
+             )}
+             
+             {/* Optionally, add more details below */}
+             <div className="max-w-6xl mx-auto px-4 sm:px-8">
+               <div className="mt-12 relative">
                 <div className={`${!isMobile ? 'lg:grid lg:grid-cols-3 lg:gap-8' : 'flex flex-col'} ${!isMobile ? '' : 'gap-6'}`} style={{
                   display: !isMobile ? 'grid' : 'flex',
                   gridTemplateColumns: !isMobile ? '2fr 1fr' : 'auto',
