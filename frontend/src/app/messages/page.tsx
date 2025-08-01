@@ -349,7 +349,7 @@ function MessagesPageContent() {
       )}
       {isMobile ? (
         // Mobile Layout
-        <div className="flex-1 mt-20 overflow-hidden">
+        <div className="flex-1 overflow-hidden bg-white" style={{ paddingTop: '80px' }}>
           {mobileView === 'inbox' && (
             <div className="h-full bg-white flex flex-col">
               <div className="flex-1 overflow-y-auto">
