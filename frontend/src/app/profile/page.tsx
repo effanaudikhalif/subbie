@@ -182,7 +182,7 @@ function ProfilePageContent() {
 
     async function fetchHostReviews() {
       try {
-        const response = await fetch(buildApiUrl(`/api/host-reviews?host_id=${targetUserId}`));
+        const response = await fetch(buildApiUrl(`/api/host-reviews/user/${targetUserId}`));
         if (response.ok) {
           const reviewsData = await response.json();
           setHostReviews(reviewsData);
