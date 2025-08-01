@@ -120,20 +120,18 @@ export default function SearchBar({
   }, [showCalendar, setShowCalendar]);
 
   const checkIn = dateRange[0].startDate
-    ? dateRange[0].startDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      })
+    ? (() => {
+        const date = dateRange[0].startDate;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      })()
     : 'Add dates';
   const checkOut = dateRange[0].endDate
-    ? dateRange[0].endDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      })
+    ? (() => {
+        const date = dateRange[0].endDate;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      })()
     : 'Add dates';
 
   return (
@@ -222,13 +220,19 @@ export default function SearchBar({
         <div ref={calendarRef} className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-40 bg-white rounded-xl shadow-lg">
           <CompactCalendar
             value={{
-              startDate: dateRange[0]?.startDate ? new Date(dateRange[0].startDate) : null,
-              endDate: dateRange[0]?.endDate ? new Date(dateRange[0].endDate) : null
+              startDate: dateRange[0]?.startDate || null,
+              endDate: dateRange[0]?.endDate || null
             }}
             onChange={({ startDate, endDate }) => {
+              // Debug logging
+              console.log('Calendar onChange - Raw dates:', { startDate, endDate });
+              
               // Always create local dates to avoid timezone issues
               const localStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
               const localEndDate = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+              
+              console.log('Calendar onChange - Local dates:', { localStartDate, localEndDate });
+              
               setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
             }}
           />
