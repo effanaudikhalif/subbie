@@ -24,10 +24,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'http://localhost:3000',
-    'https://subby-six.vercel.app',
-    'https://subby-six.vercel.app/',
-    'https://subby-effan-audi-khalifs-projects.vercel.app',
-    'https://subby-effan-audi-khalifs-projects.vercel.app/',
+    'https://www.getsubbie.com',
     process.env.FRONTEND_URL
   ].filter(Boolean),
   credentials: true,
