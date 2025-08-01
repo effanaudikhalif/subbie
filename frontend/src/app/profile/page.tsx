@@ -273,6 +273,12 @@ function ProfilePageContent() {
         const formData = new FormData();
         formData.append('avatar', editProfilePicture);
         
+        console.log('Uploading avatar:', {
+          fileName: editProfilePicture.name,
+          fileType: editProfilePicture.type,
+          fileSize: editProfilePicture.size
+        });
+        
         const avatarResponse = await fetch(buildApiUrl(`/api/users/${user.id}/avatar`), {
           method: 'POST',
           body: formData,
@@ -283,7 +289,13 @@ function ProfilePageContent() {
           setProfile(prev => prev ? { ...prev, avatar_url: avatarData.avatar_url } : null);
           console.log('Avatar updated successfully:', avatarData);
         } else {
-          console.error('Failed to upload avatar:', avatarResponse.status, avatarResponse.statusText);
+          const errorData = await avatarResponse.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('Failed to upload avatar:', {
+            status: avatarResponse.status,
+            statusText: avatarResponse.statusText,
+            error: errorData
+          });
+          alert(`Failed to upload avatar: ${errorData.error || 'Unknown error'}`);
         }
       }
 
@@ -296,6 +308,61 @@ function ProfilePageContent() {
   const handleEditProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        e.target.value = '';
+        return;
+      }
+      
+      // Validate file type and warn about HEIC compatibility
+      const recommendedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      const supportedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'image/heic', 'image/heif', 'image/bmp', 'image/tiff'
+      ];
+      
+      const allowedExtensions = [
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+        '.heic', '.heif', '.bmp', '.tiff', '.tif'
+      ];
+      
+      const fileExtension = file.name.toLowerCase().split('.').pop();
+      const isValidType = supportedTypes.includes(file.type.toLowerCase()) || 
+                         allowedExtensions.includes(`.${fileExtension}`);
+      
+      if (!isValidType) {
+        alert('Please select a valid image file (JPG, PNG, GIF, WebP, HEIC, HEIF, BMP, TIFF)');
+        e.target.value = '';
+        return;
+      }
+      
+      // Warn about HEIC/HEIF compatibility issues
+      if (file.type.toLowerCase().includes('heic') || file.type.toLowerCase().includes('heif') || 
+          fileExtension === 'heic' || fileExtension === 'heif') {
+        const shouldContinue = confirm(
+          'HEIC/HEIF files from iPhones may not display properly in all browsers. ' +
+          'For best compatibility, consider converting to JPG or PNG format first. ' +
+          'Continue with this file anyway?'
+        );
+        if (!shouldContinue) {
+          e.target.value = '';
+          return;
+        }
+      }
+      
+      // Recommend optimal formats
+      if (!recommendedTypes.includes(file.type.toLowerCase())) {
+        console.warn('For best browser compatibility, consider using JPG, PNG, GIF, or WebP format');
+      }
+      
+      console.log('Selected file:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        extension: fileExtension
+      });
+      
       setEditProfilePicture(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -555,11 +622,14 @@ function ProfilePageContent() {
                   <div className="flex-1">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp,image/heic,image/heif,.heic,.heif"
                       onChange={handleEditProfilePictureChange}
                       className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
                       style={{ color: 'transparent' }}
                     />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Recommended: JPG, PNG, GIF, WebP (max 5MB). HEIC files may not display in all browsers.
+                    </p>
                   </div>
                 </div>
               </div>

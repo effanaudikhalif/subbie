@@ -20,11 +20,34 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: function (req, file, cb) {
-    // Accept only image files
-    if (file.mimetype.startsWith('image/')) {
+    // Accept image files with specific MIME types and extensions
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+      'image/svg+xml',
+      'image/bmp',
+      'image/tiff'
+    ];
+    
+    const allowedExtensions = [
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+      '.heic', '.heif', '.svg', '.bmp', '.tiff', '.tif'
+    ];
+    
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    
+    // Check both MIME type and file extension for better compatibility
+    if (file.mimetype.startsWith('image/') || 
+        allowedMimeTypes.includes(file.mimetype.toLowerCase()) ||
+        allowedExtensions.includes(fileExtension)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error('Only image files are allowed! Supported formats: JPG, PNG, GIF, WebP, HEIC, HEIF, SVG, BMP, TIFF'), false);
     }
   }
 });
@@ -49,6 +72,21 @@ module.exports = (pool) => {
       const { rows } = await pool.query('SELECT * FROM users');
       res.json(rows);
     } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Check if email exists
+  router.get('/check-email/:email', async (req, res) => {
+    try {
+      const { email } = req.params;
+      console.log('Checking if email exists:', email);
+      const { rows } = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+      const exists = rows.length > 0;
+      console.log('Email exists result:', exists);
+      res.json({ exists });
+    } catch (err) {
+      console.error('Error checking email existence:', err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -80,10 +118,16 @@ module.exports = (pool) => {
     try {
       const { id, university_id, name, email, major, graduation_year, education_level, about_me, stripe_account } = req.body;
       
-      // Check if user already exists
+      // Check if user already exists by ID
       const existingUser = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
       if (existingUser.rows.length > 0) {
         return res.json(existingUser.rows[0]);
+      }
+      
+      // Check if email already exists
+      const existingEmail = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+      if (existingEmail.rows.length > 0) {
+        return res.status(409).json({ error: 'An account with this email address already exists' });
       }
       
       const { rows } = await pool.query(
@@ -198,10 +242,31 @@ module.exports = (pool) => {
         userId: id
       });
 
-      // Validate file type
-      if (!req.file.mimetype.startsWith('image/')) {
-        console.error('Invalid avatar file type:', req.file.mimetype, 'for file:', req.file.originalname);
-        return res.status(400).json({ error: 'Only image files are allowed for avatar uploads' });
+      // Validate file type (more comprehensive check)
+      const allowedMimeTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+        'image/heic', 'image/heif', 'image/svg+xml', 'image/bmp', 'image/tiff'
+      ];
+      
+      const allowedExtensions = [
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', 
+        '.heic', '.heif', '.svg', '.bmp', '.tiff', '.tif'
+      ];
+      
+      const fileExtension = path.extname(req.file.originalname).toLowerCase();
+      const isValidMimeType = req.file.mimetype.startsWith('image/') || allowedMimeTypes.includes(req.file.mimetype.toLowerCase());
+      const isValidExtension = allowedExtensions.includes(fileExtension);
+      
+      if (!isValidMimeType && !isValidExtension) {
+        console.error('Invalid avatar file type:', {
+          mimetype: req.file.mimetype,
+          extension: fileExtension,
+          originalname: req.file.originalname
+        });
+        return res.status(400).json({ 
+          error: 'Only image files are allowed for avatar uploads',
+          supportedFormats: 'JPG, PNG, GIF, WebP, HEIC, HEIF, SVG, BMP, TIFF'
+        });
       }
 
       // Create the avatar URL (this will be served from /uploads/ endpoint)

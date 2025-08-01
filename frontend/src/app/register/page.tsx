@@ -22,6 +22,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [domainWarning, setDomainWarning] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailChecking, setEmailChecking] = useState(false);
   const router = useRouter();
 
   // Fetch universities on component mount
@@ -59,6 +61,50 @@ export default function RegisterPage() {
     validateEmailDomain();
   }, [email, universityId, universities]);
 
+  // Debounced email existence check
+  useEffect(() => {
+    const checkEmailTimer = setTimeout(async () => {
+      if (email && email.includes('@') && email.length > 5) {
+        setEmailChecking(true);
+        setEmailError("");
+        
+        try {
+          const emailExists = await checkEmailExists(email);
+          if (emailExists) {
+            setEmailError("An account with this email address already exists.");
+          }
+        } catch (err) {
+          console.error('Error checking email:', err);
+        } finally {
+          setEmailChecking(false);
+        }
+      } else {
+        setEmailError("");
+        setEmailChecking(false);
+      }
+    }, 800); // Wait 800ms after user stops typing
+
+    return () => clearTimeout(checkEmailTimer);
+  }, [email]);
+
+  // Check if email already exists
+  const checkEmailExists = async (emailToCheck: string) => {
+    if (!emailToCheck || !emailToCheck.includes('@')) {
+      return false;
+    }
+    
+    try {
+      const response = await fetch(buildApiUrl(`/api/users/check-email/${encodeURIComponent(emailToCheck)}`));
+      if (response.ok) {
+        const data = await response.json();
+        return data.exists;
+      }
+    } catch (err) {
+      console.error('Error checking email:', err);
+    }
+    return false;
+  };
+
   // Validate email domain against selected university
   const validateEmailDomain = () => {
     if (!email || !universityId) {
@@ -91,6 +137,10 @@ export default function RegisterPage() {
     }
     if (!email.includes('@')) {
       setError("Please enter a valid email address");
+      return;
+    }
+    if (emailError) {
+      setError("Please fix the email error before proceeding");
       return;
     }
     if (!universityId) {
@@ -126,6 +176,14 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // Check if email already exists
+      const emailExists = await checkEmailExists(email);
+      if (emailExists) {
+        setError("An account with this email address already exists. Please use a different email or try signing in.");
+        setLoading(false);
+        return;
+      }
+
       // Step 1: Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({ 
         email, 
@@ -162,7 +220,12 @@ export default function RegisterPage() {
 
         if (!response.ok) {
           const errorData = await response.json();
-          setError(`Failed to create profile: ${errorData.error}`);
+          // Check if the error is specifically about duplicate email
+          if (response.status === 409) {
+            setError("An account with this email address already exists. Please use a different email or try signing in.");
+          } else {
+            setError(`Failed to create profile: ${errorData.error}`);
+          }
           setLoading(false);
           return;
         }
@@ -206,16 +269,28 @@ export default function RegisterPage() {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email Address <span className="text-red-500">*</span>
             </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm"
-              placeholder="Enter your email address"
-            />
-            {domainWarning && (
+            <div className="relative">
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${emailError ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-black focus:border-black focus:z-10 sm:text-sm pr-10`}
+                placeholder="Enter your email address"
+              />
+              {emailChecking && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                </div>
+              )}
+            </div>
+            {emailError && (
+              <div className="mt-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
+                {emailError}
+              </div>
+            )}
+            {domainWarning && !emailError && (
               <div className="mt-2 text-amber-600 text-sm bg-amber-50 border border-amber-200 rounded-md p-3">
                 {domainWarning}
               </div>
