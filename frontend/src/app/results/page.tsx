@@ -13,8 +13,16 @@ function ResultsContent() {
   const [appliedWhere, setAppliedWhere] = useState(searchParams?.get('where') || '');
   const [dateRange, setDateRange] = useState([
     {
-      startDate: searchParams?.get('checkin') ? new Date(searchParams.get('checkin')!) : new Date(),
-      endDate: searchParams?.get('checkout') ? new Date(searchParams.get('checkout')!) : (() => {
+      startDate: searchParams?.get('checkin') ? (() => {
+        const dateStr = searchParams.get('checkin')!;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day); // month is 0-indexed
+      })() : new Date(),
+      endDate: searchParams?.get('checkout') ? (() => {
+        const dateStr = searchParams.get('checkout')!;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day); // month is 0-indexed
+      })() : (() => {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         return tomorrow;

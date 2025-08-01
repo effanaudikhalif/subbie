@@ -50,8 +50,14 @@ export default function Page() {
   }, []);
 
   const handleSearch = () => {
+    console.log('🔍 [TERMINAL] SEARCH TRIGGERED');
+    console.log('🔍 [TERMINAL] dateRange:', dateRange);
+    
     const checkin = dateRange[0].startDate ? new Date(dateRange[0].startDate).toISOString().slice(0,10) : '';
     const checkout = dateRange[0].endDate ? new Date(dateRange[0].endDate).toISOString().slice(0,10) : '';
+    
+    console.log('🔍 [TERMINAL] URL dates:', { checkin, checkout });
+    
     router.push(
       `/listings?where=${encodeURIComponent(where)}&checkin=${checkin}&checkout=${checkout}`
     );

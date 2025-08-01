@@ -122,13 +122,21 @@ export default function SearchBar({
   const formatSimpleDate = (date: Date | null) => {
     if (!date) return 'Add dates';
     
+    // This will show in the Next.js terminal
+    console.log('🎨 [TERMINAL] Formatting date:', date.toString());
+    
     // Get the date parts directly - no timezone conversion
     const day = date.getDate();
     const month = date.getMonth();
     const year = date.getFullYear();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     
-    return `${months[month]} ${day}, ${year}`;
+    console.log('🎨 [TERMINAL] Date parts:', { day, month, year });
+    
+    const result = `${months[month]} ${day}, ${year}`;
+    console.log('🎨 [TERMINAL] Formatted result:', result);
+    
+    return result;
   };
 
   const checkIn = formatSimpleDate(dateRange[0].startDate);
