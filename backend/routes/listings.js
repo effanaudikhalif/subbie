@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 const EmailNotifications = require('../emailNotifications');
 const router = express.Router();
 
@@ -26,10 +27,20 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: function (req, file, cb) {
-    // Accept only image files
+    // Accept all image files - we'll convert unsupported formats automatically
+    console.log('File upload attempt:', {
+      filename: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    });
+
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
+      console.log('File rejected - not an image:', {
+        filename: file.originalname,
+        mimetype: file.mimetype
+      });
       cb(new Error('Only image files are allowed!'), false);
     }
   }
@@ -46,6 +57,79 @@ const handleMulterError = (err, req, res, next) => {
     return res.status(400).json({ error: err.message });
   }
   next();
+};
+
+// Helper function to convert images to web-compatible formats
+const convertImage = async (inputPath, outputPath, originalName) => {
+  try {
+    console.log(`Converting image: ${originalName}`);
+    
+    // Define web-compatible formats that don't need conversion
+    const webCompatibleFormats = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+    
+    // Check if file exists
+    if (!fs.existsSync(inputPath)) {
+      throw new Error(`Input file does not exist: ${inputPath}`);
+    }
+    
+    // Get image metadata
+    const metadata = await sharp(inputPath).metadata();
+    console.log(`Image metadata:`, { 
+      format: metadata.format, 
+      width: metadata.width, 
+      height: metadata.height 
+    });
+    
+    // If it's already a web-compatible format and reasonably sized, just rename it
+    if (webCompatibleFormats.includes(metadata.format) && 
+        metadata.width <= 2048 && metadata.height <= 2048) {
+      console.log(`Image is already web-compatible, keeping original format`);
+      
+      // If input and output paths are different, move/rename the file
+      if (inputPath !== outputPath) {
+        fs.renameSync(inputPath, outputPath);
+      }
+      return outputPath;
+    }
+    
+    // Convert to JPEG with optimization
+    await sharp(inputPath)
+      .resize(2048, 2048, { 
+        fit: 'inside', 
+        withoutEnlargement: true 
+      })
+      .jpeg({ 
+        quality: 85, 
+        progressive: true 
+      })
+      .toFile(outputPath);
+      
+    console.log(`Successfully converted ${originalName} to optimized JPEG`);
+    
+    // Remove original file if conversion was successful and paths are different
+    if (inputPath !== outputPath && fs.existsSync(outputPath)) {
+      fs.unlinkSync(inputPath);
+      console.log(`Removed original file: ${inputPath}`);
+    }
+    
+    return outputPath;
+    
+  } catch (error) {
+    console.error(`Error converting image ${originalName}:`, error);
+    
+    // If conversion fails, try to keep the original file
+    if (fs.existsSync(inputPath) && inputPath !== outputPath) {
+      try {
+        fs.renameSync(inputPath, outputPath);
+        console.log(`Conversion failed, kept original file as fallback`);
+        return outputPath;
+      } catch (renameError) {
+        console.error(`Failed to rename original file:`, renameError);
+      }
+    }
+    
+    throw error;
+  }
 };
 
 module.exports = (pool) => {
@@ -248,7 +332,7 @@ module.exports = (pool) => {
         }
       }
 
-      // Handle photo uploads
+      // Handle photo uploads with automatic conversion
       if (req.files && req.files.length > 0) {
         for (let i = 0; i < req.files.length; i++) {
           const file = req.files[i];
@@ -259,18 +343,44 @@ module.exports = (pool) => {
             continue; // Skip this file
           }
           
-          // Store the file path relative to the uploads directory
-          const imageUrl = `/uploads/${file.filename}`;
-          
           try {
+            // Get the original file path
+            const originalPath = file.path;
+            
+            // Generate a new filename with .jpg extension for converted images
+            const fileExtension = path.extname(file.filename).toLowerCase();
+            const baseName = path.basename(file.filename, fileExtension);
+            const convertedFilename = `${baseName}.jpg`;
+            const convertedPath = path.join(path.dirname(originalPath), convertedFilename);
+            
+            // Convert the image (will optimize and convert HEIC/HEIF to JPEG)
+            const finalPath = await convertImage(originalPath, convertedPath, file.originalname);
+            const finalFilename = path.basename(finalPath);
+            
+            // Store the file path relative to the uploads directory
+            const imageUrl = `/uploads/${finalFilename}`;
+            
+            // Save to database
             await pool.query(
               'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
               [listing.id, imageUrl, i]
             );
-            console.log('Successfully saved image:', imageUrl);
-          } catch (dbError) {
-            console.error('Database error saving image:', dbError);
-            // Continue with other files even if one fails
+            console.log('Successfully processed and saved image:', imageUrl);
+            
+          } catch (error) {
+            console.error('Error processing image:', file.originalname, error);
+            
+            // Fallback: try to save the original file if conversion fails
+            try {
+              const imageUrl = `/uploads/${file.filename}`;
+              await pool.query(
+                'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
+                [listing.id, imageUrl, i]
+              );
+              console.log('Saved original image as fallback:', imageUrl);
+            } catch (dbError) {
+              console.error('Database error saving image:', dbError);
+            }
           }
         }
       }
@@ -377,13 +487,19 @@ module.exports = (pool) => {
         }
       }
 
-      // Handle photo replacements
+      // Handle photo replacements with automatic conversion
       if (req.files && req.files.length > 0 && photo_indices) {
         const photoIndices = Array.isArray(photo_indices) ? photo_indices : [photo_indices];
         
         for (let i = 0; i < req.files.length; i++) {
           const file = req.files[i];
           const photoIndex = parseInt(photoIndices[i]);
+          
+          // Validate file type
+          if (!file.mimetype.startsWith('image/')) {
+            console.error('Invalid file type:', file.mimetype, 'for file:', file.originalname);
+            continue; // Skip this file
+          }
           
           // Get the current image to replace
           const currentImageResult = await pool.query(
@@ -394,22 +510,54 @@ module.exports = (pool) => {
           if (currentImageResult.rows.length > 0) {
             const currentImage = currentImageResult.rows[0];
             
-            // Delete the old file if it exists
-            if (currentImage.url && currentImage.url.startsWith('/uploads/')) {
-              const oldFilePath = path.join(__dirname, '..', currentImage.url);
-              if (fs.existsSync(oldFilePath)) {
-                fs.unlinkSync(oldFilePath);
+            try {
+              // Delete the old file if it exists
+              if (currentImage.url && currentImage.url.startsWith('/uploads/')) {
+                const oldFilePath = path.join(__dirname, '..', currentImage.url);
+                if (fs.existsSync(oldFilePath)) {
+                  fs.unlinkSync(oldFilePath);
+                }
+              }
+              
+              // Get the original file path
+              const originalPath = file.path;
+              
+              // Generate a new filename with .jpg extension for converted images
+              const fileExtension = path.extname(file.filename).toLowerCase();
+              const baseName = path.basename(file.filename, fileExtension);
+              const convertedFilename = `${baseName}.jpg`;
+              const convertedPath = path.join(path.dirname(originalPath), convertedFilename);
+              
+              // Convert the image (will optimize and convert HEIC/HEIF to JPEG)
+              const finalPath = await convertImage(originalPath, convertedPath, file.originalname);
+              const finalFilename = path.basename(finalPath);
+              
+              // Store the new file path
+              const imageUrl = `/uploads/${finalFilename}`;
+              
+              // Update the database record
+              await pool.query(
+                'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
+                [imageUrl, id, photoIndex]
+              );
+              
+              console.log('Successfully processed and replaced image:', imageUrl);
+              
+            } catch (error) {
+              console.error('Error processing replacement image:', file.originalname, error);
+              
+              // Fallback: try to save the original file if conversion fails
+              try {
+                const imageUrl = `/uploads/${file.filename}`;
+                await pool.query(
+                  'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
+                  [imageUrl, id, photoIndex]
+                );
+                console.log('Saved original replacement image as fallback:', imageUrl);
+              } catch (dbError) {
+                console.error('Database error updating image:', dbError);
               }
             }
-            
-            // Store the new file
-            const imageUrl = `/uploads/${file.filename}`;
-            
-            // Update the database record
-            await pool.query(
-              'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
-              [imageUrl, id, photoIndex]
-            );
           }
         }
       }

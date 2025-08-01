@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const sharp = require('sharp');
+const fs = require('fs');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -63,6 +65,64 @@ const handleMulterError = (err, req, res, next) => {
     return res.status(400).json({ error: err.message });
   }
   next();
+};
+
+// Helper function to convert avatar images to web-compatible formats
+const convertAvatar = async (inputPath, outputPath, originalName) => {
+  try {
+    console.log(`Converting avatar: ${originalName}`);
+    
+    // Check if file exists
+    if (!fs.existsSync(inputPath)) {
+      throw new Error(`Input file does not exist: ${inputPath}`);
+    }
+    
+    // Get image metadata
+    const metadata = await sharp(inputPath).metadata();
+    console.log(`Avatar metadata:`, { 
+      format: metadata.format, 
+      width: metadata.width, 
+      height: metadata.height 
+    });
+    
+    // Convert to JPEG with avatar-specific optimization
+    await sharp(inputPath)
+      .resize(400, 400, { 
+        fit: 'cover', 
+        position: 'center'
+      })
+      .jpeg({ 
+        quality: 90, 
+        progressive: true 
+      })
+      .toFile(outputPath);
+      
+    console.log(`Successfully converted avatar ${originalName} to optimized JPEG`);
+    
+    // Remove original file if conversion was successful and paths are different
+    if (inputPath !== outputPath && fs.existsSync(outputPath)) {
+      fs.unlinkSync(inputPath);
+      console.log(`Removed original avatar file: ${inputPath}`);
+    }
+    
+    return outputPath;
+    
+  } catch (error) {
+    console.error(`Error converting avatar ${originalName}:`, error);
+    
+    // If conversion fails, try to keep the original file
+    if (fs.existsSync(inputPath) && inputPath !== outputPath) {
+      try {
+        fs.renameSync(inputPath, outputPath);
+        console.log(`Avatar conversion failed, kept original file as fallback`);
+        return outputPath;
+      } catch (renameError) {
+        console.error(`Failed to rename original avatar file:`, renameError);
+      }
+    }
+    
+    throw error;
+  }
 };
 
 module.exports = (pool) => {
@@ -242,35 +302,45 @@ module.exports = (pool) => {
         userId: id
       });
 
-      // Validate file type (more comprehensive check)
-      const allowedMimeTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-        'image/heic', 'image/heif', 'image/svg+xml', 'image/bmp', 'image/tiff'
-      ];
-      
-      const allowedExtensions = [
-        '.jpg', '.jpeg', '.png', '.gif', '.webp', 
-        '.heic', '.heif', '.svg', '.bmp', '.tiff', '.tif'
-      ];
-      
-      const fileExtension = path.extname(req.file.originalname).toLowerCase();
-      const isValidMimeType = req.file.mimetype.startsWith('image/') || allowedMimeTypes.includes(req.file.mimetype.toLowerCase());
-      const isValidExtension = allowedExtensions.includes(fileExtension);
-      
-      if (!isValidMimeType && !isValidExtension) {
+      // Validate file type (accept all image files for conversion)
+      if (!req.file.mimetype.startsWith('image/')) {
         console.error('Invalid avatar file type:', {
           mimetype: req.file.mimetype,
-          extension: fileExtension,
           originalname: req.file.originalname
         });
         return res.status(400).json({ 
-          error: 'Only image files are allowed for avatar uploads',
-          supportedFormats: 'JPG, PNG, GIF, WebP, HEIC, HEIF, SVG, BMP, TIFF'
+          error: 'Only image files are allowed for avatar uploads'
         });
       }
 
+      // Convert the avatar image to web-compatible format
+      let finalFilename;
+      try {
+        // Get the original file path
+        const originalPath = req.file.path;
+        
+        // Generate a new filename with .jpg extension for converted images
+        const fileExtension = path.extname(req.file.filename).toLowerCase();
+        const baseName = path.basename(req.file.filename, fileExtension);
+        const convertedFilename = `${baseName}.jpg`;
+        const convertedPath = path.join(path.dirname(originalPath), convertedFilename);
+        
+        // Convert the avatar (will optimize and convert HEIC/HEIF to JPEG)
+        const finalPath = await convertAvatar(originalPath, convertedPath, req.file.originalname);
+        finalFilename = path.basename(finalPath);
+        
+        console.log('Successfully processed avatar:', finalFilename);
+        
+      } catch (error) {
+        console.error('Error processing avatar:', req.file.originalname, error);
+        
+        // Fallback: use original file if conversion fails
+        finalFilename = req.file.filename;
+        console.log('Using original avatar as fallback:', finalFilename);
+      }
+
       // Create the avatar URL (this will be served from /uploads/ endpoint)
-      const avatarUrl = `${process.env.API_BASE_URL || 'http://localhost:4000'}/uploads/${req.file.filename}`;
+      const avatarUrl = `${process.env.API_BASE_URL || 'http://localhost:4000'}/uploads/${finalFilename}`;
       
       // Update the user's avatar_url in the database
       const { rows } = await pool.query(

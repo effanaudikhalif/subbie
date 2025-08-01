@@ -74,10 +74,27 @@ export default function PhotoUpload({
 
   const handleFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    const imageFiles = fileArray.filter(file => file.type.startsWith('image/'));
+    
+    // Filter for image files (we now accept all image formats including HEIC/HEIF)
+    const imageFiles = fileArray.filter(file => 
+      file.type.startsWith('image/') || 
+      file.name.toLowerCase().endsWith('.heic') ||
+      file.name.toLowerCase().endsWith('.heif')
+    );
+    
+    const nonImageFiles = fileArray.filter(file => 
+      !file.type.startsWith('image/') && 
+      !file.name.toLowerCase().endsWith('.heic') &&
+      !file.name.toLowerCase().endsWith('.heif')
+    );
+
+    if (nonImageFiles.length > 0) {
+      alert('Some files are not images. Please select image files only.');
+      return;
+    }
     
     if (imageFiles.length === 0) {
-      alert('Please select image files only.');
+      alert('Please select image files.');
       return;
     }
 
@@ -264,7 +281,7 @@ export default function PhotoUpload({
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,.heic,.heif"
             onChange={handleFileInput}
             className="hidden"
           />
@@ -284,7 +301,8 @@ export default function PhotoUpload({
                 {isMobile ? 'Tap to select photos' : 'Drag and drop or click to browse'}
               </p>
               <p className="text-xs text-gray-400 mt-2">
-                Upload {minPhotos}-{maxPhotos} photos • Max 10MB each
+                Upload {minPhotos}-{maxPhotos} photos • Max 10MB each<br/>
+                Supports all image formats including HEIC/HEIF from iPhone
               </p>
             </div>
 
@@ -455,7 +473,7 @@ export default function PhotoUpload({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         onChange={handleFileInput}
         className="hidden"
       />
