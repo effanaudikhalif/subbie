@@ -151,24 +151,39 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
       return;
     }
     try {
-              const res = await fetch(buildApiUrl('/api/host-reviews'), {
-        method: 'POST',
+      // Determine if we're editing or creating
+      const isEditing = editingReviewId !== null;
+      const url = isEditing 
+        ? buildApiUrl(`/api/host-reviews/${editingReviewId}`)
+        : buildApiUrl('/api/host-reviews');
+      const method = isEditing ? 'PUT' : 'POST';
+      
+      // Prepare request body
+      const requestBody: any = {
+        cleanliness_rating: reviewForm.cleanliness_rating,
+        accuracy_rating: reviewForm.accuracy_rating,
+        communication_rating: reviewForm.communication_rating,
+        location_rating: reviewForm.location_rating,
+        value_rating: reviewForm.value_rating,
+        comment: reviewForm.comment,
+        reviewer_id: reviewer.id, // Required for validation in PUT request
+      };
+      
+      // Add additional fields for POST (new review)
+      if (!isEditing) {
+        requestBody.listing_id = listingId;
+        requestBody.reviewee_id = reviewee.id;
+      }
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          listing_id: listingId,
-          reviewer_id: reviewer.id,
-          reviewee_id: reviewee.id,
-          cleanliness_rating: reviewForm.cleanliness_rating,
-          accuracy_rating: reviewForm.accuracy_rating,
-          communication_rating: reviewForm.communication_rating,
-          location_rating: reviewForm.location_rating,
-          value_rating: reviewForm.value_rating,
-          comment: reviewForm.comment,
-        })
+        body: JSON.stringify(requestBody)
       });
+      
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || 'Failed to submit review.');
+        alert(err.error || `Failed to ${isEditing ? 'update' : 'submit'} review.`);
         return;
       }
       // Success: close modal, reset form, refresh reviews
@@ -189,7 +204,57 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
         onReviewSubmitted();
       }
     } catch (err) {
-      alert('Failed to submit review.');
+      alert(`Failed to ${editingReviewId ? 'update' : 'submit'} review.`);
+    }
+  };
+
+  // Handle review deletion
+  const handleReviewDelete = async () => {
+    if (!editingReviewId || !reviewer?.id) {
+      alert('Unable to delete review.');
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(buildApiUrl(`/api/host-reviews/${editingReviewId}`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewer_id: reviewer.id,
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Failed to delete review.');
+        return;
+      }
+
+      // Success: close modal, reset form, refresh reviews
+      setShowReviewModal(false);
+      setReviewForm({
+        cleanliness_rating: 0,
+        accuracy_rating: 0,
+        communication_rating: 0,
+        location_rating: 0,
+        value_rating: 0,
+        comment: '',
+      });
+      setEditingReviewId(null);
+      setLoading(true);
+      await fetchReviews();
+      
+      // Notify parent component to refresh ratings
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
+    } catch (err) {
+      alert('Failed to delete review.');
     }
   };
 
@@ -385,28 +450,31 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
   return (
     <>
       <div className="space-y-8">
-        {/* If no reviews, show the message */}
-        {reviews.length === 0 && (
-          <div className="mt-4">
-            <button
-              className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-              onClick={() => setShowReviewModal(true)}
-            >
-              Write a review
-            </button>
-          </div>
-        )}
+        {/* Note: "Write a review" button is now handled by the parent listing page */}
 
         {/* Write a Review Popup */}
         {showReviewModal && (
           <div className="fixed inset-0 backdrop-blur-sm bg-black/20 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-lg w-full max-h-[80vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900">Write a review</h3>
-                <button
-                  onClick={() => setShowReviewModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {editingReviewId ? 'Edit review' : 'Write a review'}
+                </h3>
+                                  <button
+                    onClick={() => {
+                      setShowReviewModal(false);
+                      setEditingReviewId(null);
+                      setReviewForm({
+                        cleanliness_rating: 0,
+                        accuracy_rating: 0,
+                        communication_rating: 0,
+                        location_rating: 0,
+                        value_rating: 0,
+                        comment: '',
+                      });
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -447,12 +515,21 @@ const ReviewsSection: React.FC<ReviewsSectionProps> = ({ listingId, reviewer, re
                     rows={3}
                   />
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-3">
+                  {editingReviewId && (
+                    <button
+                      type="button"
+                      onClick={handleReviewDelete}
+                      className="bg-white border-2 border-red-200 text-red-600 px-4 py-2 rounded-lg font-medium hover:bg-red-50 hover:border-red-300 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
                   <button
                     type="submit"
-                    className="ml-2 bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                    className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                   >
-                    Submit
+                    {editingReviewId ? 'Update' : 'Submit'}
                   </button>
                 </div>
               </form>

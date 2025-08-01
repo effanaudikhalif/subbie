@@ -528,67 +528,9 @@ export default function ListingDetails() {
     };
   } | null>(null);
 
-  // State for review modal
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewForm, setReviewForm] = useState({
-    cleanliness_rating: 0,
-    accuracy_rating: 0,
-    communication_rating: 0,
-    location_rating: 0,
-    value_rating: 0,
-    comment: '',
-  });
 
-  // Handle review form submission
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !host || !user.id || !host.id) {
-      alert('You must be logged in and viewing a valid listing to submit a review.');
-      return;
-    }
-    // Prevent submission if any rating is 0
-    const { cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating } = reviewForm;
-    if ([cleanliness_rating, accuracy_rating, communication_rating, location_rating, value_rating].some(r => r === 0)) {
-      alert('Please provide a rating for all categories.');
-      return;
-    }
-    try {
-              const res = await fetch(buildApiUrl('/api/host-reviews'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          listing_id: listing?.id,
-          reviewer_id: user.id,
-          reviewee_id: host.id,
-          cleanliness_rating: reviewForm.cleanliness_rating,
-          accuracy_rating: reviewForm.accuracy_rating,
-          communication_rating: reviewForm.communication_rating,
-          location_rating: reviewForm.location_rating,
-          value_rating: reviewForm.value_rating,
-          comment: reviewForm.comment,
-        })
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert(err.error || 'Failed to submit review.');
-        return;
-      }
-      // Success: close modal, reset form, refresh ratings
-      setShowReviewModal(false);
-      setReviewForm({
-        cleanliness_rating: 0,
-        accuracy_rating: 0,
-        communication_rating: 0,
-        location_rating: 0,
-        value_rating: 0,
-        comment: '',
-      });
-      // Refresh the ratings to show the new review
-      await fetchListingRatings();
-    } catch (err) {
-      alert('Failed to submit review.');
-    }
-  };
+
+
 
   // Handler for address selection from autocomplete
   const handleCommuteAddressSelect = (addressData: any) => {
@@ -1518,7 +1460,7 @@ export default function ListingDetails() {
               </div>
 
               {/* Reviews Section with Rating Card */}
-              <div className="mt-8">
+              <div className={`mt-8 ${isMobile && otherListings.length === 0 ? 'pb-20' : ''}`}>
                 <h3 className="text-black font-semibold text-xl mb-6">Reviews</h3>
                 {listingRatings && listingRatings.totalReviews === 0 ? (
                   /* No Reviews Layout - Rating Card on Left */
@@ -1559,7 +1501,10 @@ export default function ListingDetails() {
                       {user && host && user.id !== host.id && (
                         <div className="mt-4">
                           <button
-                            onClick={() => setShowReviewModal(true)}
+                            onClick={() => {
+                              const event = new CustomEvent('openReviewModal');
+                              window.dispatchEvent(event);
+                            }}
                             className="bg-white border-2 border-gray-200 text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors w-full"
                           >
                             Write a review
@@ -1568,8 +1513,15 @@ export default function ListingDetails() {
                       )}
                     </div>
                     
-                    {/* Empty Right Side */}
-                    <div className="flex-1"></div>
+                    {/* Reviews Section - Always render to ensure event listeners are set up */}
+                    <div className="flex-1">
+                      <ReviewsSection
+                        listingId={listing.id}
+                        reviewer={user as any}
+                        reviewee={host as any}
+                        onReviewSubmitted={fetchListingRatings}
+                      />
+                    </div>
                   </div>
                 ) : (
                   /* Has Reviews Layout - Rating Card on Left, Reviews on Right */
@@ -1632,6 +1584,7 @@ export default function ListingDetails() {
                         listingId={listing.id}
                         reviewer={user as any}
                         reviewee={host as any}
+                        onReviewSubmitted={fetchListingRatings}
                       />
                     </div>
                   </div>
