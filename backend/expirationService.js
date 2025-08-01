@@ -1,10 +1,10 @@
 const cron = require('node-cron');
-const MockEmailService = require('./mockEmailService');
+const EmailNotificationService = require('./emailNotifications');
 
 class ExpirationService {
   constructor(pool) {
     this.pool = pool;
-    this.emailNotifications = new MockEmailService();
+    this.emailNotifications = new EmailNotificationService();
   }
 
   // Function to automatically expire listings that are past their end date
