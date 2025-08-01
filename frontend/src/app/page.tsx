@@ -236,16 +236,39 @@ export default function Page() {
             controlsList="nodownload"
             onLoadedData={(e) => {
               const video = e.target as HTMLVideoElement;
-              // If video can't autoplay, pause it to freeze the first frame
+              // If video can't autoplay, show fallback image
               video.play().catch(() => {
-                video.pause();
-                video.currentTime = 0; // Go to first frame
+                video.style.display = 'none';
+                const fallbackImage = document.getElementById('fallback-image');
+                if (fallbackImage) {
+                  fallbackImage.style.display = 'block';
+                }
               });
+            }}
+            onError={() => {
+              // If video fails to load, show fallback image
+              const videoElement = document.querySelector('video') as HTMLVideoElement;
+              if (videoElement) {
+                videoElement.style.display = 'none';
+              }
+              const fallbackImage = document.getElementById('fallback-image');
+              if (fallbackImage) {
+                fallbackImage.style.display = 'block';
+              }
             }}
           >
             <source src="/icons/hook.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
+          
+          {/* Fallback Image */}
+          <img 
+            id="fallback-image"
+            src="/icons/fallback.png" 
+            alt="Sublet Buddy"
+            className="w-full h-full object-cover hidden"
+            style={{ display: 'none' }}
+          />
           
           {/* Dark Overlay */}
           <div className="absolute inset-0 bg-black/20"></div>
