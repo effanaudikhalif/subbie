@@ -256,6 +256,11 @@ export default function BecomeHost() {
       start_date: startDate ? startDate.toISOString().split('T')[0] : '',
       end_date: endDate ? endDate.toISOString().split('T')[0] : '',
     }));
+    
+    // Auto-close calendar when both dates are selected
+    if (startDate && endDate) {
+      setShowCalendar(false);
+    }
   };
 
   // Close calendar when clicking outside
@@ -1322,8 +1327,14 @@ export default function BecomeHost() {
                   <div className="absolute top-full left-0 mt-2 z-50 calendar-container">
                     <CompactCalendar
                       value={{
-                        startDate: formData.start_date ? new Date(formData.start_date) : null,
-                        endDate: formData.end_date ? new Date(formData.end_date) : null
+                        startDate: formData.start_date ? (() => {
+                          const date = new Date(formData.start_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                        })() : null,
+                        endDate: formData.end_date ? (() => {
+                          const date = new Date(formData.end_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                        })() : null
                       }}
                       onChange={handleCalendarChange}
                     />

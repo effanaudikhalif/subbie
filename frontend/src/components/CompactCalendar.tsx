@@ -135,19 +135,20 @@ export default function CompactCalendar({ value, onChange, className = "" }: Com
             style={{ cursor: dayData && dayData.isAvailable ? 'pointer' : 'default' }}
           >
             {dayData ? (
-              <div className={
-                `w-6 h-6 rounded-full flex items-center justify-center mx-auto
-                ${dayData.isStartDate
-                  ? 'text-white font-semibold'
-                  : dayData.isEndDate
-                    ? 'text-white font-semibold'
-                    : dayData.isSelected
-                      ? 'text-[#368a98] border border-[#368a98]'
-                      : dayData.isAvailable
-                        ? 'hover:bg-gray-100 text-gray-800 border border-transparent'
-                        : 'text-gray-400'}
-                ${dayData.isStartDate || dayData.isEndDate ? 'bg-[#368a98] border-[#368a98]' : dayData.isSelected ? 'bg-[#368a98]/20' : ''}`
-              }>
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center mx-auto"
+                style={{
+                  // Dark shade for start and end dates (check-in/check-out)
+                  backgroundColor: dayData.isStartDate || dayData.isEndDate ? '#368a98' : 
+                                 dayData.isSelected ? 'rgba(54, 138, 152, 0.2)' : 'transparent',
+                  border: dayData.isStartDate || dayData.isEndDate ? '1px solid #368a98' :
+                         dayData.isSelected ? '1px solid #368a98' : '1px solid transparent',
+                  color: dayData.isStartDate || dayData.isEndDate ? 'white' :
+                        dayData.isSelected ? '#368a98' :
+                        dayData.isAvailable ? '#374151' : '#9CA3AF',
+                  fontWeight: dayData.isStartDate || dayData.isEndDate ? '600' : 'normal'
+                }}
+              >
                 {dayData.day}
               </div>
             ) : (
@@ -157,7 +158,10 @@ export default function CompactCalendar({ value, onChange, className = "" }: Com
         ))}
       </div>
       <div className="mt-2 text-xs text-gray-600 text-center">
-        <span className="inline-block w-3 h-3 bg-[#368a98] border border-[#368a98] rounded-full ml-4 mr-1"></span>
+        <span 
+          className="inline-block w-3 h-3 rounded-full ml-4 mr-1"
+          style={{ backgroundColor: '#368a98', border: '1px solid #368a98' }}
+        ></span>
         Selected
       </div>
     </div>
