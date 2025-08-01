@@ -120,10 +120,20 @@ export default function SearchBar({
   }, [showCalendar, setShowCalendar]);
 
   const checkIn = dateRange[0].startDate
-    ? dateRange[0].startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    ? dateRange[0].startDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
     : 'Add dates';
   const checkOut = dateRange[0].endDate
-    ? dateRange[0].endDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    ? dateRange[0].endDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
     : 'Add dates';
 
   return (
@@ -216,15 +226,10 @@ export default function SearchBar({
               endDate: dateRange[0]?.endDate ? new Date(dateRange[0].endDate) : null
             }}
             onChange={({ startDate, endDate }) => {
-              // Fix timezone issues
-              if (startDate && endDate) {
-                // Create local dates to avoid timezone issues
-                const localStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-                const localEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-                setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
-              } else {
-                setDateRange([{ startDate, endDate, key: 'selection' }]);
-              }
+              // Always create local dates to avoid timezone issues
+              const localStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
+              const localEndDate = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+              setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
             }}
           />
         </div>
