@@ -61,7 +61,6 @@ export default function SearchBar({
         
         // Add Safari-specific check
         if (!inputRef.current || !(inputRef.current instanceof HTMLInputElement)) {
-          console.log('Input element not available for autocomplete');
           return;
         }
         
@@ -119,20 +118,21 @@ export default function SearchBar({
     };
   }, [showCalendar, setShowCalendar]);
 
-  const checkIn = dateRange[0].startDate
-    ? (() => {
-        const date = dateRange[0].startDate;
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-      })()
-    : 'Add dates';
-  const checkOut = dateRange[0].endDate
-    ? (() => {
-        const date = dateRange[0].endDate;
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-      })()
-    : 'Add dates';
+  // Simple date formatting - no timezone nonsense
+  const formatSimpleDate = (date: Date | null) => {
+    if (!date) return 'Add dates';
+    
+    // Get the date parts directly - no timezone conversion
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return `${months[month]} ${day}, ${year}`;
+  };
+
+  const checkIn = formatSimpleDate(dateRange[0].startDate);
+  const checkOut = formatSimpleDate(dateRange[0].endDate);
 
   return (
     <div className={`w-full bg-white rounded-2xl shadow flex items-center px-1 py-0 relative border border-gray-200 ${isExtraExtraSmallSize ? 'max-w-lg' : 'max-w-lg'}`}>
@@ -224,16 +224,11 @@ export default function SearchBar({
               endDate: dateRange[0]?.endDate || null
             }}
             onChange={({ startDate, endDate }) => {
-              // Debug logging
-              console.log('Calendar onChange - Raw dates:', { startDate, endDate });
+              // Simple: just create clean local dates
+              const cleanStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
+              const cleanEndDate = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
               
-              // Always create local dates to avoid timezone issues
-              const localStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
-              const localEndDate = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
-              
-              console.log('Calendar onChange - Local dates:', { localStartDate, localEndDate });
-              
-              setDateRange([{ startDate: localStartDate, endDate: localEndDate, key: 'selection' }]);
+              setDateRange([{ startDate: cleanStartDate, endDate: cleanEndDate, key: 'selection' }]);
             }}
           />
         </div>
