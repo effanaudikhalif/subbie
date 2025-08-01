@@ -1860,6 +1860,7 @@ export default function ListingDetails() {
             {user && isMobile && (
               <MobileFooter 
                 isListingPage={true}
+                isOwnListing={user?.id === host?.id}
                 price={(() => {
                   const { start, end } = selectedRange;
                   let nights = 1;

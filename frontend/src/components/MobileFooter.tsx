@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 interface MobileFooterProps {
   isVisible?: boolean;
   isListingPage?: boolean;
+  isOwnListing?: boolean;
   onAvailableDatesClick?: () => void;
   onMessageClick?: () => void;
   price?: string;
@@ -16,6 +17,7 @@ interface MobileFooterProps {
 export default function MobileFooter({ 
   isVisible = true, 
   isListingPage = false,
+  isOwnListing = false,
   onAvailableDatesClick,
   onMessageClick,
   price,
@@ -62,6 +64,20 @@ export default function MobileFooter({
 
   // If it's a listing page, show the custom footer
   if (isListingPage) {
+    // If user is viewing their own listing, show special message
+    if (isOwnListing) {
+      return (
+        <div 
+          ref={footerRef}
+          className={`fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-center z-50 shadow-lg transition-transform duration-300 ${
+            isFooterVisible ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <span className="text-gray-600 text-sm font-medium">This is your own listing</span>
+        </div>
+      );
+    }
+
     return (
       <div 
         ref={footerRef}
