@@ -6,7 +6,7 @@ import { buildApiUrl, buildAvatarUrl } from '../../../utils/api';
 import Link from "next/link";
 import Navbar from "../../../components/Navbar";
 import MobileNavbar from "../../../components/MobileNavbar";
-import SearchBar from "../../../components/Searchbar";
+import ListingCard from "../../../components/ListingCard";
 import { useAuth } from "../../../hooks/useAuth";
 import MobileFooter from "../../../components/MobileFooter";
 import LoadingPage from "../../../components/LoadingPage";
@@ -38,7 +38,8 @@ interface HostReview {
 }
 
 function ProfilePageContent() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -46,7 +47,7 @@ function ProfilePageContent() {
   const [userListings, setUserListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [averageRatings, setAverageRatings] = useState<Record<string, { average_rating: number; total_reviews: number }>>({});
 
   // SearchBar state
   const [where, setWhere] = useState("");
@@ -57,8 +58,6 @@ function ProfilePageContent() {
       key: "selection",
     },
   ]);
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [guests, setGuests] = useState("");
 
   const handleSearch = () => {
     const checkin = dateRange[0].startDate ? new Date(dateRange[0].startDate).toISOString().slice(0,10) : '';
@@ -73,8 +72,7 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-      setIsSmallScreen(window.innerWidth <= 640);
+      setIsMobile(window.innerWidth <= 1024);
     };
 
     checkMobile();
@@ -138,10 +136,23 @@ function ProfilePageContent() {
       }
     }
 
+    async function fetchAverageRatings() {
+      try {
+        const response = await fetch(buildApiUrl('/api/listings/average-ratings'));
+        if (response.ok) {
+          const ratingsData = await response.json();
+          setAverageRatings(ratingsData);
+        }
+      } catch (error) {
+        console.error('Error fetching average ratings:', error);
+      }
+    }
+
     if (id) {
       fetchProfile();
       fetchHostReviews();
       fetchUserListings();
+      fetchAverageRatings();
     }
   }, [id]);
 
@@ -151,9 +162,19 @@ function ProfilePageContent() {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <MobileNavbar />
+      <div className="min-h-screen bg-white pt-32">
+        {isMobile ? (
+          <MobileNavbar 
+            where={where}
+            setWhere={setWhere}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            onSearch={handleSearch}
+            isProfilePage={true}
+          />
+        ) : (
+          <Navbar />
+        )}
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">User Not Found</h1>
@@ -163,21 +184,29 @@ function ProfilePageContent() {
             </Link>
           </div>
         </div>
-        <MobileFooter />
+        {isMobile && <MobileFooter />}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <MobileNavbar />
+    <div className="min-h-screen bg-white pt-32">
+      {isMobile ? (
+        <MobileNavbar 
+          where={where}
+          setWhere={setWhere}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
+          onSearch={handleSearch}
+          isProfilePage={true}
+        />
+      ) : (
+        <Navbar />
+      )}
       
-      {/* Main Content */}
-      <div className="pt-8 pb-20">
-        <div className="max-w-4xl mx-auto px-4">
-          {/* Profile Header */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="flex items-start justify-center min-h-screen pt-4">
+        <div className={`flex items-start gap-6 lg:gap-12 pb-20 ${isMobile ? 'flex-col pb-35' : 'flex-row'}`}>
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm w-80 sm:w-96">
             <div className="flex flex-col items-center">
               {/* Avatar */}
               <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gray-200 flex items-center justify-center">
@@ -226,8 +255,8 @@ function ProfilePageContent() {
             </div>
           </div>
           
-          {/* Personal Information */}
-          <div className="w-full sm:w-96 mx-auto bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+          {/* Personal Information - Outside container */}
+          <div className="w-80 sm:w-96 bg-white border border-gray-200 rounded-2xl p-4 sm:p-6 shadow-sm">
             <div className="space-y-4 sm:space-y-6 pt-2">
               
               {/* About Me Section */}
@@ -243,7 +272,7 @@ function ProfilePageContent() {
                 </div>
               )}
               
-              {/* Education Info */}
+              {/* Education Info - Matching About Me Style */}
               <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                 <div className="text-sm sm:text-base font-semibold text-gray-800 mb-2 flex items-center">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -252,79 +281,81 @@ function ProfilePageContent() {
                   EDUCATION
                 </div>
                 <div className="space-y-2 sm:space-y-3">
-                  {profile?.university_name && (
-                    <div className="flex items-center">
-                      <span className="text-sm sm:text-base font-medium text-gray-700 w-20">School:</span>
-                      <span className="text-sm sm:text-base text-black">{profile.university_name}</span>
-                    </div>
-                  )}
-                  {profile?.major && (
-                    <div className="flex items-center">
-                      <span className="text-sm sm:text-base font-medium text-gray-700 w-20">Major:</span>
-                      <span className="text-sm sm:text-base text-black">{profile.major}</span>
-                    </div>
-                  )}
-                  {profile?.education_level && (
-                    <div className="flex items-center">
-                      <span className="text-sm sm:text-base font-medium text-gray-700 w-20">Level:</span>
-                      <span className="text-sm sm:text-base text-black">{profile.education_level}</span>
-                    </div>
-                  )}
-                  {profile?.graduation_year && (
-                    <div className="flex items-center">
-                      <span className="text-sm sm:text-base font-medium text-gray-700 w-20">Graduation:</span>
-                      <span className="text-sm sm:text-base text-black">{profile.graduation_year}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between py-1 sm:py-2 border-b border-gray-200">
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">University</span>
+                    <span className="text-xs sm:text-sm text-black">{profile?.university_name || 'Not specified'}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-1 sm:py-2 border-b border-gray-200">
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Education Level</span>
+                    <span className="text-xs sm:text-sm text-black">
+                      {profile?.education_level 
+                        ? profile.education_level.charAt(0).toUpperCase() + profile.education_level.slice(1).toLowerCase()
+                        : 'Not specified'
+                      }
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-1 sm:py-2 border-b border-gray-200">
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Major</span>
+                    <span className="text-xs sm:text-sm text-black">{profile?.major || 'Not specified'}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between py-1 sm:py-2">
+                    <span className="text-xs sm:text-sm font-medium text-gray-600">Graduation Year</span>
+                    <span className="text-xs sm:text-sm text-black">{profile?.graduation_year || 'Not specified'}</span>
+                  </div>
                 </div>
               </div>
+              
+              {/* User Listings Gallery */}
+              {userListings.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                  <div className="text-sm sm:text-base font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    LISTINGS
+                  </div>
+                  <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                    {userListings.map((listing) => {
+                      const listingWithRatings = {
+                        ...listing,
+                        averageRating: averageRatings[listing.id]?.average_rating,
+                        totalReviews: averageRatings[listing.id]?.total_reviews
+                      };
+                      return (
+                        <div key={listing.id} className="flex-shrink-0">
+                          <ListingCard
+                            id={listing.id}
+                            title={listing.title}
+                            images={listing.images || []}
+                            name={listing.name}
+                            avatar_url={listing.avatar_url}
+                            university_name={listing.university_name}
+                            bedrooms={listing.bedrooms}
+                            bathrooms={listing.bathrooms}
+                            price_per_night={listing.price_per_night}
+                            averageRating={listingWithRatings.averageRating}
+                            totalReviews={listingWithRatings.totalReviews}
+                            amenities={listing.amenities || []}
+                            cardHeight="h-[300px]"
+                            cardMargin=""
+                            isOwnListing={user?.id === listing.user_id}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-
-          {/* User's Listings */}
-          {userListings.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-black mb-4">Listings by {profile.name}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {userListings.map((listing) => (
-                  <div key={listing.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <h3 className="font-semibold text-black mb-2">{listing.title}</h3>
-                    <p className="text-gray-600 text-sm mb-2">{listing.city}, {listing.state}</p>
-                    <p className="text-black font-semibold">${listing.price_per_night}/night</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Host Reviews */}
-          {hostReviews.length > 0 && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-black mb-4">Reviews for {profile.name}</h2>
-              <div className="space-y-4">
-                {hostReviews.map((review) => (
-                  <div key={review.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <span className="text-yellow-500 mr-1">★</span>
-                        <span className="text-sm text-gray-600">
-                          {((review.cleanliness_rating + review.accuracy_rating + review.communication_rating + review.location_rating + review.value_rating) / 5).toFixed(1)}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p className="text-black">{review.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
-      
-      <MobileFooter />
+
+      {/* Mobile Footer */}
+      {isMobile && <MobileFooter />}
     </div>
   );
 }
