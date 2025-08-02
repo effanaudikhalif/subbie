@@ -8,11 +8,13 @@ from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any, List
 import time
+import os
 
 logger = logging.getLogger(__name__)
 
-# Initialize Celery
-celery_app = Celery('notification_worker', broker='redis://localhost:6379/0')
+# Initialize Celery with environment-based Redis URL
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+celery_app = Celery('notification_worker', broker=redis_url)
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
@@ -39,6 +41,11 @@ class NotificationWorker:
         """Check for new messages and send notifications"""
         try:
             logger.info(f"🔍 Checking for new messages since {self.last_check_time}")
+            
+            # Clear processed messages periodically to prevent memory leaks
+            if len(self.processed_messages) > 1000:
+                logger.info("🧹 Clearing processed messages cache to prevent memory leak")
+                self.processed_messages.clear()
             
             # Get new messages from database
             new_messages = db.get_new_messages(self.last_check_time)

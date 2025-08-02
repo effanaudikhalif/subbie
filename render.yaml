@@ -5,7 +5,7 @@ services:
     rootDir: backend/python-email-service
     buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt
     startCommand: python main.py
-    plan: free
+    plan: starter
     healthCheckPath: /health
     envVars:
       - key: NEXT_PUBLIC_SUPABASE_URL
@@ -34,4 +34,14 @@ services:
         fromService:
           type: web
           name: subly-email-service
-          property: port 
+          property: port
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: subly-redis
+          property: connectionString
+
+  - type: redis
+    name: subly-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru 
