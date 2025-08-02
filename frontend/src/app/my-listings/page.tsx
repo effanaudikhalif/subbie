@@ -1036,7 +1036,7 @@ function MyListingsPageContent() {
                 <div className="text-center text-gray-500 py-8">Loading your listings...</div>
               ) : listings.length === 0 ? (
                 <div className="text-center text-gray-500 py-8">
-                  <p className="text-lg mb-4">You don't have any listings yet.</p>
+                  <p className="text-lg mb-4">You don't have any listings yet</p>
                 </div>
               ) : (
                 <>

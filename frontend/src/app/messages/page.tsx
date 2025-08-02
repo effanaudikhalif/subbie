@@ -356,7 +356,7 @@ function MessagesPageContent() {
                 {loading ? (
                   <div className="p-4 text-gray-400">Loading...</div>
                 ) : conversations.length === 0 ? (
-                  <div className="p-4 text-gray-400">No messages yet.</div>
+                  <div className="p-4 text-gray-400">No messages yet</div>
                 ) : (
                   <div className="p-4">
                     {conversations.map((c) => (
