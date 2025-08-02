@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: "Find and book student sublets near you",
   icons: {
     icon: "/icons/subbie.png",
+    shortcut: "/icons/subbie.png",
     apple: "/icons/subbie.png",
   },
 };
