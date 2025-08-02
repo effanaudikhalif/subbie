@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Amaranth } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const amaranth = Amaranth({
@@ -31,6 +32,7 @@ export default function RootLayout({
         <div className="w-full min-h-screen bg-white">
           {children}
         </div>
+        <Analytics />
       </body>
     </html>
   );
