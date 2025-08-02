@@ -1341,13 +1341,19 @@ export default function EditListing() {
                     <div>
                       <div className="text-sm text-gray-500">Start date</div>
                       <div className="text-black">
-                        {formData.start_date ? new Date(formData.start_date).toLocaleDateString() : 'Select start date'}
+                        {formData.start_date ? (() => {
+                          const date = new Date(formData.start_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
+                        })() : 'Select start date'}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-500">End date</div>
                       <div className="text-black">
-                        {formData.end_date ? new Date(formData.end_date).toLocaleDateString() : 'Select end date'}
+                        {formData.end_date ? (() => {
+                          const date = new Date(formData.end_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
+                        })() : 'Select end date'}
                       </div>
                     </div>
                   </div>

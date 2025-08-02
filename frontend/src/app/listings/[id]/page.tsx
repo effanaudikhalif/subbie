@@ -126,8 +126,10 @@ export default function ListingDetails() {
 
   function formatDateString(dateStr: string) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    // Create clean local date without timezone issues (following SearchBar pattern)
+    const date = new Date(dateStr + 'T00:00:00');
+    const cleanDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    return cleanDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   // State for selected range

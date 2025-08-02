@@ -77,7 +77,9 @@ const convertImage = async (inputPath, outputPath, originalName) => {
     console.log(`Image metadata:`, { 
       format: metadata.format, 
       width: metadata.width, 
-      height: metadata.height 
+      height: metadata.height,
+      orientation: metadata.orientation,
+      exif: metadata.exif ? 'present' : 'none'
     });
     
     // If it's already a web-compatible format and reasonably sized, just rename it
@@ -92,8 +94,9 @@ const convertImage = async (inputPath, outputPath, originalName) => {
       return outputPath;
     }
     
-    // Convert to JPEG with optimization
+    // Convert to JPEG with optimization, preserving orientation
     await sharp(inputPath)
+      .rotate() // Automatically rotate based on EXIF orientation data (fixes HEIC portrait/landscape issues)
       .resize(2048, 2048, { 
         fit: 'inside', 
         withoutEnlargement: true 

@@ -82,11 +82,14 @@ const convertAvatar = async (inputPath, outputPath, originalName) => {
     console.log(`Avatar metadata:`, { 
       format: metadata.format, 
       width: metadata.width, 
-      height: metadata.height 
+      height: metadata.height,
+      orientation: metadata.orientation,
+      exif: metadata.exif ? 'present' : 'none'
     });
     
-    // Convert to JPEG with avatar-specific optimization
+    // Convert to JPEG with avatar-specific optimization, preserving orientation
     await sharp(inputPath)
+      .rotate() // Automatically rotate based on EXIF orientation data (fixes HEIC portrait/landscape issues)
       .resize(400, 400, { 
         fit: 'cover', 
         position: 'center'

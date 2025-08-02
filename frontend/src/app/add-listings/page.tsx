@@ -251,10 +251,14 @@ export default function BecomeHost() {
   };
 
   const handleCalendarChange = ({ startDate, endDate }: { startDate: Date | null, endDate: Date | null }) => {
+    // Create clean local dates without timezone issues (following SearchBar pattern)
+    const cleanStartDate = startDate ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) : null;
+    const cleanEndDate = endDate ? new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate()) : null;
+    
     setFormData(prev => ({
       ...prev,
-      start_date: startDate ? startDate.toISOString().split('T')[0] : '',
-      end_date: endDate ? endDate.toISOString().split('T')[0] : '',
+      start_date: cleanStartDate ? cleanStartDate.toISOString().split('T')[0] : '',
+      end_date: cleanEndDate ? cleanEndDate.toISOString().split('T')[0] : '',
     }));
     
     // Auto-close calendar when both dates are selected
@@ -371,8 +375,14 @@ export default function BecomeHost() {
         if (!formData.end_date) {
           newErrors.end_date = 'End date is required';
         }
-        if (formData.start_date && formData.end_date && new Date(formData.start_date) >= new Date(formData.end_date)) {
-          newErrors.end_date = 'End date must be after start date';
+                if (formData.start_date && formData.end_date) {
+          const startDate = new Date(formData.start_date + 'T00:00:00');
+          const endDate = new Date(formData.end_date + 'T00:00:00');
+          const cleanStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+          const cleanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          if (cleanStartDate >= cleanEndDate) {
+            newErrors.end_date = 'End date must be after start date';
+          }
         }
         break;
     }
@@ -1312,13 +1322,19 @@ export default function BecomeHost() {
                     <div>
                       <div className="text-sm text-gray-500">Start date</div>
                       <div className="text-black">
-                        {formData.start_date ? new Date(formData.start_date).toLocaleDateString() : 'Select start date'}
+                        {formData.start_date ? (() => {
+                          const date = new Date(formData.start_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
+                        })() : 'Select start date'}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-500">End date</div>
                       <div className="text-black">
-                        {formData.end_date ? new Date(formData.end_date).toLocaleDateString() : 'Select end date'}
+                        {formData.end_date ? (() => {
+                          const date = new Date(formData.end_date + 'T00:00:00');
+                          return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
+                        })() : 'Select end date'}
                       </div>
                     </div>
                   </div>
