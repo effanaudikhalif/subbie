@@ -757,7 +757,7 @@ function MessagesPageContent() {
                 {/* Gallery */}
                 <div className="relative w-full h-48 mb-6 group">
                   <img
-                    src={images[currentImageIndex]?.url.startsWith('/uploads/') ? `http://localhost:4000${images[currentImageIndex].url}` : images[currentImageIndex].url}
+                    src={images[currentImageIndex]?.url.startsWith('/uploads/') ? buildApiUrl(images[currentImageIndex].url) : images[currentImageIndex].url}
                     alt={currentListing.title}
                     className="w-full h-48 object-cover rounded-xl"
                   />

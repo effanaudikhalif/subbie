@@ -489,6 +489,14 @@ export default function EditListing() {
         submitData.append('photo_indices', index.toString());
       });
 
+      // Send photo order information for existing images
+      const photoOrder = formData.photos.map((photo, index) => ({
+        url: typeof photo === 'string' ? photo.replace(buildApiUrl(''), '') : null, // Strip the base URL to get relative path
+        order: index,
+        isNew: photo instanceof File
+      }));
+      submitData.append('photo_order', JSON.stringify(photoOrder));
+
       // Debug: Log the amenities being sent
       console.log('Amenities being sent:', formData.amenities);
       console.log('Amenity codes that exist in frontend:', amenities.map(a => a.code));

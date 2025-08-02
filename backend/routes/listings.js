@@ -420,7 +420,7 @@ module.exports = (pool) => {
         title, description, address, unit, city, state, zip, country, neighborhood,
         latitude, longitude, price_per_night, start_date, end_date, max_occupancy, 
         property_type, guest_space, bedrooms, bathrooms, amenities, occupants,
-        photo_indices
+        photo_indices, photo_order
       } = req.body;
 
       // Update the listing
@@ -487,6 +487,27 @@ module.exports = (pool) => {
             'INSERT INTO listing_occupants (listing_id, occupant) VALUES ($1, $2)',
             [id, occupant]
           );
+        }
+      }
+
+      // Handle photo order updates
+      if (photo_order) {
+        try {
+          const photoOrderArray = JSON.parse(photo_order);
+          console.log('Photo order data received:', photoOrderArray);
+          
+          // Update order_index for existing images
+          for (const photoInfo of photoOrderArray) {
+            if (!photoInfo.isNew && photoInfo.url) {
+              await pool.query(
+                'UPDATE listing_images SET order_index = $1 WHERE listing_id = $2 AND url = $3',
+                [photoInfo.order, id, photoInfo.url]
+              );
+              console.log(`Updated order for image ${photoInfo.url} to ${photoInfo.order}`);
+            }
+          }
+        } catch (e) {
+          console.error('Error processing photo order:', e);
         }
       }
 
