@@ -206,11 +206,62 @@ async def send_test_email(email: str):
 @app.get("/config")
 async def get_config():
     """Get current email service configuration (without sensitive data)"""
+    from config import config
     return {
         "email_provider": email_service.provider,
         "from_email": email_service.from_email,
-        "from_name": email_service.from_name
+        "from_name": email_service.from_name,
+        "smtp_host": config.SMTP_HOST,
+        "smtp_port": config.SMTP_PORT,
+        "smtp_user": config.SMTP_USER,
+        "frontend_url": config.FRONTEND_URL,
+        "supabase_url": config.SUPABASE_URL[:20] + "..." if config.SUPABASE_URL else None,
+        "has_smtp_password": bool(config.SMTP_PASSWORD)
     }
+
+@app.get("/debug/messages")
+async def debug_messages():
+    """Debug endpoint to check for recent messages"""
+    try:
+        # Get recent messages from last 24 hours
+        from datetime import datetime, timedelta
+        last_24h = (datetime.now() - timedelta(hours=24)).isoformat()
+        
+        messages = db.get_new_messages(last_24h)
+        
+        return {
+            "status": "success",
+            "messages_count": len(messages),
+            "messages": messages[:5],  # Only show first 5 for debugging
+            "last_check_time": last_24h
+        }
+    except Exception as e:
+        logger.error(f"Error in debug messages: {e}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+@app.post("/debug/check-worker")
+async def debug_check_worker():
+    """Manually trigger the notification worker check"""
+    try:
+        from notification_worker import notification_worker
+        
+        # Manually trigger the check
+        notification_worker.check_new_messages()
+        
+        return {
+            "status": "success",
+            "message": "Worker check triggered manually",
+            "last_check_time": notification_worker.last_check_time
+        }
+    except Exception as e:
+        logger.error(f"Error triggering worker check: {e}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 if __name__ == "__main__":
     import uvicorn

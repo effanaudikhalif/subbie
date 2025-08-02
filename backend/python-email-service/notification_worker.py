@@ -37,26 +37,30 @@ class NotificationWorker:
     def check_new_messages(self):
         """Check for new messages and send notifications"""
         try:
-            logger.info(f"Checking for new messages since {self.last_check_time}")
+            logger.info(f"🔍 Checking for new messages since {self.last_check_time}")
             
             # Get new messages from database
             new_messages = db.get_new_messages(self.last_check_time)
             
             if not new_messages:
-                logger.info("No new messages found")
+                logger.info("✅ No new messages found to process")
                 return
             
-            logger.info(f"Found {len(new_messages)} new messages")
+            logger.info(f"📧 Found {len(new_messages)} new messages to process")
             
             # Process each new message
             for message in new_messages:
+                logger.info(f"📤 Processing message {message.get('id')} from conversation {message.get('conversation_id')}")
                 self.process_message(message)
             
             # Update last check time
             self.last_check_time = datetime.now().isoformat()
+            logger.info(f"✅ Finished processing messages. Next check after {self.last_check_time}")
             
         except Exception as e:
-            logger.error(f"Error checking new messages: {e}")
+            logger.error(f"❌ Error checking new messages: {e}")
+            import traceback
+            traceback.print_exc()
     
     def process_message(self, message: Dict[str, Any]):
         """Process a single message and send notification"""

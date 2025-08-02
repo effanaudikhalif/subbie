@@ -18,10 +18,14 @@ def start_worker():
     """Start the notification worker in a separate thread"""
     try:
         logger.info("Starting notification worker...")
-        # The worker runs continuously in the background
+        # Import and start the notification worker
+        from notification_worker import notification_worker
+        
+        # The worker has its own scheduler that runs every 2 minutes
+        # Just keep this thread alive
         while True:
             import time
-            time.sleep(60) # Check every minute
+            time.sleep(60)
     except KeyboardInterrupt:
         logger.info("Stopping notification worker...")
 
