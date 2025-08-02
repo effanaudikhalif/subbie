@@ -368,20 +368,20 @@ export default function BecomeHost() {
           newErrors.price_per_night = 'Price must be greater than 0';
         }
         break;
-      case 11:
+            case 11:
         if (!formData.start_date) {
-          newErrors.start_date = 'Start date is required';
+          newErrors.start_date = 'Check-in date is required';
         }
         if (!formData.end_date) {
-          newErrors.end_date = 'End date is required';
+          newErrors.end_date = 'Check-out date is required';
         }
-                if (formData.start_date && formData.end_date) {
+        if (formData.start_date && formData.end_date) {
           const startDate = new Date(formData.start_date + 'T00:00:00');
           const endDate = new Date(formData.end_date + 'T00:00:00');
           const cleanStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
           const cleanEndDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
           if (cleanStartDate >= cleanEndDate) {
-            newErrors.end_date = 'End date must be after start date';
+            newErrors.end_date = 'Check-out date must be after check-in date';
           }
         }
         break;
@@ -1311,7 +1311,8 @@ export default function BecomeHost() {
       case 11:
         return (
           <div className="max-w-2xl mx-auto mt-30 text-center">
-            <h2 className="text-3xl font-bold mb-8 text-black">Availability dates</h2>
+            <h2 className="text-3xl font-bold mb-8 text-black">Set your booking period</h2>
+            <p className="text-lg text-gray-600 mb-8">Choose when guests can check in and check out</p>
             <div className="space-y-6">
               <div className="relative">
                 <div 
@@ -1320,24 +1321,37 @@ export default function BecomeHost() {
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <div className="text-sm text-gray-500">Start date</div>
+                      <div className="text-sm text-gray-500">Check in</div>
                       <div className="text-black">
                         {formData.start_date ? (() => {
                           const date = new Date(formData.start_date + 'T00:00:00');
                           return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
-                        })() : 'Select start date'}
+                        })() : 'Select check-in date'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">End date</div>
+                      <div className="text-sm text-gray-500">Check out</div>
                       <div className="text-black">
                         {formData.end_date ? (() => {
                           const date = new Date(formData.end_date + 'T00:00:00');
                           return new Date(date.getFullYear(), date.getMonth(), date.getDate()).toLocaleDateString();
-                        })() : 'Select end date'}
+                        })() : 'Select check-out date'}
                       </div>
                     </div>
                   </div>
+                  {/* Add nights counter when both dates are selected */}
+                  {formData.start_date && formData.end_date && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="text-sm text-gray-600 text-center">
+                        {(() => {
+                          const startDate = new Date(formData.start_date + 'T00:00:00');
+                          const endDate = new Date(formData.end_date + 'T00:00:00');
+                          const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                          return `${nights} night${nights !== 1 ? 's' : ''} available for booking`;
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {showCalendar && (
                   <div className="absolute top-full left-0 mt-2 z-50 calendar-container">
@@ -1536,3 +1550,4 @@ export default function BecomeHost() {
     </div>
   );
 }
+
