@@ -277,27 +277,24 @@ module.exports = (pool) => {
   });
 
   // Create listing
-  router.post('/', upload.array('photos', 10), handleMulterError, async (req, res) => {
-    // Log file upload information
-    if (req.files && req.files.length > 0) {
-      console.log('Files uploaded:', req.files.map(file => ({
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        size: file.size,
-        filename: file.filename
-      })));
-    }
-    
+  router.post('/', async (req, res) => {
     try {
       const {
-        user_id, title, description, address, city, state, zip, country,
+        user_id, title, description, address, unit, city, state, zip, country,
         neighborhood, latitude, longitude, price_per_night, start_date, end_date, max_occupancy, status,
-        property_type, guest_space, bedrooms, bathrooms, amenities, occupants
+        property_type, guest_space, bedrooms, bathrooms, amenities, occupants, image_urls
       } = req.body;
 
-      // Parse JSON arrays
-      const amenitiesArray = amenities ? JSON.parse(amenities) : [];
-      const occupantsArray = occupants ? JSON.parse(occupants) : [];
+      console.log('Creating listing with data:', req.body);
+
+      // Validate required fields
+      if (!user_id || !title || !description || !address || !city || !state || !zip || !price_per_night || !start_date || !end_date) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      // Arrays are already parsed (from JSON request)
+      const amenitiesArray = amenities || [];
+      const occupantsArray = occupants || [];
 
       // Insert the listing
       const { rows } = await pool.query(
@@ -315,6 +312,8 @@ module.exports = (pool) => {
 
       const listing = rows[0];
 
+      console.log('Created listing:', listing.id);
+
       // Insert amenities
       if (amenitiesArray.length > 0) {
         for (const amenity of amenitiesArray) {
@@ -323,6 +322,7 @@ module.exports = (pool) => {
             [listing.id, amenity]
           );
         }
+        console.log('Inserted amenities:', amenitiesArray);
       }
 
       // Insert occupants
@@ -333,59 +333,20 @@ module.exports = (pool) => {
             [listing.id, occupant]
           );
         }
+        console.log('Inserted occupants:', occupantsArray);
       }
 
-      // Handle photo uploads with automatic conversion
-      if (req.files && req.files.length > 0) {
-        for (let i = 0; i < req.files.length; i++) {
-          const file = req.files[i];
+      // Handle image URLs from Supabase Storage
+      if (image_urls && image_urls.length > 0) {
+        for (let i = 0; i < image_urls.length; i++) {
+          const imageUrl = image_urls[i];
           
-          // Validate file type
-          if (!file.mimetype.startsWith('image/')) {
-            console.error('Invalid file type:', file.mimetype, 'for file:', file.originalname);
-            continue; // Skip this file
-          }
-          
-          try {
-            // Get the original file path
-            const originalPath = file.path;
-            
-            // Generate a new filename with .jpg extension for converted images
-            const fileExtension = path.extname(file.filename).toLowerCase();
-            const baseName = path.basename(file.filename, fileExtension);
-            const convertedFilename = `${baseName}.jpg`;
-            const convertedPath = path.join(path.dirname(originalPath), convertedFilename);
-            
-            // Convert the image (will optimize and convert HEIC/HEIF to JPEG)
-            const finalPath = await convertImage(originalPath, convertedPath, file.originalname);
-            const finalFilename = path.basename(finalPath);
-            
-            // Store the file path relative to the uploads directory
-            const imageUrl = `/uploads/${finalFilename}`;
-            
-            // Save to database
-            await pool.query(
-              'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
-              [listing.id, imageUrl, i]
-            );
-            console.log('Successfully processed and saved image:', imageUrl);
-            
-          } catch (error) {
-            console.error('Error processing image:', file.originalname, error);
-            
-            // Fallback: try to save the original file if conversion fails
-            try {
-              const imageUrl = `/uploads/${file.filename}`;
-              await pool.query(
-                'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
-                [listing.id, imageUrl, i]
-              );
-              console.log('Saved original image as fallback:', imageUrl);
-            } catch (dbError) {
-              console.error('Database error saving image:', dbError);
-            }
-          }
+          await pool.query(
+            'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
+            [listing.id, imageUrl, i]
+          );
         }
+        console.log('Inserted image URLs:', image_urls);
       }
 
       // Send email notification for listing added
@@ -413,15 +374,17 @@ module.exports = (pool) => {
   });
 
   // Update listing
-  router.put('/:id', upload.array('photo_replacements', 10), handleMulterError, async (req, res) => {
+  router.put('/:id', async (req, res) => {
     try {
       const { id } = req.params;
       const { 
         title, description, address, unit, city, state, zip, country, neighborhood,
         latitude, longitude, price_per_night, start_date, end_date, max_occupancy, 
         property_type, guest_space, bedrooms, bathrooms, amenities, occupants,
-        photo_indices, photo_order
+        image_urls
       } = req.body;
+
+      console.log('Updating listing with data:', req.body);
 
       // Update the listing
       const { rows } = await pool.query(
@@ -441,149 +404,50 @@ module.exports = (pool) => {
       if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
 
       // Update amenities
-      if (amenities) {
-        // Parse amenities if it's a JSON string
-        let amenitiesArray = amenities;
-        if (typeof amenities === 'string') {
-          try {
-            amenitiesArray = JSON.parse(amenities);
-          } catch (e) {
-            console.error('Error parsing amenities:', e);
-            amenitiesArray = [];
-          }
-        }
-        
+      if (amenities && amenities.length > 0) {
         // Delete existing amenities
         await pool.query('DELETE FROM listing_amenities WHERE listing_id = $1', [id]);
         
         // Insert new amenities
-        for (const amenity of amenitiesArray) {
+        for (const amenity of amenities) {
           await pool.query(
             'INSERT INTO listing_amenities (listing_id, amenity) VALUES ($1, $2)',
             [id, amenity]
           );
         }
+        console.log('Updated amenities:', amenities);
       }
 
       // Update occupants
-      if (occupants) {
-        // Parse occupants if it's a JSON string
-        let occupantsArray = occupants;
-        if (typeof occupants === 'string') {
-          try {
-            occupantsArray = JSON.parse(occupants);
-          } catch (e) {
-            console.error('Error parsing occupants:', e);
-            occupantsArray = [];
-          }
-        }
-        
+      if (occupants && occupants.length > 0) {
         // Delete existing occupants
         await pool.query('DELETE FROM listing_occupants WHERE listing_id = $1', [id]);
         
         // Insert new occupants
-        for (const occupant of occupantsArray) {
+        for (const occupant of occupants) {
           await pool.query(
             'INSERT INTO listing_occupants (listing_id, occupant) VALUES ($1, $2)',
             [id, occupant]
           );
         }
+        console.log('Updated occupants:', occupants);
       }
 
-      // Handle photo order updates
-      if (photo_order) {
-        try {
-          const photoOrderArray = JSON.parse(photo_order);
-          console.log('Photo order data received:', photoOrderArray);
-          
-          // Update order_index for existing images
-          for (const photoInfo of photoOrderArray) {
-            if (!photoInfo.isNew && photoInfo.url) {
-              await pool.query(
-                'UPDATE listing_images SET order_index = $1 WHERE listing_id = $2 AND url = $3',
-                [photoInfo.order, id, photoInfo.url]
-              );
-              console.log(`Updated order for image ${photoInfo.url} to ${photoInfo.order}`);
-            }
-          }
-        } catch (e) {
-          console.error('Error processing photo order:', e);
-        }
-      }
-
-      // Handle photo replacements with automatic conversion
-      if (req.files && req.files.length > 0 && photo_indices) {
-        const photoIndices = Array.isArray(photo_indices) ? photo_indices : [photo_indices];
+      // Handle image URLs from Supabase Storage
+      if (image_urls && image_urls.length > 0) {
+        // Delete existing images for this listing
+        await pool.query('DELETE FROM listing_images WHERE listing_id = $1', [id]);
         
-        for (let i = 0; i < req.files.length; i++) {
-          const file = req.files[i];
-          const photoIndex = parseInt(photoIndices[i]);
+        // Insert new image URLs with proper order
+        for (let i = 0; i < image_urls.length; i++) {
+          const imageUrl = image_urls[i];
           
-          // Validate file type
-          if (!file.mimetype.startsWith('image/')) {
-            console.error('Invalid file type:', file.mimetype, 'for file:', file.originalname);
-            continue; // Skip this file
-          }
-          
-          // Get the current image to replace
-          const currentImageResult = await pool.query(
-            'SELECT url FROM listing_images WHERE listing_id = $1 AND order_index = $2',
-            [id, photoIndex]
+          await pool.query(
+            'INSERT INTO listing_images (listing_id, url, order_index) VALUES ($1, $2, $3)',
+            [id, imageUrl, i]
           );
-          
-          if (currentImageResult.rows.length > 0) {
-            const currentImage = currentImageResult.rows[0];
-            
-            try {
-              // Delete the old file if it exists
-              if (currentImage.url && currentImage.url.startsWith('/uploads/')) {
-                const oldFilePath = path.join(__dirname, '..', currentImage.url);
-                if (fs.existsSync(oldFilePath)) {
-                  fs.unlinkSync(oldFilePath);
-                }
-              }
-              
-              // Get the original file path
-              const originalPath = file.path;
-              
-              // Generate a new filename with .jpg extension for converted images
-              const fileExtension = path.extname(file.filename).toLowerCase();
-              const baseName = path.basename(file.filename, fileExtension);
-              const convertedFilename = `${baseName}.jpg`;
-              const convertedPath = path.join(path.dirname(originalPath), convertedFilename);
-              
-              // Convert the image (will optimize and convert HEIC/HEIF to JPEG)
-              const finalPath = await convertImage(originalPath, convertedPath, file.originalname);
-              const finalFilename = path.basename(finalPath);
-              
-              // Store the new file path
-              const imageUrl = `/uploads/${finalFilename}`;
-              
-              // Update the database record
-              await pool.query(
-                'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
-                [imageUrl, id, photoIndex]
-              );
-              
-              console.log('Successfully processed and replaced image:', imageUrl);
-              
-            } catch (error) {
-              console.error('Error processing replacement image:', file.originalname, error);
-              
-              // Fallback: try to save the original file if conversion fails
-              try {
-                const imageUrl = `/uploads/${file.filename}`;
-                await pool.query(
-                  'UPDATE listing_images SET url = $1 WHERE listing_id = $2 AND order_index = $3',
-                  [imageUrl, id, photoIndex]
-                );
-                console.log('Saved original replacement image as fallback:', imageUrl);
-              } catch (dbError) {
-                console.error('Database error updating image:', dbError);
-              }
-            }
-          }
         }
+        console.log('Updated image URLs:', image_urls);
       }
 
       // Send email notification for listing edited

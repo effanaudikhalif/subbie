@@ -8,8 +8,9 @@ import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import MapPreview from '../../../components/MapPreview';
 import PhotoUpload from '../../../components/PhotoUpload';
 import CompactCalendar from '../../../components/CompactCalendar';
-import { buildApiUrl } from '../../../utils/api';
+import { buildApiUrl, buildImageUrl } from '../../../utils/api';
 import LoadingPage from '../../../components/LoadingPage';
+import { uploadListingImage } from '../../../utils/supabaseStorage';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -200,7 +201,7 @@ export default function EditListing() {
             bathrooms: listingData.bathrooms || 1,
             occupants: listingData.occupants || [],
             amenities: listingData.amenities?.map((a: any) => a.code || a) || [],
-            photos: listingData.images?.map((img: any) => buildApiUrl(img.url)) || [], // Map images to full URLs
+            photos: listingData.images?.map((img: any) => buildImageUrl(img.url)) || [], // Map images to full URLs
             title: listingData.title || '',
             description: listingData.description || '',
             price_per_night: Number(listingData.price_per_night) || 100, // Always coerce to number
@@ -458,44 +459,59 @@ export default function EditListing() {
     setSubmitting(true);
 
     try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('address', formData.address);
-      submitData.append('unit', formData.unit);
-      submitData.append('city', formData.city);
-      submitData.append('state', formData.state);
-      submitData.append('zip', formData.zip);
-      submitData.append('country', formData.country);
-      submitData.append('neighborhood', formData.neighborhood);
-      if (formData.latitude) submitData.append('latitude', formData.latitude.toString());
-      if (formData.longitude) submitData.append('longitude', formData.longitude.toString());
-      submitData.append('price_per_night', formData.price_per_night.toString());
-      submitData.append('start_date', formData.start_date);
-      submitData.append('end_date', formData.end_date);
-      submitData.append('max_occupancy', formData.max_occupancy.toString());
-      submitData.append('property_type', formData.property_type);
-      submitData.append('guest_space', formData.guest_space);
-      submitData.append('bedrooms', formData.bedrooms.toString());
-      submitData.append('bathrooms', formData.bathrooms.toString());
-      submitData.append('amenities', JSON.stringify(formData.amenities));
-      submitData.append('occupants', JSON.stringify(formData.occupants));
+      console.log('Updating listing with Supabase Storage...');
 
-      // Add new photos (File objects)
-      const newPhotos = formData.photos.filter(photo => photo instanceof File);
-      newPhotos.forEach((photo, index) => {
-        submitData.append('photo_replacements', photo);
-        submitData.append('photo_indices', index.toString());
-      });
+      // Handle photo uploads - upload new File objects to Supabase Storage
+      const imageUrls: string[] = [];
+      
+      for (let i = 0; i < formData.photos.length; i++) {
+        const photo = formData.photos[i];
+        
+        // If it's already a URL (existing image), keep it
+        if (typeof photo === 'string') {
+          imageUrls.push(photo);
+          continue;
+        }
+        
+        // Upload new file to Supabase Storage
+        console.log(`Uploading new image ${i + 1}...`);
+        const tempListingId = `listing-${id}-${Date.now()}`;
+        const uploadResult = await uploadListingImage(photo, tempListingId, i);
+        
+        if (!uploadResult.success) {
+          throw new Error(`Failed to upload image ${i + 1}: ${uploadResult.error}`);
+        }
+        
+        imageUrls.push(uploadResult.url!);
+      }
+      
+      console.log('Image URLs for update:', imageUrls);
 
-      // Send photo order information for existing images
-      const photoOrder = formData.photos.map((photo, index) => ({
-        url: typeof photo === 'string' ? photo.replace(buildApiUrl(''), '') : null, // Strip the base URL to get relative path
-        order: index,
-        isNew: photo instanceof File
-      }));
-      submitData.append('photo_order', JSON.stringify(photoOrder));
+      // Prepare data as JSON
+      const submitData = {
+        title: formData.title,
+        description: formData.description,
+        address: formData.address,
+        unit: formData.unit,
+        city: formData.city,
+        state: formData.state,
+        zip: formData.zip,
+        country: formData.country,
+        neighborhood: formData.neighborhood,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        price_per_night: formData.price_per_night,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        max_occupancy: formData.max_occupancy,
+        property_type: formData.property_type,
+        guest_space: formData.guest_space,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        amenities: formData.amenities,
+        occupants: formData.occupants,
+        image_urls: imageUrls // Send updated image URLs
+      };
 
       // Debug: Log the amenities being sent
       console.log('Amenities being sent:', formData.amenities);
@@ -510,9 +526,12 @@ export default function EditListing() {
         console.error('Invalid amenity codes being sent:', invalidAmenities);
       }
 
-      const response = await fetch(buildApiUrl(`/api/listings/${id}`), {
-          method: 'PUT',
-        body: submitData
+            const response = await fetch(buildApiUrl(`/api/listings/${id}`), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submitData)
       });
 
       if (response.ok) {

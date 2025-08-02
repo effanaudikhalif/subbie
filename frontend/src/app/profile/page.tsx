@@ -9,6 +9,7 @@ import { buildApiUrl, buildAvatarUrl } from "../../utils/api";
 import Link from "next/link";
 import MobileFooter from "../../components/MobileFooter";
 import LoadingPage from "../../components/LoadingPage";
+import { uploadAvatar } from "../../utils/supabaseStorage";
 
 interface UserProfile {
   id: string;
@@ -306,32 +307,39 @@ function ProfilePageContent() {
 
       // Upload profile picture if selected
       if (editProfilePicture) {
-        const formData = new FormData();
-        formData.append('avatar', editProfilePicture);
-        
-        console.log('Uploading avatar:', {
+        console.log('Uploading avatar to Supabase Storage:', {
           fileName: editProfilePicture.name,
           fileType: editProfilePicture.type,
           fileSize: editProfilePicture.size
         });
         
-        const avatarResponse = await fetch(buildApiUrl(`/api/users/${user.id}/avatar`), {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (avatarResponse.ok) {
-          const avatarData = await avatarResponse.json();
-          setProfile(prev => prev ? { ...prev, avatar_url: avatarData.avatar_url } : null);
-          console.log('Avatar updated successfully:', avatarData);
-        } else {
-          const errorData = await avatarResponse.json().catch(() => ({ error: 'Unknown error' }));
-          console.error('Failed to upload avatar:', {
-            status: avatarResponse.status,
-            statusText: avatarResponse.statusText,
-            error: errorData
+        // Upload to Supabase Storage
+        const uploadResult = await uploadAvatar(editProfilePicture, user.id);
+        
+        if (uploadResult.success) {
+          // Update avatar URL in database
+          const avatarResponse = await fetch(buildApiUrl(`/api/users/${user.id}/avatar`), {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              avatar_url: uploadResult.url
+            }),
           });
-          alert(`Failed to upload avatar: ${errorData.error || 'Unknown error'}`);
+
+          if (avatarResponse.ok) {
+            const avatarData = await avatarResponse.json();
+            setProfile(prev => prev ? { ...prev, avatar_url: avatarData.avatar_url } : null);
+            console.log('Avatar updated successfully:', avatarData);
+          } else {
+            const errorData = await avatarResponse.json().catch(() => ({ error: 'Failed to update avatar URL' }));
+            console.error('Failed to update avatar URL in database:', errorData);
+            alert(`Failed to save avatar: ${errorData.error || 'Unknown error'}`);
+          }
+        } else {
+          console.error('Failed to upload avatar to Supabase Storage:', uploadResult.error);
+          alert(`Failed to upload avatar: ${uploadResult.error || 'Unknown error'}`);
         }
       }
 

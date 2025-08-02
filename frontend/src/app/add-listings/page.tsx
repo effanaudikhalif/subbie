@@ -10,6 +10,7 @@ import PhotoUpload from '../../components/PhotoUpload';
 import CompactCalendar from '../../components/CompactCalendar';
 import { buildApiUrl } from '../../utils/api';
 import LoadingPage from '../../components/LoadingPage';
+import { uploadListingImage } from '../../utils/supabaseStorage';
 
 interface FormData {
   property_type: 'house' | 'apartment';
@@ -440,57 +441,69 @@ export default function BecomeHost() {
     }
 
     try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-      submitData.append('user_id', user.id);
-      submitData.append('property_type', formData.property_type);
-      submitData.append('guest_space', formData.guest_space);
-      submitData.append('address', formData.address);
-      submitData.append('unit', formData.unit);
-      submitData.append('city', formData.city);
-      submitData.append('state', formData.state);
-      submitData.append('zip', formData.zip);
-      submitData.append('country', formData.country);
-      submitData.append('neighborhood', formData.neighborhood);
-      if (formData.latitude) submitData.append('latitude', formData.latitude.toString());
-      if (formData.longitude) submitData.append('longitude', formData.longitude.toString());
-      submitData.append('max_occupancy', formData.max_occupancy.toString());
-      submitData.append('bedrooms', formData.bedrooms.toString());
-      submitData.append('bathrooms', formData.bathrooms.toString());
-      submitData.append('title', formData.title);
-      submitData.append('description', formData.description);
-      submitData.append('price_per_night', formData.price_per_night.toString());
-      submitData.append('start_date', formData.start_date);
-      submitData.append('end_date', formData.end_date);
-      submitData.append('amenities', JSON.stringify(formData.amenities));
-      submitData.append('occupants', JSON.stringify(formData.occupants));
+      // Upload images to Supabase Storage first
+      console.log('Uploading images to Supabase Storage...');
+      const imageUrls: string[] = [];
+      
+      for (let i = 0; i < formData.photos.length; i++) {
+        const photo = formData.photos[i];
+        
+        // Skip if it's already a URL (existing image)
+        if (typeof photo === 'string') {
+          imageUrls.push(photo);
+          continue;
+        }
+        
+        // Upload new file to Supabase Storage
+        console.log(`Uploading image ${i + 1}/${formData.photos.length}...`);
+        const tempListingId = `listing-${user.id}-${Date.now()}`;
+        const uploadResult = await uploadListingImage(photo, tempListingId, i);
+        
+        if (!uploadResult.success) {
+          throw new Error(`Failed to upload image ${i + 1}: ${uploadResult.error}`);
+        }
+        
+        imageUrls.push(uploadResult.url!);
+      }
+      
+      console.log('All images uploaded successfully:', imageUrls);
 
-      // Add photos
-      formData.photos.forEach((photo) => {
-        submitData.append(`photos`, photo);
-      });
-
-      console.log('Submitting form data:', {
+      // Prepare data as JSON (no FormData needed anymore)
+      const submitData = {
         user_id: user.id,
         property_type: formData.property_type,
         guest_space: formData.guest_space,
         address: formData.address,
+        unit: formData.unit,
         city: formData.city,
         state: formData.state,
         zip: formData.zip,
+        country: formData.country,
+        neighborhood: formData.neighborhood,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        max_occupancy: formData.max_occupancy,
+        bedrooms: formData.bedrooms,
+        bathrooms: formData.bathrooms,
+        title: formData.title,
+        description: formData.description,
         price_per_night: formData.price_per_night,
         start_date: formData.start_date,
         end_date: formData.end_date,
         amenities: formData.amenities,
         occupants: formData.occupants,
-        photos_count: formData.photos.length
-      });
+        image_urls: imageUrls // Send URLs instead of files
+      };
 
+      console.log('Submitting listing data:', submitData);
       console.log('Making request to:', buildApiUrl('/api/listings'));
       
       const response = await fetch(buildApiUrl('/api/listings'), {
         method: 'POST',
-        body: submitData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submitData)
       });
 
       console.log('Response status:', response.status);

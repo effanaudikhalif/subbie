@@ -368,5 +368,40 @@ module.exports = (pool) => {
     }
   });
 
+  // Update avatar URL (for Supabase Storage URLs)
+  router.put('/:id/avatar', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { avatar_url } = req.body;
+      
+      if (!avatar_url) {
+        return res.status(400).json({ error: 'Avatar URL is required' });
+      }
+
+      console.log('Updating avatar URL for user:', id, 'URL:', avatar_url);
+      
+      // Update the user's avatar_url in the database
+      const { rows } = await pool.query(
+        'UPDATE users SET avatar_url = $1 WHERE id = $2 RETURNING *',
+        [avatar_url, id]
+      );
+      
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      console.log('Avatar URL updated successfully for user:', id);
+      
+      res.json({ 
+        message: 'Avatar URL updated successfully',
+        avatar_url: avatar_url,
+        user: rows[0]
+      });
+    } catch (err) {
+      console.error('Avatar URL update error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   return router;
 }; 
