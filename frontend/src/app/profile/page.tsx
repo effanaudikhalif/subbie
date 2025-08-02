@@ -482,8 +482,8 @@ function ProfilePageContent() {
                     ? (hostReviews.reduce((sum, review) => {
                         const avgRating = (review.cleanliness_rating + review.accuracy_rating + review.communication_rating + review.location_rating + review.value_rating) / 5;
                         return sum + avgRating;
-                      }, 0) / hostReviews.length).toFixed(2)
-                    : '0.00'
+                      }, 0) / hostReviews.length).toFixed(1)
+                    : '0'
                   }
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600">Host Rating</div>
