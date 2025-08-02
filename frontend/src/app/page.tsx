@@ -381,7 +381,21 @@ export default function Page() {
           </div>
         </section>
 
-
+        {/* Footer */}
+        <footer className="w-full bg-white border-t border-gray-200 py-8">
+          <div className="w-full">
+            <div className="ml-10">
+              <div className="text-gray-600 text-sm">
+                <a 
+                  href="mailto:subbie.founder@gmail.com" 
+                  className="hover:text-gray-800 transition-colors"
+                >
+                  subbie.founder@gmail.com
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
 
       </div>
     </div>
