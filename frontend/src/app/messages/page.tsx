@@ -608,7 +608,7 @@ function MessagesPageContent() {
             {loading ? (
               <div className="text-gray-400">Loading...</div>
             ) : conversations.length === 0 ? (
-              <div className="text-gray-400">No messages yet.</div>
+              <div className="text-gray-400">No messages yet</div>
             ) : (
               <ul className="flex-1 overflow-y-auto scrollbar-hide">
                 {conversations.map((c) => (

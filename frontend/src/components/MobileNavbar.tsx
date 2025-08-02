@@ -311,7 +311,7 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
                   onChange={e => setWhere(e.target.value)}
                   onFocus={() => setShowCalendar(false)}
                   placeholder="Search destination"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent placeholder-gray-500 text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-gray-300 placeholder-gray-500 text-gray-900"
                   disabled={isLoading}
                 />
                 {isLoading && (
