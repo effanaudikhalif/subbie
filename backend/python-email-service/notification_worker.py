@@ -20,6 +20,7 @@ scheduler = BackgroundScheduler()
 class NotificationWorker:
     def __init__(self):
         self.last_check_time = datetime.now().isoformat()
+        self.processed_messages = set()  # Track processed messages in memory
         self.setup_scheduler()
     
     def setup_scheduler(self):
@@ -48,8 +49,11 @@ class NotificationWorker:
             
             logger.info(f"📧 Found {len(new_messages)} new messages to process")
             
-            # Process each new message
-            for message in new_messages:
+            # Process each new message (filter out already processed ones)
+            unprocessed_messages = [msg for msg in new_messages if msg.get('id') not in self.processed_messages]
+            logger.info(f"📤 {len(unprocessed_messages)} unprocessed messages out of {len(new_messages)} total")
+            
+            for message in unprocessed_messages:
                 logger.info(f"📤 Processing message {message.get('id')} from conversation {message.get('conversation_id')}")
                 self.process_message(message)
             
@@ -70,9 +74,9 @@ class NotificationWorker:
             conversation_id = message.get('conversation_id')
             content = message.get('body', '')  # Using 'body' field instead of 'content'
             
-            # Skip if already notified
-            if message.get('email_sent'):
-                logger.info(f"Message {message_id} already notified, skipping")
+            # Check if we already processed this message in this session
+            if message_id in self.processed_messages:
+                logger.info(f"Message {message_id} already processed in this session, skipping")
                 return
             
             # Get sender information
@@ -101,7 +105,8 @@ class NotificationWorker:
             # Send email notification
             self.send_notification(message, sender, recipient, conversation_id)
             
-            # Mark message as notified
+            # Mark message as processed in memory and log it
+            self.processed_messages.add(message_id)
             db.mark_message_notified(message_id)
             
         except Exception as e:

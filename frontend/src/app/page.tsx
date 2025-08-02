@@ -390,7 +390,7 @@ export default function Page() {
                   href="mailto:subbie.founder@gmail.com" 
                   className="hover:text-gray-800 transition-colors"
                 >
-                  subbie.founder@gmail.com
+                  getsubbie@gmail.com
                 </a>
               </div>
             </div>
