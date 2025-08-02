@@ -28,12 +28,7 @@ export default function PhotoUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photosWithPreview, setPhotosWithPreview] = useState<PhotoWithPreview[]>([]);
   
-  // Touch drag and drop state
-  const [touchStartY, setTouchStartY] = useState<number | null>(null);
-  const [touchStartIndex, setTouchStartIndex] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const photoRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Note: Touch drag functionality removed for better mobile UX
   const [isMobile, setIsMobile] = useState(false);
 
   // Detect mobile device
@@ -151,76 +146,7 @@ export default function PhotoUpload({
     fileInputRef.current?.click();
   }, []);
 
-  // Touch event handlers for mobile drag and drop
-  const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
-    if (!isMobile) return;
-    
-    // Prevent default to avoid text selection and other touch behaviors
-    e.preventDefault();
-    
-    const touch = e.touches[0];
-    setTouchStartY(touch.clientY);
-    setTouchStartIndex(index);
-    setIsDragging(true);
-    setDraggedIndex(index);
-    
-    // Add haptic feedback if available
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-    
-    // Add a small delay to distinguish between tap and drag
-    setTimeout(() => {
-      if (isDragging && touchStartIndex === index) {
-        // Visual feedback that drag is active
-        setDragOffset(0);
-      }
-    }, 150);
-  }, [isMobile, isDragging, touchStartIndex]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isMobile || touchStartY === null || touchStartIndex === null) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - touchStartY;
-    setDragOffset(deltaY);
-  }, [isMobile, touchStartY, touchStartIndex]);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isMobile || touchStartIndex === null) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const touch = e.changedTouches[0];
-    const currentY = touch.clientY;
-    const deltaY = currentY - (touchStartY || 0);
-    
-    // Only reorder if there was significant movement (more than 20px)
-    if (Math.abs(deltaY) > 20) {
-      // Calculate which photo we're hovering over
-      const photoHeight = 80; // Approximate height of each photo item
-      const currentIndex = touchStartIndex;
-      const targetIndex = Math.round(deltaY / photoHeight) + currentIndex;
-      
-      // Ensure target index is within bounds
-      const clampedTargetIndex = Math.max(0, Math.min(photos.length - 1, targetIndex));
-      
-      if (clampedTargetIndex !== currentIndex) {
-        reorderPhoto(currentIndex, clampedTargetIndex);
-      }
-    }
-    
-    // Reset state
-    setTouchStartY(null);
-    setTouchStartIndex(null);
-    setIsDragging(false);
-    setDraggedIndex(null);
-    setDragOffset(0);
-  }, [isMobile, touchStartIndex, touchStartY, photos.length, reorderPhoto]);
+  // Touch drag functionality removed for better mobile UX - now using up/down buttons instead
 
   // Mouse drag and drop handlers (for desktop)
   const handleDragStart = (e: React.DragEvent, index: number) => {
@@ -332,67 +258,45 @@ export default function PhotoUpload({
               <div>
                 <p className="text-sm font-medium" style={{ color: '#2d5a63' }}>Photo Order</p>
                 <p className="text-sm mt-1" style={{ color: '#368a98' }}>
-                  {isMobile ? 'Touch and hold to drag photos and reorder them. The first photo will be your cover photo.' : 'Drag photos to reorder them. The first photo will be your cover photo.'}
+                  {isMobile ? 'Use the arrow buttons to reorder photos. The first photo will be your cover photo.' : 'Drag photos to reorder them. The first photo will be your cover photo.'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Photo List */}
-          <div 
-            className="space-y-2"
-            style={{
-              touchAction: isMobile && isDragging ? 'none' : 'auto',
-              userSelect: isMobile && isDragging ? 'none' : 'auto'
-            }}
-          >
+          <div className="space-y-2">
             {photos.map((photo, index) => (
               <div
                 key={index}
-                ref={(el) => {
-                  photoRefs.current[index] = el;
-                }}
                 draggable={!isMobile}
                 onDragStart={!isMobile ? (e) => handleDragStart(e, index) : undefined}
                 onDragOver={!isMobile ? (e) => handleDragOver(e, index) : undefined}
                 onDragEnd={!isMobile ? handleDragEnd : undefined}
                 onDrop={!isMobile ? (e) => handleDropOnPhoto(e, index) : undefined}
-                onTouchStart={isMobile ? (e) => handleTouchStart(e, index) : undefined}
-                onTouchMove={isMobile ? handleTouchMove : undefined}
-                onTouchEnd={isMobile ? handleTouchEnd : undefined}
                 className={`relative flex items-center p-3 border rounded-lg transition-all ${
                   isMobile 
-                    ? 'cursor-pointer touch-manipulation' 
+                    ? 'cursor-default' 
                     : 'cursor-move'
                 } ${
-                  draggedIndex === index 
+                  !isMobile && draggedIndex === index 
                     ? 'opacity-50 bg-gray-100 transform scale-105' 
-                    : dragOverIndex === index 
+                    : !isMobile && dragOverIndex === index 
                     ? 'border-gray-200 hover:border-gray-300 hover:bg-gray-50' 
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                } ${isDragging && touchStartIndex === index ? 'z-10 shadow-lg' : ''}`}
+                }`}
                 style={{
-                  transform: isDragging && touchStartIndex === index ? `translateY(${dragOffset}px)` : 'none',
-                  transition: isDragging ? 'none' : 'all 0.2s ease',
-                  touchAction: isMobile ? 'pan-y' : 'auto',
-                  userSelect: isMobile ? 'none' : 'auto',
-                  backgroundColor: dragOverIndex === index ? '#f0f8fa' : isDragging && touchStartIndex === index ? '#f0f8fa' : undefined,
-                  borderColor: dragOverIndex === index ? '#368a98' : isDragging && touchStartIndex === index ? '#368a98' : undefined
+                  transition: 'all 0.2s ease',
+                  backgroundColor: !isMobile && dragOverIndex === index ? '#f0f8fa' : undefined,
+                  borderColor: !isMobile && dragOverIndex === index ? '#368a98' : undefined
                 }}
               >
-                {/* Drag Handle */}
-                <div className="mr-3 text-gray-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                </div>
-
-                {/* Touch Drag Indicator */}
-                {isMobile && isDragging && touchStartIndex === index && (
-                  <div className="absolute inset-0 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(54, 138, 152, 0.5)' }}>
-                    <div className="text-white px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: '#368a98' }}>
-                      Moving...
-                    </div>
+                {/* Drag Handle - Desktop Only */}
+                {!isMobile && (
+                  <div className="mr-3 text-gray-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    </svg>
                   </div>
                 )}
 
@@ -430,12 +334,57 @@ export default function PhotoUpload({
                   </div>
                 </div>
 
-                {/* Remove Button */}
+                {/* Mobile Reorder and Delete Buttons */}
+                {isMobile && (
+                  <div className="ml-3 flex flex-col space-y-1">
+                    {/* Move Up Button */}
+                    {index > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          reorderPhoto(index, index - 1);
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors touch-manipulation"
+                        style={{ minWidth: '32px', minHeight: '32px' }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                    )}
+                    {/* Move Down Button */}
+                    {index < photos.length - 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          reorderPhoto(index, index + 1);
+                        }}
+                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors touch-manipulation"
+                        style={{ minWidth: '32px', minHeight: '32px' }}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Remove Button - Larger on Mobile */}
                 <button
-                  onClick={() => removePhoto(index)}
-                  className="ml-3 text-gray-400 hover:text-red-500 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removePhoto(index);
+                  }}
+                  className={`ml-3 text-gray-400 hover:text-red-500 transition-colors touch-manipulation ${
+                    isMobile ? 'p-2' : ''
+                  }`}
+                  style={isMobile ? { minWidth: '44px', minHeight: '44px' } : {}}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>

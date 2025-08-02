@@ -198,8 +198,8 @@ export default function MobileNavbar({ where, setWhere, dateRange, setDateRange,
       <header className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm mobile-navbar" style={{ height: '80px' }}>
                               {/* Logo and Search Bar Row */}
         <div className="px-4 py-1 flex items-center gap-0 h-full">
-          {/* Logo - Show on left when not logged in, center when logged in */}
-          {isHomePage || isAddListingPage || isEditListingPage || isListingDetailsPage || isMyListingsPage || isWishlistPage || isProfilePage || (isMessagesPage && !listingId) ? (
+          {/* Logo - Show on left when not logged in, center when logged in (Hidden on Add/Edit Listing) */}
+          {isHomePage || isListingDetailsPage || isMyListingsPage || isWishlistPage || isProfilePage || (isMessagesPage && !listingId) ? (
             isListingDetailsPage ? (
               /* Listing Details Page - Always center the logo */
               <div className="w-full flex justify-center">
