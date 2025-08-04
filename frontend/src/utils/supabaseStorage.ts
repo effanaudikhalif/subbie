@@ -10,6 +10,51 @@ export interface UploadResult {
   error?: string;
 }
 
+// Helper function to check if file is HEIC/HEIF
+const isHeicFile = (file: File): boolean => {
+  const fileName = file.name.toLowerCase();
+  const mimeType = file.type.toLowerCase();
+  
+  return mimeType === 'image/heic' || 
+         mimeType === 'image/heif' || 
+         mimeType === 'image/x-heic' ||
+         mimeType === 'image/x-heif' ||
+         fileName.endsWith('.heic') || 
+         fileName.endsWith('.heif');
+};
+
+// Function to convert HEIC to JPEG
+const convertHeicToJpeg = async (file: File): Promise<File> => {
+  try {
+    // Dynamic import to handle potential loading issues
+    const heic2any = (await import('heic2any')).default;
+    
+    console.log('Converting HEIC file for upload:', file.name);
+    
+    const conversionResult = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.9 // Higher quality for uploaded files
+    });
+    
+    // heic2any can return an array or single blob
+    const convertedBlob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
+    
+    // Create a new File object with JPEG extension
+    const originalName = file.name.replace(/\.(heic|heif)$/i, '');
+    const convertedFile = new File([convertedBlob as Blob], `${originalName}.jpg`, {
+      type: 'image/jpeg',
+      lastModified: file.lastModified
+    });
+    
+    console.log('HEIC conversion successful, converted to:', convertedFile.name);
+    return convertedFile;
+  } catch (error) {
+    console.error('HEIC conversion failed:', error);
+    throw new Error('Failed to convert HEIC file');
+  }
+};
+
 /**
  * Upload a listing image to Supabase Storage
  */
@@ -19,16 +64,24 @@ export async function uploadListingImage(
   imageIndex: number
 ): Promise<UploadResult> {
   try {
+    let fileToUpload = file;
+    
+    // Convert HEIC files to JPEG before upload
+    if (isHeicFile(file)) {
+      console.log('HEIC file detected, converting before upload');
+      fileToUpload = await convertHeicToJpeg(file);
+    }
+    
     // Generate unique filename
     const timestamp = Date.now();
     const random = Math.round(Math.random() * 1E9);
-    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const fileExtension = fileToUpload.name.split('.').pop() || 'jpg';
     const fileName = `${listingId}-${imageIndex}-${timestamp}-${random}.${fileExtension}`;
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(LISTING_IMAGES_BUCKET)
-      .upload(fileName, file, {
+      .upload(fileName, fileToUpload, {
         cacheControl: '3600',
         upsert: false
       });
@@ -46,7 +99,7 @@ export async function uploadListingImage(
     return { success: true, url: publicUrl };
   } catch (error) {
     console.error('Upload failed:', error);
-    return { success: false, error: 'Upload failed' };
+    return { success: false, error: error instanceof Error ? error.message : 'Upload failed' };
   }
 }
 
@@ -58,16 +111,24 @@ export async function uploadAvatar(
   userId: string
 ): Promise<UploadResult> {
   try {
+    let fileToUpload = file;
+    
+    // Convert HEIC files to JPEG before upload
+    if (isHeicFile(file)) {
+      console.log('HEIC avatar detected, converting before upload');
+      fileToUpload = await convertHeicToJpeg(file);
+    }
+    
     // Generate unique filename
     const timestamp = Date.now();
     const random = Math.round(Math.random() * 1E9);
-    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const fileExtension = fileToUpload.name.split('.').pop() || 'jpg';
     const fileName = `avatar-${userId}-${timestamp}-${random}.${fileExtension}`;
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
       .from(AVATARS_BUCKET)
-      .upload(fileName, file, {
+      .upload(fileName, fileToUpload, {
         cacheControl: '3600',
         upsert: false
       });
@@ -85,7 +146,7 @@ export async function uploadAvatar(
     return { success: true, url: publicUrl };
   } catch (error) {
     console.error('Avatar upload failed:', error);
-    return { success: false, error: 'Avatar upload failed' };
+    return { success: false, error: error instanceof Error ? error.message : 'Avatar upload failed' };
   }
 }
 

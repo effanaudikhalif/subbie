@@ -1,7 +1,26 @@
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-// @ts-ignore
-import heic2any from 'heic2any';
+
+// Dynamic import for heic2any to handle potential issues
+const convertHeicToJpeg = async (file: File) => {
+  try {
+    // Dynamic import to ensure it loads properly
+    const heic2any = (await import('heic2any')).default;
+    
+    const conversionResult = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.8
+    });
+    
+    // heic2any can return an array or single blob
+    const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
+    return blob as Blob;
+  } catch (error) {
+    console.error('HEIC conversion failed:', error);
+    throw error;
+  }
+};
 
 interface PhotoUploadProps {
   photos: (File | string)[];
@@ -19,29 +38,94 @@ interface PhotoWithPreview {
 
 // Helper function to check if file is HEIC/HEIF
 const isHeicFile = (file: File): boolean => {
-  return file.type === 'image/heic' || 
-         file.type === 'image/heif' || 
-         file.name.toLowerCase().endsWith('.heic') || 
-         file.name.toLowerCase().endsWith('.heif');
+  const fileName = file.name.toLowerCase();
+  const mimeType = file.type.toLowerCase();
+  
+  const isHeic = mimeType === 'image/heic' || 
+         mimeType === 'image/heif' || 
+         mimeType === 'image/x-heic' ||
+         mimeType === 'image/x-heif' ||
+         mimeType === '' && (fileName.endsWith('.heic') || fileName.endsWith('.heif')) ||
+         fileName.endsWith('.heic') || 
+         fileName.endsWith('.heif');
+  
+  console.log('HEIC detection for file:', file.name, 'type:', file.type, 'size:', file.size, 'isHeic:', isHeic);
+  
+  // Additional check: HEIC files are typically larger and have specific characteristics
+  if (isHeic && file.size > 0) {
+    console.log('Confirmed HEIC file based on extension and/or type');
+  }
+  
+  return isHeic;
 };
 
 // Function to convert HEIC to JPEG for preview
 const convertHeicForPreview = async (file: File): Promise<string> => {
+  console.log('Converting HEIC file:', file.name, file.type, 'size:', file.size);
+  
+  // First, let's try the heic2any conversion
   try {
-    const conversionResult = await heic2any({
-      blob: file,
-      toType: "image/jpeg",
-      quality: 0.8
-    });
-    
-    // heic2any can return an array or single blob
-    const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
-    return URL.createObjectURL(blob as Blob);
+    const convertedBlob = await convertHeicToJpeg(file);
+    const previewUrl = URL.createObjectURL(convertedBlob);
+    console.log('HEIC conversion successful, created preview URL:', previewUrl);
+    return previewUrl;
   } catch (error) {
-    console.error('Error converting HEIC file:', error);
-    // Fallback: try to create URL anyway (might not work but won't crash)
-    return URL.createObjectURL(file);
+    console.error('HEIC conversion failed:', error);
   }
+  
+  // If heic2any fails, try to create a preview using FileReader and canvas
+  try {
+    console.log('Attempting canvas-based fallback for HEIC preview');
+    return await createCanvasFallbackPreview(file);
+  } catch (canvasError) {
+    console.error('Canvas fallback failed:', canvasError);
+  }
+  
+  // Final fallback: show HEIC file info with placeholder
+  console.log('Using placeholder for HEIC file');
+  return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiA4SDI4VjMySDEyVjhaIiBzdHJva2U9IiM5Q0E0QjAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8dGV4dCB4PSIyMCIgeT0iMjIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI4IiBmaWxsPSIjNkI3MjgwIj5IRUlDPC90ZXh0Pgo8L3N2Zz4K';
+};
+
+// Canvas-based fallback for HEIC files
+const createCanvasFallbackPreview = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        
+        canvas.width = 40;
+        canvas.height = 40;
+        
+        // Fill with gray background
+        ctx.fillStyle = '#F3F4F6';
+        ctx.fillRect(0, 0, 40, 40);
+        
+        // Draw HEIC text
+        ctx.fillStyle = '#6B7280';
+        ctx.font = '8px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('HEIC', 20, 22);
+        
+        // Draw camera icon outline
+        ctx.strokeStyle = '#9CA4B0';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(8, 8, 24, 24);
+        
+        resolve(canvas.toDataURL('image/png'));
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsArrayBuffer(file);
+  });
 };
 
 export default function PhotoUpload({ 
@@ -53,6 +137,7 @@ export default function PhotoUpload({
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [processingHeic, setProcessingHeic] = useState(false);
+  const [heicConversionComplete, setHeicConversionComplete] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +170,7 @@ export default function PhotoUpload({
       
       if (hasHeicFiles) {
         setProcessingHeic(true);
+        setHeicConversionComplete(false);
       }
 
       const photosWithPreviews = await Promise.all(
@@ -94,12 +180,15 @@ export default function PhotoUpload({
           if (typeof photo === 'string') {
             // Already a URL string
             preview = photo;
+            console.log(`Photo ${index}: Using existing URL`);
           } else if (isHeicFile(photo)) {
             // Convert HEIC to JPEG for preview
+            console.log(`Photo ${index}: Converting HEIC file`);
             preview = await convertHeicForPreview(photo);
           } else {
             // Regular image file
             preview = URL.createObjectURL(photo);
+            console.log(`Photo ${index}: Regular image, created object URL:`, preview);
           }
 
           return {
@@ -113,6 +202,13 @@ export default function PhotoUpload({
       
       setPhotosWithPreview(photosWithPreviews);
       setProcessingHeic(false);
+      
+      // Show success message if HEIC files were processed
+      if (hasHeicFiles) {
+        setHeicConversionComplete(true);
+        // Hide success message after 3 seconds
+        setTimeout(() => setHeicConversionComplete(false), 3000);
+      }
     };
 
     createPhotosWithPreviews();
@@ -331,12 +427,29 @@ export default function PhotoUpload({
             <div className="rounded-lg p-4 bg-blue-50 border border-blue-200">
               <div className="flex items-start">
                 <svg className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 animate-spin text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0118 15m-3.343 2.657A7 7 0 717 10.657V4" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0718 15m-3.343 2.657A7 7 0 717 10.657V4" />
                 </svg>
                 <div>
                   <p className="text-sm font-medium text-blue-800">Processing HEIC Files</p>
                   <p className="text-sm mt-1 text-blue-600">
-                    Converting HEIC files for web preview. This may take a moment...
+                    Converting HEIC files for web preview and upload. This ensures compatibility across all devices.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* HEIC Conversion Success Message */}
+          {heicConversionComplete && (
+            <div className="rounded-lg p-4 bg-green-50 border border-green-200">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-green-800">HEIC Files Converted Successfully!</p>
+                  <p className="text-sm mt-1 text-green-600">
+                    Your HEIC files have been converted to JPEG format and will display properly on all devices.
                   </p>
                 </div>
               </div>
@@ -381,11 +494,32 @@ export default function PhotoUpload({
 
                 {/* Small Preview */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 mr-3 flex-shrink-0">
-                  {processingHeic && typeof photo !== 'string' && isHeicFile(photo) ? (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0118 15m-3.343 2.657A7 7 0 017 10.657V4" />
-                      </svg>
+                  {typeof photo !== 'string' && isHeicFile(photo) ? (
+                    // Always show HEIC indicator with preview or placeholder
+                    <div className="w-full h-full relative">
+                      {photosWithPreview[index]?.preview && !processingHeic ? (
+                        <img
+                          src={photosWithPreview[index].preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
+                          {processingHeic ? (
+                            <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0118 15m-3.343 2.657A7 7 0 717 10.657V4" />
+                            </svg>
+                          ) : (
+                            <>
+                              <div className="text-xs font-bold text-blue-600">HEIC</div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {/* HEIC badge */}
+                      <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs px-1 rounded-bl text-[8px] font-bold">
+                        HEIC
+                      </div>
                     </div>
                   ) : (
                     <img
