@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "../../utils/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
+import { buildApiUrl } from "../../utils/api";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -26,10 +27,29 @@ function LoginForm() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(error.message);
       } else {
+        // Check if user exists in our database
+        const checkResponse = await fetch(buildApiUrl(`/api/users/check-email/${encodeURIComponent(email)}`));
+        if (checkResponse.ok) {
+          const { exists } = await checkResponse.json();
+          if (!exists) {
+            // User doesn't exist in our database, sign them out
+            await supabase.auth.signOut();
+            setError("This account has been deleted. Please contact support if you believe this is an error.");
+            setLoading(false);
+            return;
+          }
+        } else {
+          // If we can't check the database, show a generic error
+          await supabase.auth.signOut();
+          setError("Unable to verify account. Please try again later.");
+          setLoading(false);
+          return;
+        }
+        
         router.push("/");
       }
     } catch (err) {

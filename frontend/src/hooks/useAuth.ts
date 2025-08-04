@@ -136,40 +136,12 @@ export function useAuth() {
           setProfile(userData);
         }
       } else if (response.status === 404) {
-        // Profile not found, create a basic one
-        console.log('Profile not found, creating basic profile...');
-        const basicProfile = {
-          id: userId,
-          name: user?.email?.split('@')[0] || 'User',
-          email: user?.email || '',
-          university_id: null,
-          major: null,
-          graduation_year: null,
-          education_level: null,
-          about_me: null,
-          stripe_account: null
-        };
-        
-        console.log('Creating profile with data:', basicProfile);
-        
-        const createResponse = await fetch(buildApiUrl('/api/users'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(basicProfile),
-        });
-        
-        console.log('Create profile response status:', createResponse.status);
-        
-        if (createResponse.ok) {
-          const newProfile = await createResponse.json();
-          console.log('Profile created successfully:', newProfile);
-          setProfile(newProfile);
-        } else {
-          const errorData = await createResponse.json();
-          console.error('Failed to create profile:', errorData);
-        }
+        // Profile not found - this means the user was deleted from the database
+        // Sign them out instead of creating a new profile
+        console.log('Profile not found, user may have been deleted. Signing out...');
+        await supabase.auth.signOut();
+        setProfile(null);
+        setUser(null);
       } else {
         console.error('Unexpected response status:', response.status);
       }

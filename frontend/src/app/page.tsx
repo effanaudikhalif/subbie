@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import Link from 'next/link';
 import MobileFooter from '../components/MobileFooter';
 import LoadingPage from '../components/LoadingPage';
+import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
 
 export default function Page() {
   const [where, setWhere] = useState('');
@@ -25,6 +26,7 @@ export default function Page() {
   const { user: authUser } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   useEffect(() => {
     async function fetchUser() {
@@ -118,9 +120,6 @@ export default function Page() {
           .tutorial-title {
             font-size: 2rem !important;
             margin-bottom: 40px !important;
-          }
-          .tutorial-title span {
-            display: block !important;
           }
           .hero-buttons {
             flex-direction: column !important;
@@ -329,13 +328,13 @@ export default function Page() {
             {/* Top Section */}
                           <div className="text-center mb-16">
                 <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 tutorial-title" style={{ fontSize: '3rem', marginBottom: '60px' }}>
-                  <span>Sublet</span> <span>Made</span> <span>Simple</span>
+                  <span>Sublet</span> <span>Made</span> <span>Easy</span>
                 </h2>
               </div>
 
             {/* Feature Cards */}
             <div className="flex justify-center">
-              <div className="flex flex-col gap-8 w-full max-w-xl">
+              <div className="flex flex-col gap-8 w-full max-w-lg">
                 {/* Card 1: Verified Students Only */}
                 <div className="bg-white rounded-xl p-6 shadow-lg relative overflow-hidden border-1 border-gray-200">
                   <div className="flex items-center mb-4 relative z-10">
@@ -345,7 +344,7 @@ export default function Page() {
                       </svg>
                     </div>
                     <h3 className="text-xl font-bold text-gray-800">
-                      Verified Students Only
+                      Students Only
                     </h3>
                   </div>
                   <p className="text-gray-600 relative z-10">
@@ -397,16 +396,28 @@ export default function Page() {
           <div className="w-full">
             <div className="ml-0 md:ml-10 text-center md:text-left">
               <div className="text-gray-600 text-sm">
-                <a 
-                  href="mailto:subbie.founder@gmail.com" 
+                @ 2025 Subbie • <button 
+                  onClick={() => setShowPrivacyModal(true)}
                   className="hover:text-gray-800 transition-colors"
                 >
-                  getsubbie@gmail.com
+                  Privacy Policy
+                </button> • 
+                <a 
+                  href="mailto:subbie.founder@gmail.com" 
+                  className="hover:text-gray-800 transition-colors ml-1 cursor-default"
+                >
+                  Contact Us
                 </a>
               </div>
             </div>
           </div>
         </footer>
+
+        {/* Privacy Policy Modal */}
+        <PrivacyPolicyModal 
+          isOpen={showPrivacyModal} 
+          onClose={() => setShowPrivacyModal(false)} 
+        />
 
       </div>
     </div>
