@@ -85,6 +85,10 @@ export default function Page() {
             font-size: 2rem !important;
             margin-bottom: 40px !important;
           }
+          .tutorial-title {
+            font-size: 2rem !important;
+            margin-bottom: 40px !important;
+          }
           .hero-buttons {
             gap: 0.75rem !important;
           }
@@ -109,6 +113,13 @@ export default function Page() {
             margin-bottom: 40px !important;
           }
           .hero-subtitle span {
+            display: block !important;
+          }
+          .tutorial-title {
+            font-size: 2rem !important;
+            margin-bottom: 40px !important;
+          }
+          .tutorial-title span {
             display: block !important;
           }
           .hero-buttons {
@@ -317,8 +328,8 @@ export default function Page() {
           <div className="max-w-6xl mx-auto px-4 relative z-10">
             {/* Top Section */}
                           <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-                  Sublet made <span style={{ color: '#368a98' }}>easy</span> and <span style={{ color: '#368a98' }}>safe</span>
+                <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 tutorial-title" style={{ fontSize: '3rem', marginBottom: '60px' }}>
+                  <span>Sublet</span> <span>Made</span> <span>Simple</span>
                 </h2>
               </div>
 
@@ -384,7 +395,7 @@ export default function Page() {
         {/* Footer */}
         <footer className="w-full bg-white border-t border-gray-200 py-8">
           <div className="w-full">
-            <div className="ml-10">
+            <div className="ml-0 md:ml-10 text-center md:text-left">
               <div className="text-gray-600 text-sm">
                 <a 
                   href="mailto:subbie.founder@gmail.com" 
