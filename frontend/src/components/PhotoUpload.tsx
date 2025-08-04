@@ -1,5 +1,7 @@
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+// @ts-ignore
+import heic2any from 'heic2any';
 
 interface PhotoUploadProps {
   photos: (File | string)[];
@@ -15,6 +17,33 @@ interface PhotoWithPreview {
   order: number;
 }
 
+// Helper function to check if file is HEIC/HEIF
+const isHeicFile = (file: File): boolean => {
+  return file.type === 'image/heic' || 
+         file.type === 'image/heif' || 
+         file.name.toLowerCase().endsWith('.heic') || 
+         file.name.toLowerCase().endsWith('.heif');
+};
+
+// Function to convert HEIC to JPEG for preview
+const convertHeicForPreview = async (file: File): Promise<string> => {
+  try {
+    const conversionResult = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.8
+    });
+    
+    // heic2any can return an array or single blob
+    const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
+    return URL.createObjectURL(blob as Blob);
+  } catch (error) {
+    console.error('Error converting HEIC file:', error);
+    // Fallback: try to create URL anyway (might not work but won't crash)
+    return URL.createObjectURL(file);
+  }
+};
+
 export default function PhotoUpload({ 
   photos, 
   onPhotosChange, 
@@ -23,6 +52,7 @@ export default function PhotoUpload({
 }: PhotoUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [processingHeic, setProcessingHeic] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,20 +77,52 @@ export default function PhotoUpload({
 
   // Convert photos to PhotoWithPreview format
   React.useEffect(() => {
-    const photosWithPreviews = photos.map((photo, index) => ({
-      file: photo,
-      id: `${Date.now()}-${index}`,
-      preview: typeof photo === 'string' ? photo : URL.createObjectURL(photo),
-      order: index
-    }));
-    setPhotosWithPreview(photosWithPreviews);
+    const createPhotosWithPreviews = async () => {
+      // Check if any files are HEIC and need processing
+      const hasHeicFiles = photos.some(photo => 
+        typeof photo !== 'string' && isHeicFile(photo)
+      );
+      
+      if (hasHeicFiles) {
+        setProcessingHeic(true);
+      }
+
+      const photosWithPreviews = await Promise.all(
+        photos.map(async (photo, index) => {
+          let preview: string;
+          
+          if (typeof photo === 'string') {
+            // Already a URL string
+            preview = photo;
+          } else if (isHeicFile(photo)) {
+            // Convert HEIC to JPEG for preview
+            preview = await convertHeicForPreview(photo);
+          } else {
+            // Regular image file
+            preview = URL.createObjectURL(photo);
+          }
+
+          return {
+            file: photo,
+            id: `${Date.now()}-${index}`,
+            preview,
+            order: index
+          };
+        })
+      );
+      
+      setPhotosWithPreview(photosWithPreviews);
+      setProcessingHeic(false);
+    };
+
+    createPhotosWithPreviews();
   }, [photos]);
 
   // Cleanup preview URLs
   React.useEffect(() => {
     return () => {
       photosWithPreview.forEach(photo => {
-        if (typeof photo.file !== 'string') {
+        if (typeof photo.file !== 'string' && photo.preview) {
           URL.revokeObjectURL(photo.preview);
         }
       });
@@ -264,6 +326,23 @@ export default function PhotoUpload({
             </div>
           </div>
 
+          {/* HEIC Processing Message */}
+          {processingHeic && (
+            <div className="rounded-lg p-4 bg-blue-50 border border-blue-200">
+              <div className="flex items-start">
+                <svg className="w-5 h-5 mt-0.5 mr-3 flex-shrink-0 animate-spin text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0118 15m-3.343 2.657A7 7 0 717 10.657V4" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">Processing HEIC Files</p>
+                  <p className="text-sm mt-1 text-blue-600">
+                    Converting HEIC files for web preview. This may take a moment...
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Photo List */}
           <div className="space-y-2">
             {photos.map((photo, index) => (
@@ -302,11 +381,19 @@ export default function PhotoUpload({
 
                 {/* Small Preview */}
                 <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 mr-3 flex-shrink-0">
-                  <img
-                    src={typeof photo === 'string' ? photo : URL.createObjectURL(photo)}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  {processingHeic && typeof photo !== 'string' && isHeicFile(photo) ? (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8 0 004.646 9.646 8 8 0 0118 15m-3.343 2.657A7 7 0 017 10.657V4" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <img
+                      src={photosWithPreview[index]?.preview || (typeof photo === 'string' ? photo : URL.createObjectURL(photo))}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
 
                 {/* File Info */}
