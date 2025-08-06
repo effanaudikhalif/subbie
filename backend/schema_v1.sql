@@ -201,7 +201,7 @@ create policy "read images of active listings"
     exists (
       select 1 from public.listings
       where id = listing_id
-        and status = 'active'
+        and (status = 'active' OR user_id = auth.uid())
     )
   );
 

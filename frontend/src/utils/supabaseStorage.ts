@@ -5,7 +5,7 @@ const LISTING_IMAGES_BUCKET = 'listing-images';
 const AVATARS_BUCKET = 'avatars';
 
 // Configuration flag to disable HEIC conversion for debugging
-const ENABLE_HEIC_CONVERSION = false; // Set to false to completely skip HEIC conversion
+const ENABLE_HEIC_CONVERSION = true; // Set to false to completely skip HEIC conversion
 
 export interface UploadResult {
   success: boolean;
