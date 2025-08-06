@@ -153,8 +153,9 @@ function ResultsContent() {
 
   // Filter listings based on applied values from URL/query params and map bounds
   const filteredListings = listings.filter(listing => {
-    // Map bounds filter
-    if (visibleBounds && listing.latitude && listing.longitude) {
+    // Only apply map bounds filter if explicitly searching within map bounds
+    // Don't filter by map bounds on initial page load
+    if (visibleBounds && where && where.trim() !== '' && listing.latitude && listing.longitude) {
       const lat = parseFloat(listing.latitude);
       const lng = parseFloat(listing.longitude);
       if (
@@ -164,9 +165,10 @@ function ResultsContent() {
         return false;
       }
     }
-    // Location filter
-    if (where && where.trim() !== '') {
-      const searchTerm = where.toLowerCase();
+    
+    // Location filter - only apply if there's an actual search term from URL params
+    if (appliedWhere && appliedWhere.trim() !== '') {
+      const searchTerm = appliedWhere.toLowerCase();
       let searchParts = [];
       if (searchTerm.includes(',')) {
         searchParts = searchTerm.split(',').map(part => part.trim().toLowerCase());
@@ -236,14 +238,16 @@ function ResultsContent() {
       });
       if (!matches) return false;
     }
-    // Guests filter
-    if (guests && Number(guests) > 0) {
-      if (listing.max_occupancy < Number(guests)) return false;
+    
+    // Guests filter - only apply if guests param is in URL
+    if (appliedGuests && Number(appliedGuests) > 0) {
+      if (listing.max_occupancy < Number(appliedGuests)) return false;
     }
-    // Date range filter
-    if (dateRange[0]?.startDate && dateRange[0]?.endDate && listing.start_date && listing.end_date) {
-      const checkin = new Date(dateRange[0].startDate);
-      const checkout = new Date(dateRange[0].endDate);
+    
+    // Date range filter - only apply if both dates are in URL params
+    if (appliedCheckin && appliedCheckout && listing.start_date && listing.end_date) {
+      const checkin = new Date(appliedCheckin);
+      const checkout = new Date(appliedCheckout);
       const availableStart = new Date(listing.start_date);
       const availableEnd = new Date(listing.end_date);
       // Only include listings where the entire requested range is within the available range
@@ -251,6 +255,7 @@ function ResultsContent() {
         return false;
       }
     }
+    
     return true;
   });
 
