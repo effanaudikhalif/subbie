@@ -59,6 +59,7 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   const redMarkerRef = useRef<google.maps.Marker | null>(null);
   const searchLocationCoords = useRef<{ lat: number, lng: number } | null>(null);
   const overlayRef = useRef<any>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   // Mobile detection
   useEffect(() => {
@@ -488,97 +489,139 @@ const LocationMapPreview: React.FC<LocationMapPreviewProps> = React.memo(({
   }, [selectedListing, currentImageIndices, isInWishlist, wishlistLoading]);
 
   const addMarkersToMap = (mapInstance: google.maps.Map) => {
-    markers.forEach(marker => marker.setMap(null));
+    // Clear existing markers first
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
 
-    if (redMarkerRef.current) {
-      redMarkerRef.current.setMap(null);
-      redMarkerRef.current = null;
-    }
-
-    if (searchLocation && searchLocationCoords.current) {
-      redMarkerRef.current = new google.maps.Marker({
+    if (searchLocation) {
+      const marker = new google.maps.Marker({
         position: searchLocationCoords.current,
         map: mapInstance,
         title: searchLocation,
         icon: {
-          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+          url: '/icons/icons8-google-maps-old-50.png',
           scaledSize: new google.maps.Size(32, 32)
         }
       });
     }
 
-    const newMarkers: google.maps.Marker[] = [];
+    // Collision detection system to prevent any marker overlap
+    const MIN_DISTANCE = 0.0008; // Minimum distance between markers (approximately 35 pixels)
+    const markerPositions: Array<{ lat: number; lng: number; listing: any }> = [];
+    
+    // Process each listing and find a non-overlapping position
     listings.forEach(listing => {
       if (listing.latitude && listing.longitude) {
         const lat = parseFloat(listing.latitude as any);
         const lng = parseFloat(listing.longitude as any);
         
         if (!isNaN(lat) && !isNaN(lng)) {
-          let displayPrice = listing.price_per_night;
+          let finalPosition = { lat, lng };
+          let attempts = 0;
+          const maxAttempts = 20;
           
-          if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
-            const checkIn = new Date(dateRange[0].startDate);
-            const checkOut = new Date(dateRange[0].endDate);
-            const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-            displayPrice = nights * listing.price_per_night;
+          // Keep trying positions until we find one that doesn't overlap
+          while (attempts < maxAttempts) {
+            let hasCollision = false;
+            
+            // Check if this position collides with any existing marker
+            for (const existingMarker of markerPositions) {
+              const distance = Math.sqrt(
+                Math.pow(finalPosition.lat - existingMarker.lat, 2) + 
+                Math.pow(finalPosition.lng - existingMarker.lng, 2)
+              );
+              
+              if (distance < MIN_DISTANCE) {
+                hasCollision = true;
+                break;
+              }
+            }
+            
+            if (!hasCollision) {
+              // Found a good position!
+              break;
+            }
+            
+            // Try a new position - stack vertically with slight horizontal variation
+            const stackLevel = Math.floor(attempts / 4); // Every 4 attempts, go up one level
+            const horizontalVariation = (attempts % 4) * 0.0002; // Small horizontal spread within each level
+            
+            finalPosition = {
+              lat: lat + (stackLevel * MIN_DISTANCE),
+              lng: lng + horizontalVariation - 0.0003 // Center the horizontal spread
+            };
+            
+            attempts++;
           }
           
-          const marker = new google.maps.Marker({
-            position: { lat, lng },
-            map: mapInstance,
-            title: listing.title,
-            icon: {
-              path: 'M-10,-8 L10,-8 L10,8 L-10,8 Z',
-              scale: 1,
-              fillColor: '#FFFFFF',
-              fillOpacity: 1,
-              strokeColor: '#000000',
-              strokeWeight: 2,
-            },
-            label: {
-              text: `$${Math.round(displayPrice)}`,
-              className: 'rectangular-marker-label',
-              color: '#000000',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }
-          });
-
-          marker.addListener('click', () => {
-            // Close existing overlay
-            if (overlayRef.current) {
-              overlayRef.current.setMap(null);
-              overlayRef.current = null;
-            }
-
-            setSelectedListing(listing);
-            
-            // Create new overlay
-            const position = new google.maps.LatLng(lat, lng);
-            const ListingCardOverlayClass = createListingCardOverlay(google);
-            const overlay = new ListingCardOverlayClass(
-              position,
-              listing,
-              closeListingCard,
-              handleNextImage,
-              handlePrevImage,
-              toggleWishlist,
-              currentImageIndices[listing.id] || 0,
-              isInWishlist,
-              wishlistLoading,
-              user
-            );
-            
-            overlay.setMap(mapInstance);
-            overlayRef.current = overlay;
-          });
-
-          newMarkers.push(marker);
+          markerPositions.push({ lat: finalPosition.lat, lng: finalPosition.lng, listing });
         }
       }
     });
 
-    setMarkers(newMarkers);
+    const newMarkers: google.maps.Marker[] = [];
+    
+    // Create markers using the collision-free positions
+    markerPositions.forEach((markerPos, index) => {
+      const listing = markerPos.listing;
+      let displayPrice = listing.price_per_night;
+      
+      if (dateRange && dateRange[0]?.startDate && dateRange[0]?.endDate) {
+        const checkIn = new Date(dateRange[0].startDate);
+        const checkOut = new Date(dateRange[0].endDate);
+        const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        displayPrice = nights * listing.price_per_night;
+      }
+      
+      const marker = new google.maps.Marker({
+        position: { lat: markerPos.lat, lng: markerPos.lng },
+        map: mapInstance,
+        title: listing.title,
+        icon: {
+          path: 'M-10,-8 L10,-8 L10,8 L-10,8 Z',
+          scale: 1,
+          fillColor: '#FFFFFF',
+          fillOpacity: 1,
+          strokeColor: '#000000',
+          strokeWeight: 2
+        },
+        label: {
+          text: `$${Math.round(displayPrice)}`,
+          className: 'rectangular-marker-label',
+          color: '#000000',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        },
+        zIndex: 1000 + index
+      });
+
+      marker.addListener('click', () => {
+        setSelectedListing(listing);
+        
+        // Create new overlay
+        const position = new google.maps.LatLng(markerPos.lat, markerPos.lng);
+        const ListingCardOverlayClass = createListingCardOverlay(google);
+        const overlay = new ListingCardOverlayClass(
+          position,
+          listing,
+          closeListingCard,
+          handleNextImage,
+          handlePrevImage,
+          toggleWishlist,
+          currentImageIndices[listing.id] || 0,
+          isInWishlist,
+          wishlistLoading,
+          user
+        );
+        
+        overlay.setMap(mapInstance);
+        overlayRef.current = overlay;
+      });
+
+      newMarkers.push(marker);
+    });
+
+    markersRef.current = newMarkers;
   };
 
   // Update overlay content when state changes
