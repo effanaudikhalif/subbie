@@ -87,6 +87,12 @@ function ResultsContent() {
     },
   ];
 
+  console.log('🔍 URL Parameters being applied as filters:');
+  console.log('- appliedWhere:', appliedWhere);
+  console.log('- appliedGuests:', appliedGuests);
+  console.log('- appliedCheckin:', appliedCheckin);
+  console.log('- appliedCheckout:', appliedCheckout);
+
   // Mobile detection
   useEffect(() => {
     const checkMobile = () => {
@@ -107,6 +113,8 @@ function ResultsContent() {
     fetch(buildApiUrl('/api/listings'))
       .then(res => res.json())
       .then(data => {
+        console.log('🔍 API Response - Total listings received:', Array.isArray(data) ? data.length : 'Not an array');
+        console.log('🔍 Raw API data:', data);
         setListings(Array.isArray(data) ? data : []);
       })
       .catch(() => setListings([]))
@@ -153,21 +161,26 @@ function ResultsContent() {
 
   // Filter listings based on applied values from URL/query params and map bounds
   const filteredListings = listings.filter(listing => {
-    // Only apply map bounds filter if explicitly searching within map bounds
-    // Don't filter by map bounds on initial page load
-    if (visibleBounds && where && where.trim() !== '' && listing.latitude && listing.longitude) {
+    console.log(`🔍 Filtering listing: "${listing.title}" (ID: ${listing.id})`);
+    
+    // If we have a location search and map bounds, use GEOGRAPHIC filtering instead of text matching
+    if (appliedWhere && appliedWhere.trim() !== '' && visibleBounds && listing.latitude && listing.longitude) {
+      console.log(`🗺️ Using geographic bounds filtering for location search: "${appliedWhere}"`);
       const lat = parseFloat(listing.latitude);
       const lng = parseFloat(listing.longitude);
       if (
         lat < visibleBounds.sw.lat || lat > visibleBounds.ne.lat ||
         lng < visibleBounds.sw.lng || lng > visibleBounds.ne.lng
       ) {
+        console.log(`❌ Filtered out "${listing.title}" - outside map bounds`);
         return false;
       }
+      console.log(`✅ "${listing.title}" is within map bounds - INCLUDED`);
+      // Skip text-based location filtering since we're using geographic bounds
     }
-    
-    // Location filter - only apply if there's an actual search term from URL params
-    if (appliedWhere && appliedWhere.trim() !== '') {
+    // Only use text-based location filtering if we don't have map bounds  
+    else if (appliedWhere && appliedWhere.trim() !== '' && !visibleBounds) {
+      console.log(`📝 Using text-based location filter: "${appliedWhere}" (no map bounds available)`);
       const searchTerm = appliedWhere.toLowerCase();
       let searchParts = [];
       if (searchTerm.includes(',')) {
@@ -236,28 +249,41 @@ function ResultsContent() {
         const neighborhoodMatch = listing.neighborhood?.toLowerCase().includes(part);
         return cityMatch || stateMatch || neighborhoodMatch;
       });
-      if (!matches) return false;
+      if (!matches) {
+        console.log(`❌ Filtered out "${listing.title}" - location doesn't match "${appliedWhere}"`);
+        return false;
+      }
     }
     
     // Guests filter - only apply if guests param is in URL
     if (appliedGuests && Number(appliedGuests) > 0) {
-      if (listing.max_occupancy < Number(appliedGuests)) return false;
+      console.log(`🔍 Applying guests filter: ${appliedGuests}`);
+      if (listing.max_occupancy < Number(appliedGuests)) {
+        console.log(`❌ Filtered out "${listing.title}" - not enough capacity (${listing.max_occupancy} < ${appliedGuests})`);
+        return false;
+      }
     }
     
     // Date range filter - only apply if both dates are in URL params
     if (appliedCheckin && appliedCheckout && listing.start_date && listing.end_date) {
+      console.log(`🔍 Applying date filter: ${appliedCheckin} to ${appliedCheckout}`);
       const checkin = new Date(appliedCheckin);
       const checkout = new Date(appliedCheckout);
       const availableStart = new Date(listing.start_date);
       const availableEnd = new Date(listing.end_date);
       // Only include listings where the entire requested range is within the available range
       if (checkin < availableStart || checkout > availableEnd) {
+        console.log(`❌ Filtered out "${listing.title}" - dates don't match`);
         return false;
       }
     }
     
+    console.log(`✅ Listing "${listing.title}" passed all filters`);
     return true;
   });
+
+  console.log(`🔍 Final result: ${filteredListings.length} listings after filtering (started with ${listings.length})`);
+  console.log('🔍 Filtered listings:', filteredListings.map(l => ({ id: l.id, title: l.title })));
 
   // Reset to page 1 when filtered listings change
   useEffect(() => {
