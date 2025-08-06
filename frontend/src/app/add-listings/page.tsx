@@ -454,32 +454,16 @@ export default function BecomeHost() {
           continue;
         }
         
-        // Log detailed file info
-        console.log(`Processing image ${i + 1}/${formData.photos.length}:`, {
-          name: photo.name,
-          type: photo.type,
-          size: photo.size,
-          isHEIC: photo.name.toLowerCase().includes('heic') || photo.type.toLowerCase().includes('heic')
-        });
-        
         // Upload new file to Supabase Storage
         console.log(`Uploading image ${i + 1}/${formData.photos.length}...`);
         const tempListingId = `listing-${user.id}-${Date.now()}`;
+        const uploadResult = await uploadListingImage(photo, tempListingId, i);
         
-        try {
-          const uploadResult = await uploadListingImage(photo, tempListingId, i);
-          
-          if (!uploadResult.success) {
-            console.error(`Upload failed for image ${i + 1}:`, uploadResult.error);
-            throw new Error(`Failed to upload image ${i + 1}: ${uploadResult.error}`);
-          }
-          
-          console.log(`Upload successful for image ${i + 1}:`, uploadResult.url);
-          imageUrls.push(uploadResult.url!);
-        } catch (uploadError) {
-          console.error(`Error during upload of image ${i + 1}:`, uploadError);
-          throw uploadError;
+        if (!uploadResult.success) {
+          throw new Error(`Failed to upload image ${i + 1}: ${uploadResult.error}`);
         }
+        
+        imageUrls.push(uploadResult.url!);
       }
       
       console.log('All images uploaded successfully:', imageUrls);
@@ -1579,4 +1563,3 @@ export default function BecomeHost() {
     </div>
   );
 }
-
