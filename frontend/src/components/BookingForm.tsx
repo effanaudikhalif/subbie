@@ -48,9 +48,16 @@ function BookingForm({ listing, onSuccess, onCancel }: BookingFormProps) {
   // Calculate total price when dates change
   useEffect(() => {
     if (formData.check_in_date && formData.check_out_date) {
-      const start = new Date(formData.check_in_date);
-      const end = new Date(formData.check_out_date);
-      const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      // Parse dates properly to avoid timezone issues
+      const startParts = formData.check_in_date.split('-');
+      const endParts = formData.check_out_date.split('-');
+      
+      const start = new Date(parseInt(startParts[0]), parseInt(startParts[1]) - 1, parseInt(startParts[2]));
+      const end = new Date(parseInt(endParts[0]), parseInt(endParts[1]) - 1, parseInt(endParts[2]));
+      
+      // Calculate nights by getting the difference in days
+      const timeDiff = end.getTime() - start.getTime();
+      const nights = Math.round(timeDiff / (1000 * 60 * 60 * 24));
       
       if (nights > 0) {
         setFormData(prev => ({
