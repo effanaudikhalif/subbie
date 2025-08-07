@@ -117,7 +117,7 @@ const DraggableMapContainer: React.FC<DraggableMapContainerProps> = ({
         listings={listings}
         dateRange={dateRange}
         onBoundsChange={onBoundsChange}
-        className="w-full h-full"
+        className={`w-full h-full ${className?.includes('rounded-none') ? 'rounded-none' : ''}`}
       />
       
       {/* Draggable handle */}

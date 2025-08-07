@@ -545,7 +545,7 @@ function ResultsContent() {
                   key={mapRefreshKey}
                   searchLocation={where}
                   listings={listingsWithRatings}
-                  className="h-full w-full rounded-lg"
+                  className="h-full w-full rounded-none"
                   dateRange={dateRange}
                   onBoundsChange={setVisibleBounds}
                   isMobileSmall={false}
