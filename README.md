@@ -2,7 +2,7 @@
 
 A full-stack student sublet rental platform connecting students with sublet opportunities near their universities.
 
-**Live Demo:** [subly-chi.vercel.app](https://subly-chi.vercel.app)
+[**Live Demo:** [subly-chi.vercel.app](https://subly-chi.vercel.app)](https://www.getsubbie.com/)
 
 ## ✨ Features
 
